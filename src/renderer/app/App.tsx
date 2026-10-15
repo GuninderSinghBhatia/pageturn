@@ -1,12 +1,13 @@
 import { useEffect } from 'react'
 import { LibraryView } from '../library/LibraryView'
+import { ReaderView } from '../reader/ReaderView'
 import { useLibraryStore } from '../stores/libraryStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useNav } from './nav'
 import './base.css'
 
 function App(): React.JSX.Element {
-  const { view, goReader, goLibrary } = useNav()
+  const { view, goReader } = useNav()
 
   useEffect(() => {
     void useSettingsStore.getState().load()
@@ -18,13 +19,7 @@ function App(): React.JSX.Element {
   }, [goReader])
 
   if (view === 'library') return <LibraryView />
-  // The reader arrives in Task 7.
-  return (
-    <div style={{ padding: 24 }}>
-      <button onClick={goLibrary}>← Library</button>
-      <p>Reader for {view.reader}</p>
-    </div>
-  )
+  return <ReaderView key={view.reader} bookId={view.reader} />
 }
 
 export default App
