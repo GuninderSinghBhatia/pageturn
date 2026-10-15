@@ -7,7 +7,7 @@ Spec: `docs/superpowers/specs/2026-10-16-pdf-book-reader-design.md`
 |---|---|---|---|
 | 1 Skeleton | done | 8382397 | see notes below |
 | 2 Shared types/IPC | done | f04f039 | `Channels.libraryOpenRequest` is the main→renderer event; extra schemas `BookMetaSchema`, `PngSchema`. `pathForFile` gets added to `Api` in Task 6 |
-| 3 SQLite/repos | todo | | |
+| 3 SQLite/repos | done | a186244 | `import.meta.glob` uses `{ query: '?raw', import: 'default' }` (Vite 8 form of `as: 'raw'`). WAL on. `upsert` COALESCEs title/author/numPages so re-import keeps metadata |
 | 4 Library import/IPC | todo | | |
 | 5 pdf.js + cache | todo | | |
 | 6 Library view | todo | | |
@@ -26,6 +26,6 @@ Spec: `docs/superpowers/specs/2026-10-16-pdf-book-reader-design.md`
 - ESLint 9 flat config (`eslint.config.mjs`) used instead of `.eslintrc.cjs`; Prettier config is `.prettierrc.yaml`.
 - `password.pdf` generated with **pdfkit** (pdf-lib can't encrypt; qpdf not installed). Fixtures committed.
 - `npm run test:e2e` = `electron-vite build && playwright test` (skips typecheck; `npm run build` includes typecheck).
-- better-sqlite3 `postinstall` (`electron-builder install-app-deps`) builds for Electron ABI: expect the Vitest ABI issue in Task 3 (plan has the `test:main` workaround).
+- better-sqlite3 13 ships N-API prebuilds: the same binary loads under Vitest (Node) and Electron, so no `test:main` script is needed.
 - Dev CSP not yet verified by hand in `npm run dev` (check it at Task 7).
 - In bash heredocs, `\\` collapses: write TS strings with backslashes via the Write/Edit tools.
