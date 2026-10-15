@@ -9,11 +9,12 @@ type Props = {
   page: number
   width: number // CSS px (already includes zoom)
   height: number
+  scale: number // render scale; may lag width while zoom settles (old bitmap is stretched)
   onState(page: number, state: PageState): void
 }
 
 /** One PDF page drawn at devicePixelRatio × displayed size, with a retry on failure. */
-export function PageCanvas({ doc, page, width, height, onState }: Props): React.JSX.Element {
+export function PageCanvas({ doc, page, width, height, scale, onState }: Props): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [state, setState] = useState<PageState>('loading')
   const [attempt, setAttempt] = useState(0)
@@ -26,7 +27,6 @@ export function PageCanvas({ doc, page, width, height, onState }: Props): React.
       onState(page, s)
     }
     report('loading')
-    const scale = (window.devicePixelRatio * width) / doc.pageSize(page).width
     doc
       .renderPage(page, scale)
       .then((bmp) => {
@@ -44,7 +44,7 @@ export function PageCanvas({ doc, page, width, height, onState }: Props): React.
     return () => {
       cancelled = true
     }
-  }, [doc, page, width, onState, attempt])
+  }, [doc, page, scale, onState, attempt])
 
   return (
     <div className={styles.page} style={{ width, height }} data-page={page}>
