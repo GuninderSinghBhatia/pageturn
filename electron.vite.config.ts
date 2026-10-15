@@ -21,7 +21,8 @@ function devCsp(): Plugin {
 
 export default defineElectronConfig({
   main: { resolve: { alias: shared } },
-  preload: { resolve: { alias: shared } },
+  // Sandboxed preloads can only require 'electron', so bundle everything else (e.g. zod).
+  preload: { resolve: { alias: shared }, build: { externalizeDeps: false } },
   renderer: defineConfig({
     resolve: { alias: { ...shared, '@renderer': resolve('src/renderer') } },
     plugins: [react(), devCsp()]
