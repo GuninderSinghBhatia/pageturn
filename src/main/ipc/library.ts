@@ -1,4 +1,4 @@
-import { app, dialog, ipcMain, type BrowserWindow } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -18,8 +18,14 @@ export function thumbDir(): string {
   return join(app.getPath('userData'), 'thumbnails')
 }
 
+/** Tells every window the library contents changed so views can refresh. */
+function notifyChanged(): void {
+  for (const w of BrowserWindow.getAllWindows()) w.webContents.send(Channels.libraryChanged)
+}
+
 export async function importAsBooks(repo: BooksRepo, paths: string[]): Promise<Book[]> {
   const rows = await importFiles(repo, parse(PathsSchema, paths))
+  notifyChanged()
   return rows.map((r) => toBook(r, existsSync, thumbDir()))
 }
 
@@ -50,6 +56,7 @@ export function registerLibraryIpc(repo: BooksRepo, win: BrowserWindow): void {
     const row = getRow(id)
     repo.remove(row.id)
     await rm(thumbnailPath(thumbDir(), row.id), { force: true })
+    notifyChanged()
   })
 
   ipcMain.handle(Channels.libraryRelocate, async (_e, id: unknown) => {
@@ -68,6 +75,7 @@ export function registerLibraryIpc(repo: BooksRepo, win: BrowserWindow): void {
       })
       return null
     }
+    notifyChanged()
     return toBook(repo.get(row.id)!, existsSync, thumbDir())
   })
 

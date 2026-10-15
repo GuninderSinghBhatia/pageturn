@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron'
 import { Channels, type Api } from '@shared/ipc'
 import type { Book } from '@shared/types'
 
@@ -18,7 +18,13 @@ const api: Api = {
       const listener = (_e: IpcRendererEvent, book: Book): void => cb(book)
       ipcRenderer.on(Channels.libraryOpenRequest, listener)
       return () => ipcRenderer.removeListener(Channels.libraryOpenRequest, listener)
-    }
+    },
+    onChanged: (cb) => {
+      const listener = (): void => cb()
+      ipcRenderer.on(Channels.libraryChanged, listener)
+      return () => ipcRenderer.removeListener(Channels.libraryChanged, listener)
+    },
+    pathForFile: (file) => webUtils.getPathForFile(file)
   },
   reader: {
     saveProgress: (bookId, page) => invoke(Channels.readerSaveProgress, bookId, page)

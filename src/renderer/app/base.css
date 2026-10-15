@@ -1,0 +1,40 @@
+/* Base tokens (light only for now; full theming arrives with theme.css in Task 11). */
+:root {
+  --bg: #f6f3ee;
+  --surface: #fffdf9;
+  --paper: #fbf7ef;
+  --text: #2a2723;
+  --muted: #7a736a;
+  --border: #e3ddd3;
+  --hover: #f0ebe3;
+  --accent: #8a5a2b;
+  --accent-text: #fff;
+  --danger: #a3332b;
+  --danger-bg: #f8e3e0;
+  --serif: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  --sans: 'Segoe UI', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
