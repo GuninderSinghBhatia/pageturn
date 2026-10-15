@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, Menu } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { existsSync } from 'node:fs'
@@ -76,6 +76,8 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(() => {
     electronApp.setAppUserModelId('com.pageturn.app')
+    // No app menu: its hidden accelerators (Ctrl+±/0 zoom) would fight the reader's own keys.
+    Menu.setApplicationMenu(null)
 
     app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
 
