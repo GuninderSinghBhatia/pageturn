@@ -8,7 +8,7 @@ Spec: `docs/superpowers/specs/2026-10-16-pdf-book-reader-design.md`
 | 1 Skeleton | done | 8382397 | see notes below |
 | 2 Shared types/IPC | done | f04f039 | `Channels.libraryOpenRequest` is the main→renderer event; extra schemas `BookMetaSchema`, `PngSchema`. `pathForFile` gets added to `Api` in Task 6 |
 | 3 SQLite/repos | done | a186244 | `import.meta.glob` uses `{ query: '?raw', import: 'default' }` (Vite 8 form of `as: 'raw'`). WAL on. `upsert` COALESCEs title/author/numPages so re-import keeps metadata |
-| 4 Library import/IPC | todo | | |
+| 4 Library import/IPC | done | f92109a | `registerIpc` in `src/main/ipc/index.ts`; payload helper `parse()` in `ipc/validate.ts`; `importAsBooks(repo, paths)` exported from `ipc/library.ts`. `toBook(row, fsExists: (p)=>boolean, thumbDir)`. Preload built with `externalizeDeps: false` (sandbox can only require electron). Single-instance lock + argv/second-instance → `library:openRequest`. Relocate mismatch shows a warning dialog and returns null |
 | 5 pdf.js + cache | todo | | |
 | 6 Library view | todo | | |
 | 7 Reader shell | todo | | user checkpoint: tell them how to run the app |
