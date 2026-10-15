@@ -12,6 +12,7 @@ export const Channels = {
   librarySaveThumbnail: 'library:saveThumbnail',
   libraryUpdateMeta: 'library:updateMeta',
   libraryOpenRequest: 'library:openRequest', // event: main → renderer
+  libraryChanged: 'library:changed', // event: main → renderer (import/remove/relocate)
   readerSaveProgress: 'reader:saveProgress',
   settingsGet: 'settings:get',
   settingsSet: 'settings:set'
@@ -60,6 +61,9 @@ export interface Api {
     saveThumbnail(bookId: string, png: ArrayBuffer): Promise<string>
     updateMeta(bookId: string, meta: BookMeta): Promise<void>
     onOpenRequest(cb: (book: Book) => void): () => void
+    onChanged(cb: () => void): () => void
+    /** Absolute path of a dropped File (Electron webUtils). */
+    pathForFile(file: File): string
   }
   reader: {
     saveProgress(bookId: string, page: number): Promise<void>

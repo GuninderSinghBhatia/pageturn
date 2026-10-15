@@ -31,7 +31,14 @@ type OpenOptions = { onPassword: (retry: boolean) => Promise<string | null> }
 
 export async function openPdf(data: ArrayBuffer, opts: OpenOptions): Promise<OpenedDoc> {
   // pdf.js transfers the buffer to its worker; copy so the caller's buffer stays usable.
-  const task = getDocument({ data: new Uint8Array(data.slice(0)) })
+  const task = getDocument({
+    data: new Uint8Array(data.slice(0)),
+    // Font data for non-embedded standard fonts (copied by scripts/copy-pdf-assets.mjs).
+    standardFontDataUrl:
+      typeof document === 'undefined'
+        ? undefined
+        : new URL('standard_fonts/', document.baseURI).href
+  })
   let cancelled = false
   task.onPassword = (update: (pw: string) => void, reason: number) => {
     opts.onPassword(reason === PasswordResponses.INCORRECT_PASSWORD).then((pw) => {

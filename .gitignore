@@ -7,3 +7,4 @@ out
 test-results
 playwright-report
 .eslintcache
+src/renderer/public/standard_fonts
