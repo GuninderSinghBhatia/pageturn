@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNav } from '../app/nav'
 import { displayTitle } from '../library/displayTitle'
 import { useLibraryStore } from '../stores/libraryStore'
@@ -9,10 +9,13 @@ import { FindBar } from './FindBar'
 import { fitPageSize, resolveLayout, spreadFor, spreadPages } from './layout'
 import { NavBar } from './NavBar'
 import { PasswordPrompt } from './PasswordPrompt'
+import { Prefetcher } from './pdf/prefetch'
 import { TocSidebar } from './TocSidebar'
 import { usePan, useViewportSize } from './useViewport'
 import { useReaderKeys } from './useReaderKeys'
 import styles from './Reader.module.css'
+
+const ZOOM_SETTLE_MS = 150
 
 const reducedMotion = (): boolean => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -96,6 +99,29 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
     [doc, viewport, r.layout]
   )
 
+  // Re-render at a new resolution only once zooming settles; until then the old bitmap stretches.
+  const [renderZoom, setRenderZoom] = useState(r.zoom)
+  useEffect(() => {
+    const t = setTimeout(() => setRenderZoom(r.zoom), ZOOM_SETTLE_MS)
+    return () => clearTimeout(t)
+  }, [r.zoom])
+
+  const scaleAt = useCallback(
+    (p: number, zoom: number) =>
+      doc ? (window.devicePixelRatio * pageSize(p).width * zoom) / doc.pageSize(p).width : 1,
+    [doc, pageSize]
+  )
+  const scaleFor = useCallback((p: number) => scaleAt(p, renderZoom), [scaleAt, renderZoom])
+
+  // Neighbouring spreads are prefetched at fit size (turning is disabled while zoomed in).
+  const prefetcher = useMemo(
+    () => (doc ? new Prefetcher(doc, (p) => scaleAt(p, Math.min(renderZoom, 1))) : null),
+    [doc, scaleAt, renderZoom]
+  )
+  useEffect(() => {
+    if (prefetcher && viewport.width > 0) prefetcher.update(r.page, r.layout)
+  }, [prefetcher, r.page, r.layout, viewport.width])
+
   const title = book ? displayTitle(book) : 'PageTurn'
 
   return (
@@ -129,6 +155,7 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
               layout={r.layout}
               pageSize={pageSize}
               zoom={r.zoom}
+              scaleFor={scaleFor}
               animate={settings.pageTurnStyle !== 'instant' && !reducedMotion()}
             />
           )}

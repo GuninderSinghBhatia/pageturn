@@ -10,6 +10,7 @@ type Props = {
   layout: ResolvedLayout
   pageSize(page: number): { width: number; height: number } // fitted CSS px at zoom 1
   zoom: number
+  scaleFor(page: number): number // pdf.js render scale for a page
   animate: boolean // false for 'instant' turns
 }
 
@@ -23,6 +24,7 @@ export function SlideStage({
   layout,
   pageSize,
   zoom,
+  scaleFor,
   animate
 }: Props): React.JSX.Element {
   const pages = spreadPages(spread)
@@ -51,7 +53,7 @@ export function SlideStage({
     if (layout === 'single' && side === 'left') return null
     const size = slot(p, pages[0])
     if (p === null) return <div className={styles.emptySlot} style={size} />
-    return <PageCanvas key={p} doc={doc} page={p} {...size} onState={onState} />
+    return <PageCanvas key={p} doc={doc} page={p} {...size} scale={scaleFor(p)} onState={onState} />
   }
 
   const anim = !animate || dir === 0 ? '' : dir > 0 ? styles.slideFromRight : styles.slideFromLeft
