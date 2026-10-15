@@ -9,8 +9,8 @@ Spec: `docs/superpowers/specs/2026-10-16-pdf-book-reader-design.md`
 | 2 Shared types/IPC | done | f04f039 | `Channels.libraryOpenRequest` is the main→renderer event; extra schemas `BookMetaSchema`, `PngSchema`. `pathForFile` gets added to `Api` in Task 6 |
 | 3 SQLite/repos | done | a186244 | `import.meta.glob` uses `{ query: '?raw', import: 'default' }` (Vite 8 form of `as: 'raw'`). WAL on. `upsert` COALESCEs title/author/numPages so re-import keeps metadata |
 | 4 Library import/IPC | done | f92109a | `registerIpc` in `src/main/ipc/index.ts`; payload helper `parse()` in `ipc/validate.ts`; `importAsBooks(repo, paths)` exported from `ipc/library.ts`. `toBook(row, fsExists: (p)=>boolean, thumbDir)`. Preload built with `externalizeDeps: false` (sandbox can only require electron). Single-instance lock + argv/second-instance → `library:openRequest`. Relocate mismatch shows a warning dialog and returns null |
-| 5 pdf.js + cache | done | 5db4067 | workerSrc via `import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'` (Vite can't resolve bare specifiers in `new URL()`). pdfjs 6: destroy via loading task (`PDFDocumentProxy.destroy` gone). `pageSize(n)` returns page 1's size until page n is loaded. Tests mock `pdfjs-dist` → legacy build. **TODO Task 7:** pass `standardFontDataUrl` (copy `node_modules/pdfjs-dist/standard_fonts` into renderer public) — fixtures use non-embedded Times; also verify worker loads under CSP from file:// |
-| 6 Library view | todo | | |
+| 5 pdf.js + cache | done | 5db4067 | workerSrc via `import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'` (Vite can't resolve bare specifiers in `new URL()`). pdfjs 6: destroy via loading task (`PDFDocumentProxy.destroy` gone). `pageSize(n)` returns page 1's size until page n is loaded. Tests mock `pdfjs-dist` → legacy build. Standard fonts + CSP worker resolved in Task 6 (postinstall copies fonts to `src/renderer/public/standard_fonts`, gitignored; worker loads with no fallback warning) |
+| 6 Library view | done | 911dc94 | **Api additions:** `library.onChanged(cb)` (main emits `library:changed` after import/remove/relocate) and `library.pathForFile(file)`. Nav store `useNav` in `app/nav.ts`. `displayTitle` in `library/displayTitle.ts`. Base CSS tokens in `app/base.css` (Task 11 adds theme.css). Thumbnails skip password PDFs (no prompt in library). Reader view is a placeholder in App.tsx |
 | 7 Reader shell | todo | | user checkpoint: tell them how to run the app |
 | 8 Prefetch | todo | | |
 | 9 Curl math | todo | | |
@@ -29,3 +29,4 @@ Spec: `docs/superpowers/specs/2026-10-16-pdf-book-reader-design.md`
 - better-sqlite3 13 ships N-API prebuilds: the same binary loads under Vitest (Node) and Electron, so no `test:main` script is needed.
 - Dev CSP not yet verified by hand in `npm run dev` (check it at Task 7).
 - In bash heredocs, `\\` collapses: write TS strings with backslashes via the Write/Edit tools.
+- Preload typings live in `src/preload/api.d.ts` (an `index.d.ts` next to `index.ts` is ignored by TS).
