@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { join } from 'node:path'
+import { waitForWindowFit } from './annotationHelpers'
 import { launchApp } from './helpers'
 
 const TEXT500 = join(__dirname, '..', 'fixtures', 'text-500.pdf')
@@ -8,6 +9,7 @@ async function openBook(page: Page): Promise<void> {
   await page.evaluate((p) => window.api.library.import([p]), TEXT500)
   await page.getByTestId('book-card').getByRole('button').first().click()
   await expect(page.getByTestId('book-stage')).toHaveAttribute('data-ready', 'true')
+  await waitForWindowFit(page)
 }
 
 test('rapid key presses never desync the page (Review Focus 5)', async () => {

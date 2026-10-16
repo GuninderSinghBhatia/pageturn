@@ -5,7 +5,8 @@ import {
   InkStrokeSchema,
   PageSchema,
   PathsSchema,
-  SettingsPartialSchema
+  SettingsPartialSchema,
+  WindowAspectSchema
 } from '@shared/ipc'
 
 describe('IPC schemas', () => {
@@ -82,5 +83,12 @@ describe('IPC schemas', () => {
     expect(
       SettingsPartialSchema.safeParse({ drawWithMouse: true, highlightColor: 'pink' }).success
     ).toBe(true)
+  })
+
+  it('WindowAspectSchema accepts a sane book aspect or 0 (unlock)', () => {
+    expect(WindowAspectSchema.safeParse(1.33).success).toBe(true)
+    expect(WindowAspectSchema.safeParse(0).success).toBe(true)
+    expect(WindowAspectSchema.safeParse(9).success).toBe(false)
+    expect(WindowAspectSchema.safeParse(NaN).success).toBe(false)
   })
 })

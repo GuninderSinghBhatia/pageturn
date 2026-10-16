@@ -8,6 +8,7 @@ import { registerAnnotationsIpc } from './annotations'
 import { registerLibraryIpc } from './library'
 import { registerReaderIpc } from './reader'
 import { registerSettingsIpc } from './settings'
+import { registerWindowIpc } from './window'
 
 export function registerIpc(db: Database.Database, win: BrowserWindow): void {
   const books = new BooksRepo(db)
@@ -15,4 +16,5 @@ export function registerIpc(db: Database.Database, win: BrowserWindow): void {
   registerReaderIpc(books)
   registerSettingsIpc(new SettingsRepo(db))
   registerAnnotationsIpc(new AnnotationsRepo(db), new InkRepo(db), books)
+  registerWindowIpc(win)
 }
