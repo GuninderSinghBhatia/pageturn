@@ -47,7 +47,6 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
   const scannedNoticeShown = useRef(false)
   const viewportRef = useRef<HTMLDivElement>(null)
   const viewport = useViewportSize(viewportRef)
-  usePan(viewportRef, r.zoom > 1)
   useTextTool(viewportRef)
 
   useEffect(() => {
@@ -173,6 +172,10 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
     [doc, pageSize]
   )
   const scaleFor = useCallback((p: number) => scaleAt(p, renderZoom), [scaleAt, renderZoom])
+  const fitScaleFor = useCallback(
+    (p: number) => scaleAt(p, Math.min(renderZoom, 1)),
+    [scaleAt, renderZoom]
+  )
 
   // Neighbouring spreads are prefetched at fit size (turning is disabled while zoomed in).
   const prefetcher = useMemo(
@@ -183,10 +186,12 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
     if (prefetcher && viewport.width > 0) prefetcher.update(r.page, r.layout)
   }, [prefetcher, r.page, r.layout, viewport.width])
 
-  // WebGL curl unless the user chose slide/instant (Settings), zoomed in, or WebGL failed.
+  // WebGL page flip unless the user chose slide/instant (Settings) or WebGL failed.
   const [webglFailed, setWebglFailed] = useState(false)
   const onWebglFailed = useCallback(() => setWebglFailed(true), [])
-  const useCurl = settings.pageTurnStyle === 'curl' && !webglFailed && r.zoom <= 1
+  const useCurl = settings.pageTurnStyle === 'curl' && !webglFailed
+  // The page-flip view pans itself; the slide fallback scrolls its container.
+  usePan(viewportRef, r.zoom > 1 && !useCurl)
 
   const renderOverlay = useCallback(
     (p: number, size: { width: number; height: number }) =>
@@ -229,7 +234,7 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
         {r.doc && <InkHost viewportRef={viewportRef} />}
         <div
           ref={viewportRef}
-          className={`${styles.viewport} ${r.zoom > 1 ? styles.zoomed : ''} ${penActive ? inkStyles.penMode : ''}`}
+          className={`${styles.viewport} ${r.zoom > 1 && !useCurl ? styles.zoomed : ''} ${penActive ? inkStyles.penMode : ''}`}
         >
           {r.doc && viewport.width > 0 && useCurl && (
             <BookStage
@@ -238,6 +243,8 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
               viewport={viewport}
               pageSize={pageSize}
               scaleFor={scaleFor}
+              fitScaleFor={fitScaleFor}
+              zoom={r.zoom}
               tint={settings.paperTint}
               onFallback={onWebglFailed}
               renderOverlay={renderOverlay}

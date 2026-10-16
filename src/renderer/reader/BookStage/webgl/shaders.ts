@@ -1,12 +1,12 @@
 /**
  * One program, four modes:
- *   0 flat page quad (static spread / page revealed under the curl, with gutter + curl shadow)
- *   1 curling page mesh (vertex shader mirrors curlMath.curlVertex exactly)
+ *   0 flat page quad (static spread / pages under the flip, with gutter + flip shadow)
+ *   1 flipping page mesh: the leaf swings around the spine (mirrors flipMath.flipPoint exactly)
  *   2 page-stack edge strip
  *   3 soft drop shadow under a page
  * Page-local coordinates: x∈[0,1], y∈[0,aspect], y down; u_rect maps them to CSS pixels.
  */
-export const MODE = { flat: 0, curl: 1, edge: 2, shadow: 3 } as const
+export const MODE = { flat: 0, flip: 1, edge: 2, shadow: 3 } as const
 
 export const VERTEX_SHADER = `#version 300 es
 in vec2 a_uv;
@@ -14,13 +14,13 @@ uniform vec2 u_res;
 uniform vec4 u_rect;
 uniform float u_aspect;
 uniform int u_mode;
-uniform vec2 u_origin;
-uniform vec2 u_normal;
-uniform float u_radius;
+uniform float u_progress; // flip: 0 = flat where it started, 1 = flat on the other side
+uniform float u_bend;     // flip: extra lead of the outer edge mid-turn (radians)
+uniform float u_side;     // flip: +1 = page right of the spine (spine at x=0), -1 = left (x=1)
+uniform float u_eye;      // flip: viewer distance for perspective (page widths)
 out vec2 v_uv;
 out vec3 v_normal;
 out float v_back;
-out vec2 v_local;
 out vec2 v_px;
 
 const float PI = 3.14159265;
@@ -31,31 +31,32 @@ void main() {
   vec3 n = vec3(0.0, 0.0, 1.0);
   float back = 0.0;
   if (u_mode == 1) {
-    float d = dot(p - u_origin, u_normal);
-    if (d > 0.0) {
-      vec2 proj = p - u_normal * d;
-      float halfCirc = PI * u_radius;
-      if (d <= halfCirc) {
-        float th = d / u_radius;
-        float s = sin(th);
-        float c = cos(th);
-        pos = vec3(proj + u_normal * u_radius * s, u_radius * (1.0 - c));
-        n = vec3(-u_normal * s, c);
-        back = th > PI * 0.5 ? 1.0 : 0.0;
-      } else {
-        pos = vec3(proj - u_normal * (d - halfCirc), 2.0 * u_radius);
-        n = vec3(0.0, 0.0, -1.0);
-        back = 1.0;
-      }
+    float xs = u_side > 0.0 ? p.x : 1.0 - p.x; // distance from the spine along the paper
+    float th = PI * u_progress;
+    float c = u_progress >= 1.0 ? 0.0 : u_bend * sin(th);
+    float ph = th + c * xs;
+    float X;
+    float Z;
+    if (abs(c) < 1e-5) {
+      X = xs * cos(th);
+      Z = xs * sin(th);
+    } else {
+      X = (sin(ph) - sin(th)) / c;
+      Z = (cos(th) - cos(ph)) / c;
     }
+    float s = u_eye / (u_eye - Z); // perspective: nearer the reader = larger
+    float spine = u_side > 0.0 ? 0.0 : 1.0;
+    float cy = u_aspect * 0.5;
+    pos = vec3(spine + u_side * X * s, cy + (p.y - cy) * s, Z);
+    n = vec3(-u_side * sin(ph), 0.0, cos(ph));
+    back = cos(ph) < 0.0 ? 1.0 : 0.0;
   }
   vec2 px = u_rect.xy + vec2(pos.x, pos.y / u_aspect) * u_rect.zw;
   vec2 clip = px / u_res * 2.0 - 1.0;
-  gl_Position = vec4(clip.x, -clip.y, 0.5 - pos.z, 1.0);
+  gl_Position = vec4(clip.x, -clip.y, 0.5 - pos.z * 0.25, 1.0);
   v_uv = a_uv;
   v_normal = n;
   v_back = back;
-  v_local = p;
   v_px = px;
 }
 `
@@ -66,20 +67,17 @@ precision highp int; // must match the vertex shader's default for the shared u_
 in vec2 v_uv;
 in vec3 v_normal;
 in float v_back;
-in vec2 v_local;
 in vec2 v_px;
 uniform sampler2D u_front;
 uniform sampler2D u_back;
 uniform int u_mode;
 uniform int u_dark;
 uniform vec3 u_tint;
-uniform int u_curlShadow;   // flat: shade the revealed page near the fold
-uniform vec2 u_origin;
-uniform vec2 u_normal;
-uniform float u_strength;   // curl shadow strength
-uniform float u_gutter;     // flat: +1 spine at x=1 (left page), -1 spine at x=0 (right page)
-uniform float u_stripes;    // edge: number of page lines
-uniform vec4 u_inner;       // shadow: page rect in px (x, y, w, h)
+uniform float u_shadow;      // flat: flip shadow strength, darkest at the spine
+uniform float u_shadowSpine; // flat: where the spine is for the flip shadow (0: x=0, 1: x=1)
+uniform float u_gutter;      // flat: +1 spine at x=1 (left page), -1 spine at x=0 (right page)
+uniform float u_stripes;     // edge: number of page lines
+uniform vec4 u_inner;        // shadow: page rect in px (x, y, w, h)
 out vec4 outColor;
 
 vec3 tone(vec3 c) {
@@ -112,8 +110,8 @@ void main() {
   vec3 c;
   if (u_mode == 1 && v_back > 0.5) {
     vec3 b = texture(u_back, vec2(1.0 - v_uv.x, v_uv.y)).rgb;
-    vec3 f = texture(u_front, v_uv).rgb;
-    c = mix(b, f, 0.05); // slight paper translucency
+    vec3 f = texture(u_front, vec2(v_uv.x, v_uv.y)).rgb;
+    c = mix(b, f, 0.03); // slight paper translucency
   } else {
     c = texture(u_front, v_uv).rgb;
   }
@@ -121,15 +119,15 @@ void main() {
 
   if (u_mode == 1) {
     vec3 N = normalize(v_normal);
-    if (v_back > 0.5) N = -N; // shade the side facing the viewer
+    if (v_back > 0.5) N = -N; // shade the side facing the reader
     vec3 L = normalize(vec3(-0.35, -0.45, 1.0));
     float diff = max(dot(N, L), 0.0);
-    float spec = pow(max(dot(reflect(-L, N), vec3(0.0, 0.0, 1.0)), 0.0), 24.0) * 0.16;
-    c = c * (0.6 + 0.4 * diff) + spec;
+    float spec = pow(max(dot(reflect(-L, N), vec3(0.0, 0.0, 1.0)), 0.0), 24.0) * 0.12;
+    c = c * (0.55 + 0.45 * diff) + spec;
   } else {
-    if (u_curlShadow == 1) {
-      float d = dot(v_local - u_origin, u_normal);
-      if (d > 0.0) c *= 1.0 - u_strength * exp(-d / 0.06);
+    if (u_shadow > 0.0) {
+      float d = u_shadowSpine > 0.5 ? 1.0 - v_uv.x : v_uv.x;
+      c *= 1.0 - u_shadow * (1.0 - smoothstep(0.0, 0.85, d));
     }
     if (u_gutter != 0.0) {
       float g = u_gutter > 0.0 ? 1.0 - v_uv.x : v_uv.x;
