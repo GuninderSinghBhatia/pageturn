@@ -5,7 +5,8 @@ import { useReaderStore } from '../stores/readerStore'
 type Handlers = {
   onFind(): void
   onFocusPageBox(): void
-  onEscape(): void
+  onEscape(): boolean // true if it closed or left something
+  onToggleToolbar(): void
   onHighlight(): boolean // highlight the current text selection; false if there is none
   onBookmark(): void
   onTogglePen(): void
@@ -21,16 +22,17 @@ function isTyping(target: EventTarget | null): boolean {
   return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
 }
 
-function toggleFullscreen(): void {
+export function toggleFullscreen(): void {
   if (document.fullscreenElement) void document.exitFullscreen()
   else void document.documentElement.requestFullscreen()
 }
 
-/** Reader keyboard shortcuts (spec §4.8 subset). */
+/** Reader keyboard shortcuts (immersive reader spec §7). */
 export function useReaderKeys({
   onFind,
   onFocusPageBox,
   onEscape,
+  onToggleToolbar,
   onHighlight,
   onBookmark,
   onTogglePen,
@@ -61,8 +63,8 @@ export function useReaderKeys({
         return
       }
       if (e.key === 'Escape') {
-        if (document.fullscreenElement) void document.exitFullscreen()
-        onEscape()
+        // Innermost first: cards and tools, then the toolbar, then fullscreen.
+        if (!onEscape() && document.fullscreenElement) void document.exitFullscreen()
         return
       }
       if (e.key === 'F11') {
@@ -77,7 +79,7 @@ export function useReaderKeys({
         case 'PageDown':
         case ' ':
           if (!canTurn) return
-          s.requestTurn(1)
+          s.requestTurn(e.key === ' ' && e.shiftKey ? -1 : 1)
           break
         case 'ArrowLeft':
         case 'PageUp':
@@ -102,6 +104,14 @@ export function useReaderKeys({
         case 'E':
           onEraser()
           break
+        case 't':
+        case 'T':
+          onToggleToolbar()
+          break
+        case 'b':
+        case 'B':
+          onBookmark()
+          break
         default:
           return
       }
@@ -113,6 +123,7 @@ export function useReaderKeys({
     onFind,
     onFocusPageBox,
     onEscape,
+    onToggleToolbar,
     onHighlight,
     onBookmark,
     onTogglePen,

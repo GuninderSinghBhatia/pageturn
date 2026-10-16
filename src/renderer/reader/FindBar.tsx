@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { OpenedDoc } from './pdf/pdfService'
+import toolbar from './chrome/Toolbar.module.css'
 import styles from './Reader.module.css'
 
 type Props = {
@@ -7,6 +8,7 @@ type Props = {
   visibleLast: number // highest page currently on screen
   onJump(page: number): void
   onClose(): void
+  inline?: boolean // inside the reader toolbar pill
 }
 
 /** Results for one needle; a needle with no results object yet is still being searched. */
@@ -20,7 +22,7 @@ function countMatches(haystack: string, needle: string): number {
 }
 
 /** Incremental, cancellable whole-book text search; Enter jumps to the next page with a hit. */
-export function FindBar({ doc, visibleLast, onJump, onClose }: Props): React.JSX.Element {
+export function FindBar({ doc, visibleLast, onJump, onClose, inline }: Props): React.JSX.Element {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Search | null>(null)
   const pendingJump = useRef(false)
@@ -81,11 +83,12 @@ export function FindBar({ doc, visibleLast, onJump, onClose }: Props): React.JSX
   }
 
   return (
-    <div className={styles.findBar} role="search">
+    <div className={inline ? toolbar.find : styles.findBar} role="search">
       <input
         ref={inputRef}
         data-testid="find-input"
-        className={styles.findInput}
+        aria-label="Find in book"
+        className={inline ? toolbar.findInput : styles.findInput}
         placeholder="Find in book"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -94,13 +97,15 @@ export function FindBar({ doc, visibleLast, onJump, onClose }: Props): React.JSX
           if (e.key === 'Escape') onClose()
         }}
       />
-      <span className={styles.findCount}>
+      <span className={inline ? toolbar.findCount : styles.findCount}>
         {needle &&
           `${search.count} match${search.count === 1 ? '' : 'es'} on ${search.hitPages.length} page${search.hitPages.length === 1 ? '' : 's'}${search.done ? '' : '…'}`}
       </span>
-      <button className={styles.navBtn} onClick={onClose} aria-label="Close find">
-        ✕
-      </button>
+      {!inline && (
+        <button className={styles.navBtn} onClick={onClose} aria-label="Close find">
+          ✕
+        </button>
+      )}
     </div>
   )
 }

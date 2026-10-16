@@ -1,5 +1,11 @@
 import { test, expect, type Page } from '@playwright/test'
-import { openAtSpread2, stored } from './annotationHelpers'
+import {
+  goToPage,
+  hideToolbar,
+  openAtSpread2,
+  openReaderSettings,
+  stored
+} from './annotationHelpers'
 import { launchApp, makeUserDataDir } from './helpers'
 
 /** Mouse stroke across the blank lower part of a page (fractions of the page box). */
@@ -31,9 +37,11 @@ export async function inkAlpha(page: Page, p: number, at: [number, number]): Pro
 }
 
 export async function enableDrawWithMouse(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Settings' }).click()
+  await openReaderSettings(page)
   await page.getByRole('checkbox', { name: /draw with mouse/i }).check()
-  await page.getByRole('button', { name: /back/i }).click()
+  await page.getByRole('button', { name: '← Back' }).click()
+  await page.keyboard.press('Escape') // close the Display menu (keeps an active pen)
+  await hideToolbar(page)
 }
 
 test('pen mode draws persistent ink (mouse only when enabled)', async () => {
@@ -42,7 +50,7 @@ test('pen mode draws persistent ink (mouse only when enabled)', async () => {
   try {
     await openAtSpread2(page)
     await page.keyboard.press('p')
-    await expect(page.getByRole('toolbar', { name: 'Pen' })).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Pen options' })).toBeVisible()
 
     await stroke(page, 2, [0.4, 0.85], [0.7, 0.88])
     await page.waitForTimeout(300)
@@ -50,7 +58,7 @@ test('pen mode draws persistent ink (mouse only when enabled)', async () => {
     await expect(page.getByTestId('book-stage')).toHaveAttribute('data-pages', '2,3')
 
     await enableDrawWithMouse(page)
-    await expect(page.getByRole('toolbar', { name: 'Pen' })).toBeVisible() // still in pen mode
+    await expect(page.getByRole('group', { name: 'Pen options' })).toBeVisible() // still in pen mode
     await stroke(page, 2, [0.4, 0.85], [0.7, 0.85])
     await expect.poll(async () => (await stored(page)).ink.length).toBe(1)
     const [s] = (await stored(page)).ink
@@ -65,7 +73,7 @@ test('pen mode draws persistent ink (mouse only when enabled)', async () => {
     expect(await inkAlpha(page, 2, [0.55, 0.85])).toBeGreaterThan(0)
 
     await page.keyboard.press('Escape')
-    await expect(page.getByRole('toolbar', { name: 'Pen' })).toHaveCount(0)
+    await expect(page.getByRole('group', { name: 'Pen options' })).toHaveCount(0)
   } finally {
     await app.close()
   }
@@ -107,8 +115,7 @@ test('eraser and undo/redo, limited to visible pages', async () => {
     await page.keyboard.press('Control+z')
     await expect.poll(count).toBe(2)
 
-    await page.getByTestId('page-box').fill('4')
-    await page.getByTestId('page-box').press('Enter')
+    await goToPage(page, 4)
     await expect(page.getByTestId('book-stage')).toHaveAttribute('data-pages', '4,5')
     await page.keyboard.press('Control+z')
     await page.waitForTimeout(300)

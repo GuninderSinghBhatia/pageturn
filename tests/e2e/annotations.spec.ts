@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import { join } from 'node:path'
 import {
   bodyLine,
+  displayAction,
   dragSelect,
   FIXTURES,
   highlightPoint,
@@ -168,12 +169,12 @@ test('highlights stay clickable after layout and zoom changes (Review Focus 5); 
     }
 
     await clickHighlight()
-    await page.getByRole('button', { name: 'Single page' }).click()
+    await displayAction(page, 'Single page')
     await clickHighlight()
-    await page.getByRole('button', { name: 'Two pages' }).click()
-    await page.getByRole('button', { name: 'Zoom in' }).click()
+    await displayAction(page, 'Two pages')
+    await displayAction(page, 'Zoom in')
     await clickHighlight()
-    await page.getByRole('button', { name: 'Zoom out' }).click()
+    await displayAction(page, 'Zoom out')
     await clickHighlight()
 
     const pt = await highlightPoint(page, hl)

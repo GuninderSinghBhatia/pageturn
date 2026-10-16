@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { join } from 'node:path'
+import { openReaderSettings } from './annotationHelpers'
 import { launchApp, makeUserDataDir } from './helpers'
 
 const TEXT500 = join(__dirname, '..', 'fixtures', 'text-500.pdf')
@@ -13,7 +14,7 @@ test('settings apply live to the open book and persist across restarts', async (
     const stage = page.getByTestId('book-stage')
     await expect(stage).toHaveAttribute('data-stage', 'curl')
 
-    await page.getByRole('button', { name: 'Settings' }).click()
+    await openReaderSettings(page)
     await page.getByRole('radio', { name: 'Slide' }).check()
     await page.getByRole('radio', { name: 'Dark' }).check()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
@@ -21,7 +22,7 @@ test('settings apply live to the open book and persist across restarts', async (
     // behind the overlay must still ignore them.
     await page.getByRole('heading', { name: 'Settings' }).click()
     await page.keyboard.press('ArrowRight')
-    await page.getByRole('button', { name: /back/i }).click()
+    await page.getByRole('button', { name: '← Back' }).click()
     await expect(page.getByTestId('settings')).toHaveCount(0)
 
     await expect(stage).toHaveAttribute('data-stage', 'slide')
