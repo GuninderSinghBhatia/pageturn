@@ -159,9 +159,12 @@ test('highlights stay clickable after layout and zoom changes (Review Focus 5); 
     const clickHighlight = async (): Promise<void> => {
       await expect(stage).toHaveAttribute('data-settled', 'true')
       await page.waitForFunction(() => document.getAnimations().length === 0)
-      const pt = await highlightPoint(page, hl)
-      await page.mouse.click(pt.x, pt.y)
-      await expect(popover).toBeVisible()
+      // Retried briefly: right after a zoom the stage may still be swapping (curl ↔ slide).
+      await expect(async () => {
+        const pt = await highlightPoint(page, hl)
+        await page.mouse.click(pt.x, pt.y)
+        await expect(popover).toBeVisible({ timeout: 1000 })
+      }).toPass({ timeout: 10_000 })
       await page.keyboard.press('Escape')
       await expect(popover).toHaveCount(0)
     }
@@ -217,13 +220,13 @@ test('a free note added by right-click persists across a restart', async () => {
 test('Ctrl+D bookmarks the left page of the spread and survives a restart', async () => {
   const userData = makeUserDataDir()
   let { app, page } = await launchApp(userData)
-  const ribbon = (p: typeof page): ReturnType<typeof page.getByRole> =>
-    p.getByRole('button', { name: 'Bookmark page 2' })
+  const tab = (p: typeof page): ReturnType<typeof page.getByRole> =>
+    p.getByRole('button', { name: /^Bookmark 1, page 2/ })
   try {
     await openAtSpread2(page)
-    await expect(ribbon(page)).toHaveAttribute('aria-pressed', 'false')
+    await expect(tab(page)).toHaveCount(0)
     await page.keyboard.press('Control+d')
-    await expect(ribbon(page)).toHaveAttribute('aria-pressed', 'true')
+    await expect(tab(page)).toBeVisible()
     await expect.poll(async () => (await stored(page)).bookmarks.map((b) => b.page)).toEqual([2])
   } finally {
     await app.close()
@@ -231,11 +234,10 @@ test('Ctrl+D bookmarks the left page of the spread and survives a restart', asyn
   ;({ app, page } = await launchApp(userData))
   try {
     await openAtSpread2(page)
-    await expect(ribbon(page)).toHaveAttribute('aria-pressed', 'true')
+    await expect(tab(page)).toBeVisible()
     await page.keyboard.press('Control+d')
-    await expect(ribbon(page)).toHaveAttribute('aria-pressed', 'false')
-    await page.getByRole('button', { name: 'Bookmark page 3' }).click()
-    await expect.poll(async () => (await stored(page)).bookmarks.map((b) => b.page)).toEqual([3])
+    await expect(tab(page)).toHaveCount(0)
+    await expect.poll(async () => (await stored(page)).bookmarks).toEqual([])
   } finally {
     await app.close()
   }

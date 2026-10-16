@@ -258,3 +258,88 @@
 .marginDot:hover {
   transform: translate(-50%, -50%) scale(1.3);
 }
+
+/* ---- Bookmark tabs: ribbons sticking out of the right page edge ---- */
+.tabs {
+  position: absolute;
+  top: 18px;
+  right: -16px; /* 22px wide, ~6px overlapping the page */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: auto;
+}
+
+.tabSlot {
+  position: relative;
+}
+
+.tab {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 22px;
+  height: 60px;
+  padding: 0 0 6px;
+  border: 0;
+  border-radius: 0 4px 4px 0;
+  color: rgb(0 0 0 / 0.55);
+  font: 600 10px var(--sans);
+  box-shadow: 1px 1px 3px rgb(0 0 0 / 0.18);
+  cursor: pointer;
+  transition: transform 120ms ease-out;
+}
+
+.tab:hover,
+.tabHere {
+  transform: translateX(3px);
+}
+
+.gearTab {
+  align-items: center;
+  height: 40px;
+  padding: 0;
+  background: #c9ccd1;
+  font-size: 13px;
+}
+
+:root[data-theme='dark'] .tab {
+  filter: saturate(0.5) brightness(0.8);
+}
+
+.tabMenu {
+  position: absolute;
+  top: 0;
+  left: 28px;
+  z-index: 6;
+  min-width: 140px;
+  padding: 4px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  font: 13px var(--sans);
+}
+
+.tabMenu button {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #2b2b2b;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tabMenu button:hover {
+  background: #f2f2f2;
+}
+
+.tabRename {
+  width: 180px;
+  padding: 5px 8px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font: 13px var(--sans);
+}

@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import {
   bodyLine,
   dragSelect,
+  goToPage,
   highlightPoint,
   openAtSpread2,
   showToolbar,
@@ -157,6 +158,46 @@ test('right-click a selection: Make a note adds a dotted note with a margin dot;
     const box = (await page.locator('[data-page-overlay="3"]').boundingBox())!
     await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.92, { button: 'right' })
     await expect(page.getByRole('menuitem', { name: 'Add note here' })).toBeVisible()
+  } finally {
+    await app.close()
+  }
+})
+
+test('bookmark tabs stick out of the right page: jump, rename, delete, hide', async () => {
+  const { app, page } = await launchApp()
+  try {
+    await openAtSpread2(page)
+    const gear = page.getByRole('button', { name: 'Settings tab' })
+    await expect(gear).toBeVisible()
+    await page.keyboard.press('b') // bookmarks page 2
+    await goToPage(page, 10)
+    await page.keyboard.press('b') // page 10
+    const tab1 = page.getByRole('button', { name: /^Bookmark 1, page 2/ })
+    const tab2 = page.getByRole('button', { name: /^Bookmark 2, page 10/ })
+    await expect(tab1).toBeVisible()
+    await expect(tab2).toBeVisible()
+
+    await tab1.click()
+    await expect(page.getByTestId('book-stage')).toHaveAttribute('data-pages', '2,3')
+
+    await page.getByRole('button', { name: /^Bookmark 2/ }).click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Rename' }).click()
+    await page.getByRole('textbox', { name: 'Bookmark name' }).fill('Results')
+    await page.keyboard.press('Enter')
+    await expect
+      .poll(async () => (await stored(page)).bookmarks.map((b) => b.label))
+      .toEqual([null, 'Results'])
+    await expect(page.getByRole('button', { name: /^Bookmark 2, page 10: Results/ })).toBeVisible()
+
+    await page.getByRole('button', { name: /^Bookmark 1/ }).click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Delete' }).click()
+    await expect.poll(async () => (await stored(page)).bookmarks.map((b) => b.page)).toEqual([10])
+
+    await page.evaluate(() => window.api.settings.set({ showBookmarkTabs: false }))
+    await page.reload()
+    await openAtSpread2(page)
+    await expect(page.getByRole('button', { name: /^Bookmark 1/ })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Settings tab' })).toBeVisible()
   } finally {
     await app.close()
   }
