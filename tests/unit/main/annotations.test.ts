@@ -123,6 +123,19 @@ describe('AnnotationsRepo notes', () => {
     expect(all.notes).toEqual([])
   })
 
+  it('tags are set separately, kept in a fixed order, and survive saving the note', () => {
+    const n = note()
+    repo.upsertNote(n)
+    expect(repo.listForBook(bookId).notes[0].tags).toEqual([])
+    repo.setNoteTags(n.id, ['review', 'important', 'review'])
+    expect(repo.listForBook(bookId).notes[0].tags).toEqual(['important', 'review'])
+    repo.upsertNote({ ...n, body: 'edited in the reader', updatedAt: 3000 })
+    const [saved] = repo.listForBook(bookId).notes
+    expect(saved.body).toBe('edited in the reader')
+    expect(saved.tags).toEqual(['important', 'review'])
+    expect(repo.listAllNotes()[0].note.tags).toEqual(['important', 'review'])
+  })
+
   it('keeps notes_fts in sync on insert, update and delete', () => {
     const n = note()
     repo.upsertNote(n)

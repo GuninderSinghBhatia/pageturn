@@ -41,6 +41,7 @@ const api: Api = {
     deleteHighlight: (id) => invoke(Channels.annotationsDeleteHighlight, id),
     upsertNote: (n) => invoke(Channels.annotationsUpsertNote, n),
     deleteNote: (id) => invoke(Channels.annotationsDeleteNote, id),
+    setNoteTags: (id, tags) => invoke(Channels.annotationsSetNoteTags, id, tags),
     addInk: (strokes) => invoke(Channels.annotationsAddInk, strokes),
     deleteInk: (ids) => invoke(Channels.annotationsDeleteInk, ids),
     toggleBookmark: (bookId, page, label, id) =>

@@ -26,7 +26,7 @@ function createWindow(): BrowserWindow {
     // No OS title bar: the app runs to the top edge and draws its own minimise / maximise /
     // close buttons (renderer WindowControls; macOS keeps its traffic lights).
     titleBarStyle: 'hidden',
-    ...(process.platform === 'linux' ? { icon } : {}),
+    ...(process.platform === 'darwin' ? {} : { icon }), // macOS uses the bundle icon
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

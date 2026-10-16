@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="turn" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#23905A"/>
+      <stop offset="1" stop-color="#1F7A4D"/>
+    </linearGradient>
+    <linearGradient id="under" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#9A9A9A"/>
+      <stop offset="1" stop-color="#C9C9C9"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#141414"/>
+  <rect x="2" y="2" width="508" height="508" rx="110" fill="none" stroke="#2E2E2E" stroke-width="4"/>
+  <!-- left page -->
+  <path d="M256 160 C214 134 160 124 104 130 V376 C160 370 214 380 256 404 Z" fill="#EDEDED"/>
+  <path d="M136 186 C170 184 202 190 228 202 M136 230 C170 228 202 234 228 246 M136 274 C170 272 202 278 228 290 M136 318 C162 317 186 321 206 328"
+        fill="none" stroke="#8B8B8B" stroke-width="12" stroke-linecap="round"/>
+  <!-- right page underneath -->
+  <path d="M256 160 C298 134 352 124 408 130 V376 C352 370 298 380 256 404 Z" fill="url(#under)"/>
+  <!-- page turning over -->
+  <path d="M256 160 C292 128 330 106 372 92 C356 176 348 268 344 362 C310 364 280 378 256 404 Z" fill="url(#turn)"/>
+  <path d="M256 160 C292 128 330 106 372 92" fill="none" stroke="#22C55E" stroke-width="6" stroke-linecap="round"/>
+</svg>

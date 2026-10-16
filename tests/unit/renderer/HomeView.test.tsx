@@ -143,12 +143,12 @@ describe('HomeView', () => {
     expect(titles()).toEqual(['Middlemarch'])
   })
 
-  it('Notes lists notes by book; clicking one opens the book at that page', async () => {
+  it('Notes shows note cards; clicking one opens the book at that page', async () => {
     render(<HomeView />)
     fireEvent.click(screen.getByRole('tab', { name: 'Notes' }))
     const note = await screen.findByText('Check the pole at s = 1')
     expect(screen.getByText(/the zeta function has a pole/)).toBeTruthy()
-    expect(screen.getByText(/Page 42/)).toBeTruthy()
+    expect(screen.getByText('p. 42')).toBeTruthy()
     fireEvent.click(note)
     expect(useNav.getState().view).toEqual({ reader: zeta.id, page: 42 })
   })

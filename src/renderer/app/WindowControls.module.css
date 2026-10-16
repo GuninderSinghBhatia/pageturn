@@ -18,7 +18,7 @@
 }
 
 .btn:focus-visible {
-  outline: 2px solid #7b5cff;
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
@@ -33,11 +33,7 @@
   top: 0;
   right: 0;
   z-index: 60;
-  color: #5b5550;
-}
-
-:root[data-theme='dark'] .flush {
-  color: #dadada;
+  color: var(--muted);
 }
 
 .flush .btn {
@@ -46,7 +42,8 @@
 }
 
 .flush .btn:hover {
-  background: rgb(128 128 128 / 0.18);
+  background: var(--surface-hover);
+  color: var(--text);
 }
 
 /* ---- Inline: a pill beside the reader tools, same dark glass ---- */
@@ -54,10 +51,10 @@
   gap: 2px;
   padding: 6px;
   border-radius: 999px;
-  background: rgb(30 30 30 / 0.85);
+  border: 1px solid var(--chrome-border);
+  background: var(--chrome-bg);
   backdrop-filter: blur(12px);
-  color: rgb(255 255 255 / 0.85);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+  color: var(--chrome-text);
 }
 
 .inline .btn {
@@ -67,5 +64,6 @@
 }
 
 .inline .btn:hover {
-  background: rgb(255 255 255 / 0.14);
+  background: var(--chrome-active);
+  color: var(--chrome-strong);
 }

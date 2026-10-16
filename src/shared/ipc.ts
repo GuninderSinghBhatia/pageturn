@@ -5,12 +5,14 @@ import {
   HIGHLIGHT_STYLES,
   INK_COLORS,
   INK_WIDTHS,
+  NOTE_TAGS,
   type Book,
   type BookAnnotations,
   type Bookmark,
   type Highlight,
   type InkStroke,
   type Note,
+  type NoteTag,
   type Settings
 } from './types'
 
@@ -35,6 +37,7 @@ export const Channels = {
   annotationsDeleteHighlight: 'annotations:deleteHighlight',
   annotationsUpsertNote: 'annotations:upsertNote',
   annotationsDeleteNote: 'annotations:deleteNote',
+  annotationsSetNoteTags: 'annotations:setNoteTags',
   annotationsAddInk: 'annotations:addInk',
   annotationsDeleteInk: 'annotations:deleteInk',
   annotationsToggleBookmark: 'annotations:toggleBookmark',
@@ -124,6 +127,7 @@ export const NoteSchema = z
       })
       .strict(),
     body: z.string().max(100_000),
+    tags: z.array(z.enum(NOTE_TAGS)).max(3).optional(),
     createdAt: TimeSchema,
     updatedAt: TimeSchema
   })
@@ -149,6 +153,9 @@ export const InkStrokesSchema = z.array(InkStrokeSchema).min(1).max(500)
 export const InkIdsSchema = z.array(IdSchema).min(1).max(500)
 /** Book width / height for the window to match; 0 releases the lock. */
 export const WindowAspectSchema = z.union([z.literal(0), z.number().min(0.3).max(4)])
+
+/** The full tag set for a note (duplicates removed by the repo). */
+export const NoteTagsSchema = z.array(z.enum(NOTE_TAGS)).max(3)
 
 /** Phrase to look up and the Wikipedia language to look it up in. */
 export const LookupQuerySchema = z.string().trim().min(1).max(300)
@@ -212,6 +219,7 @@ export interface Api {
     deleteHighlight(id: string): Promise<void>
     upsertNote(n: Note): Promise<void>
     deleteNote(id: string): Promise<void>
+    setNoteTags(id: string, tags: NoteTag[]): Promise<void>
     addInk(strokes: InkStroke[]): Promise<void>
     deleteInk(ids: string[]): Promise<void>
     /** Adds a bookmark on the page or removes the existing one (null). */

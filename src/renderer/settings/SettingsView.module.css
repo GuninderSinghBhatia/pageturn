@@ -30,7 +30,7 @@
 .back {
   padding: 6px 10px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--text);
   cursor: pointer;
@@ -87,7 +87,7 @@
   gap: 6px;
   padding: 6px 12px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   background: var(--surface);
   cursor: pointer;
 }
@@ -166,7 +166,7 @@
   max-width: 420px;
   padding: 7px 10px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   background: var(--surface);
   color: var(--text);
   font: inherit;
@@ -178,11 +178,11 @@
 }
 
 .input[aria-invalid='true'] {
-  border-color: #d9534f;
+  border-color: var(--danger);
 }
 
 .error {
   margin: 6px 0 0;
-  color: #d9534f;
+  color: var(--danger);
   font-size: 13px;
 }

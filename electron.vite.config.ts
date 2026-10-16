@@ -25,6 +25,8 @@ export default defineElectronConfig({
   preload: { resolve: { alias: shared }, build: { externalizeDeps: false } },
   renderer: defineConfig({
     resolve: { alias: { ...shared, '@renderer': resolve('src/renderer') } },
-    plugins: [react(), devCsp()]
+    plugins: [react(), devCsp()],
+    // Fonts stay files: the CSP (default-src 'self') blocks data: fonts.
+    build: { assetsInlineLimit: (file) => (/.woff2?$/.test(file) ? false : undefined) }
   })
 })

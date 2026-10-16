@@ -8,6 +8,7 @@ import {
   InkIdsSchema,
   InkStrokesSchema,
   NoteSchema,
+  NoteTagsSchema,
   PageSchema
 } from '@shared/ipc'
 import { existsSync } from 'node:fs'
@@ -52,6 +53,10 @@ export function registerAnnotationsIpc(
   })
   ipcMain.handle(Channels.annotationsDeleteNote, (_e, id: unknown) =>
     annotations.deleteNote(parse(IdSchema, id))
+  )
+
+  ipcMain.handle(Channels.annotationsSetNoteTags, (_e, id: unknown, tags: unknown) =>
+    annotations.setNoteTags(parse(IdSchema, id), parse(NoteTagsSchema, tags))
   )
 
   ipcMain.handle(Channels.annotationsAddInk, (_e, strokes: unknown) => {

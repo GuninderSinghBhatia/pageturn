@@ -1,12 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
-import type {
-  BookAnnotations,
-  Bookmark,
-  Highlight,
-  HighlightColor,
-  HighlightStyle,
-  Note
+import {
+  NOTE_TAGS,
+  type BookAnnotations,
+  type Bookmark,
+  type Highlight,
+  type HighlightColor,
+  type HighlightStyle,
+  type Note,
+  type NoteTag
 } from '@shared/types'
 
 type HighlightRow = {
@@ -27,6 +29,7 @@ type NoteRow = {
   page: number
   anchor_json: string
   body: string
+  tags_json?: string
   created_at: number
   updated_at: number
 }
@@ -57,6 +60,7 @@ const toNote = (r: NoteRow): Note => ({
   page: r.page,
   anchor: JSON.parse(r.anchor_json),
   body: r.body,
+  tags: r.tags_json ? (JSON.parse(r.tags_json) as NoteTag[]) : [],
   createdAt: r.created_at,
   updatedAt: r.updated_at
 })
@@ -126,6 +130,11 @@ export class AnnotationsRepo {
           .run(n.id, n.anchor.highlightId)
       }
     })()
+  }
+
+  setNoteTags(id: string, tags: NoteTag[]): void {
+    const unique = NOTE_TAGS.filter((t) => tags.includes(t)) // fixed order, no duplicates
+    this.db.prepare('UPDATE notes SET tags_json = ? WHERE id = ?').run(JSON.stringify(unique), id)
   }
 
   deleteNote(id: string): void {

@@ -44,7 +44,7 @@
 .navBtn {
   padding: 4px 9px;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   background: none;
   color: var(--text);
   cursor: pointer;
@@ -68,7 +68,7 @@
   width: 52px;
   padding: 3px 6px;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--radius-control);
   background: var(--bg);
   color: var(--text);
   text-align: center;
@@ -230,15 +230,15 @@
 
 .tocPopover {
   width: 300px;
-  color: #2b2b2b;
+  color: var(--pop-text);
 }
 
 .tocPopover .tocItem {
-  color: #2b2b2b;
+  color: var(--pop-text);
 }
 
 .tocPopover .tocItem:hover:not(:disabled) {
-  background: #f2f2f2;
+  background: var(--pop-hover);
 }
 
 .tocHeading {
@@ -272,7 +272,7 @@
   width: 100%;
   padding: 5px 8px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius-control);
   background: none;
   color: var(--text);
   text-align: left;
@@ -301,14 +301,14 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
-  box-shadow: 0 6px 20px rgb(0 0 0 / 0.15);
+  box-shadow: var(--shadow);
 }
 
 .findInput {
   width: 220px;
   padding: 4px 8px;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--radius-control);
   background: var(--bg);
   color: var(--text);
 }
@@ -359,9 +359,10 @@
   gap: 12px;
   width: 360px;
   padding: 20px;
-  border-radius: 10px;
+  border-radius: var(--radius-card);
   background: var(--surface);
-  box-shadow: 0 12px 40px rgb(0 0 0 / 0.25);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
 }
 
 .modal h2 {
@@ -372,7 +373,7 @@
 .modal input {
   padding: 7px 10px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   background: var(--bg);
   color: var(--text);
 }
@@ -392,7 +393,7 @@
 .modalActions button {
   padding: 6px 14px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   background: var(--bg);
   color: var(--text);
   cursor: pointer;

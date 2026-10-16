@@ -21,6 +21,10 @@ export type Theme = 'system' | 'light' | 'dark'
 
 // ---- Annotations (all coordinates normalized 0..1 of the page) ----
 
+/** Tags a note can carry on the Notes page (red / purple / yellow dots). */
+export const NOTE_TAGS = ['important', 'idea', 'review'] as const
+export type NoteTag = (typeof NOTE_TAGS)[number]
+
 export const HIGHLIGHT_COLORS = ['yellow', 'green', 'blue', 'pink', 'purple'] as const
 export type HighlightColor = (typeof HIGHLIGHT_COLORS)[number]
 
@@ -59,6 +63,8 @@ export type Note = {
   page: number
   anchor: { highlightId?: string; point?: { x: number; y: number } }
   body: string // markdown
+  /** Set from the Notes page (annotations.setNoteTags); saving a note never changes them. */
+  tags?: NoteTag[]
   createdAt: number
   updatedAt: number
 }
