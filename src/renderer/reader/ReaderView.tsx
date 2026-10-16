@@ -6,7 +6,9 @@ import { useAnnotationStore } from '../stores/annotationStore'
 import { useReaderStore } from '../stores/readerStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { PageOverlay } from './annotations/PageOverlay'
+import { PageMenu } from './annotations/PageMenu'
 import { highlightSelection } from './annotations/selection'
+import { useOverlayUi } from './annotations/uiStore'
 import { SelectionToolbarHost } from './annotations/SelectionToolbar'
 import { BookStage } from './BookStage/BookStage'
 import { SlideStage } from './BookStage/SlideStage'
@@ -21,6 +23,12 @@ import { useReaderKeys } from './useReaderKeys'
 import styles from './Reader.module.css'
 
 const ZOOM_SETTLE_MS = 150
+
+/** Pages of the spread on screen right now (lowest first). */
+function spreadPagesNow(): number[] {
+  const s = useReaderStore.getState()
+  return s.doc ? spreadPages(spreadFor(s.page, s.doc.numPages, s.layout)) : []
+}
 
 const reducedMotion = (): boolean => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -88,6 +96,11 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
     onEscape: useCallback(() => {
       setFindOpen(false)
       setTocOpen(false)
+      useOverlayUi.getState().closeAll()
+    }, []),
+    onBookmark: useCallback(() => {
+      const first = useReaderStore.getState().doc && spreadPagesNow()[0]
+      if (first) useAnnotationStore.getState().toggleBookmark(first)
     }, []),
     onHighlight: useCallback(
       () =>
@@ -218,6 +231,7 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
         </div>
       </div>
       {r.doc && <SelectionToolbarHost rootRef={viewportRef} />}
+      {r.doc && <PageMenu rootRef={viewportRef} />}
       {findOpen && r.doc && (
         <FindBar
           doc={r.doc}

@@ -187,3 +187,57 @@ test('highlights stay clickable after layout and zoom changes (Review Focus 5); 
     await app.close()
   }
 })
+
+test('a free note added by right-click persists across a restart', async () => {
+  const userData = makeUserDataDir()
+  let { app, page } = await launchApp(userData)
+  try {
+    await openAtSpread2(page)
+    const box = (await page.locator('[data-page-overlay="3"]').boundingBox())!
+    await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.9, { button: 'right' })
+    await page.getByRole('menuitem', { name: 'Add note here' }).click()
+    await page.getByRole('textbox', { name: 'Note' }).fill('remember')
+    await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.05) // click elsewhere
+    await expect(page.getByRole('textbox', { name: 'Note' })).toHaveCount(0)
+    await expect
+      .poll(async () => (await stored(page)).notes)
+      .toMatchObject([{ page: 3, body: 'remember', anchor: { point: {} } }])
+  } finally {
+    await app.close()
+  }
+  ;({ app, page } = await launchApp(userData))
+  try {
+    await openAtSpread2(page)
+    await page.locator('[data-page-overlay="3"]').getByRole('button', { name: /^Note/ }).click()
+    await expect(page.getByRole('textbox', { name: 'Note' })).toHaveValue('remember')
+  } finally {
+    await app.close()
+  }
+})
+
+test('Ctrl+D bookmarks the left page of the spread and survives a restart', async () => {
+  const userData = makeUserDataDir()
+  let { app, page } = await launchApp(userData)
+  const ribbon = (p: typeof page): ReturnType<typeof page.getByRole> =>
+    p.getByRole('button', { name: 'Bookmark page 2' })
+  try {
+    await openAtSpread2(page)
+    await expect(ribbon(page)).toHaveAttribute('aria-pressed', 'false')
+    await page.keyboard.press('Control+d')
+    await expect(ribbon(page)).toHaveAttribute('aria-pressed', 'true')
+    await expect.poll(async () => (await stored(page)).bookmarks.map((b) => b.page)).toEqual([2])
+  } finally {
+    await app.close()
+  }
+  ;({ app, page } = await launchApp(userData))
+  try {
+    await openAtSpread2(page)
+    await expect(ribbon(page)).toHaveAttribute('aria-pressed', 'true')
+    await page.keyboard.press('Control+d')
+    await expect(ribbon(page)).toHaveAttribute('aria-pressed', 'false')
+    await page.getByRole('button', { name: 'Bookmark page 3' }).click()
+    await expect.poll(async () => (await stored(page)).bookmarks.map((b) => b.page)).toEqual([3])
+  } finally {
+    await app.close()
+  }
+})

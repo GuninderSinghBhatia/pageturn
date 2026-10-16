@@ -100,3 +100,82 @@
   font-size: 13px;
   resize: vertical;
 }
+
+/* ---- Free notes ---- */
+.sticky {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #d9b84a;
+  border-radius: 4px 4px 4px 0;
+  background: #ffe680;
+  color: #6b5413;
+  font-size: 13px;
+  line-height: 22px;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.2);
+  cursor: pointer;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+}
+
+/* ---- Bookmark ribbon ---- */
+.ribbon {
+  position: absolute;
+  top: -4px;
+  width: 22px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: var(--accent);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%);
+  opacity: 0;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: opacity 120ms;
+}
+
+.ribbonRight {
+  right: 28px;
+}
+
+.ribbonLeft {
+  left: 28px;
+}
+
+.ribbon:hover,
+.ribbon:focus-visible {
+  opacity: 0.45;
+}
+
+.ribbon[aria-pressed='true'] {
+  opacity: 1;
+}
+
+/* ---- Page context menu ---- */
+.menu {
+  position: fixed;
+  z-index: 40;
+  min-width: 150px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
+}
+
+.menu button {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu button:hover {
+  background: var(--hover);
+}

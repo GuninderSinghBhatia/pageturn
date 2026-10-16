@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { selectPage, useAnnotationStore } from '../../stores/annotationStore'
+import { useReaderStore } from '../../stores/readerStore'
 import type { OpenedDoc } from '../pdf/pdfService'
 import { TextLayer } from '../pdf/TextLayer'
 import { drawPageAnnotations } from './draw'
+import { FreeNotes } from './FreeNotes'
 import { HighlightPopover } from './HighlightPopover'
 import { hitHighlight } from './rects'
+import { Ribbon } from './Ribbon'
 import styles from './Annotations.module.css'
 
 type Props = { doc: OpenedDoc; page: number; width: number; height: number }
@@ -27,6 +30,8 @@ export function PageOverlay({ doc, page, width, height }: Props): React.JSX.Elem
   const ann = useAnnotationStore((s) => selectPage(s, page))
   const [open, setOpen] = useState<Open | null>(null)
   const close = useCallback(() => setOpen(null), [])
+  // In a spread, even pages sit on the left (page 1 is a cover on the right).
+  const side = useReaderStore((s) => (s.layout === 'spread' && page % 2 === 0 ? 'left' : 'right'))
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -80,6 +85,8 @@ export function PageOverlay({ doc, page, width, height }: Props): React.JSX.Elem
     >
       <canvas ref={canvasRef} className={styles.annotationCanvas} style={{ width, height }} />
       <TextLayer doc={doc} page={page} width={width} />
+      <FreeNotes page={page} notes={ann.freeNotes} width={width} height={height} />
+      <Ribbon page={page} bookmarked={!!ann.bookmark} side={side} />
       {openHighlight && (
         <HighlightPopover
           key={openHighlight.id}
