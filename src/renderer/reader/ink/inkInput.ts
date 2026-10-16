@@ -40,7 +40,9 @@ type Options = {
   drawWithMouse: boolean
   onLive(page: number, stroke: InkStroke | null): void
   onCommit(page: number, stroke: InkStroke): void
-  onErase(page: number, p: { x: number; y: number }): void
+  /** Eraser at p; `aspect` = page height / width (for distances in page widths). */
+  onErase(page: number, p: { x: number; y: number }, aspect: number): void
+  onEraseEnd(page: number): void
 }
 
 const clamp = (v: number): number => Math.min(1.05, Math.max(-0.05, v))
@@ -101,7 +103,7 @@ export function useInkInput(opts: Options): void {
           createdAt: Date.now()
         }
       }
-      if (action === 'erase') o.onErase(hit.page, p)
+      if (action === 'erase') o.onErase(hit.page, p, box.height / box.width)
       else o.onLive(hit.page, active.stroke)
     }
 
@@ -111,7 +113,8 @@ export function useInkInput(opts: Options): void {
       // Chromium sends synthetic button-less moves (e.g. on repaint); only follow a held button.
       const events = (e.getCoalescedEvents?.() ?? [e]).filter((ev) => ev.buttons !== 0)
       if (active.action === 'erase') {
-        for (const ev of events) latest.current.onErase(active.page, local(active.box, ev))
+        const aspect = active.box.height / active.box.width
+        for (const ev of events) latest.current.onErase(active.page, local(active.box, ev), aspect)
         return
       }
       const points = [...active.stroke.points]
@@ -128,6 +131,7 @@ export function useInkInput(opts: Options): void {
       e.stopPropagation()
       const done = active
       active = null
+      if (done.action === 'erase') latest.current.onEraseEnd(done.page)
       if (done.action === 'draw') {
         latest.current.onLive(done.page, null)
         if (done.stroke.points.length >= 2) latest.current.onCommit(done.page, done.stroke)

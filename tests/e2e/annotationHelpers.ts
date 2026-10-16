@@ -21,8 +21,11 @@ type Box = { x: number; y: number; width: number; height: number; text: string }
 
 /** Bounding boxes of the non-empty text spans on one page (waits for the text layer). */
 export async function spans(page: Page, p: number): Promise<Box[]> {
+  await expect(page.locator(`[data-page-overlay="${p}"] .textLayer`)).toHaveAttribute(
+    'data-rendered',
+    'true'
+  )
   const loc = page.locator(`[data-page-overlay="${p}"] .textLayer span`)
-  await expect(loc.first()).toBeAttached()
   return loc.evaluateAll((els) =>
     els
       .map((e) => ({ r: e.getBoundingClientRect(), text: e.textContent ?? '' }))

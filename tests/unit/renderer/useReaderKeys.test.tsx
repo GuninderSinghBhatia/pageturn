@@ -11,7 +11,10 @@ const handlers = {
   onEscape: vi.fn(),
   onHighlight: vi.fn(() => true),
   onBookmark: vi.fn(),
-  onTogglePen: vi.fn()
+  onTogglePen: vi.fn(),
+  onEraser: vi.fn(),
+  onUndo: vi.fn(() => true),
+  onRedo: vi.fn(() => true)
 }
 const store = { requestTurn: vi.fn(), goTo: vi.fn(), setZoom: vi.fn() }
 
