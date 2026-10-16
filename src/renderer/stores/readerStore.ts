@@ -25,7 +25,8 @@ type ReaderState = {
   status: Status
   error: string | null
   passwordRequest: { retry: boolean } | null
-  open(bookId: string): Promise<void>
+  /** Opens a book at `startPage`, or where the reader left off. */
+  open(bookId: string, startPage?: number): Promise<void>
   goTo(page: number): void
   next(): void
   prev(): void
@@ -73,7 +74,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   layout: 'spread',
   layoutMode: 'auto',
 
-  open: async (bookId) => {
+  open: async (bookId, startPage) => {
     get().close()
     set({ ...initial, bookId, status: 'loading' })
     try {
@@ -88,7 +89,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       })
       if (get().bookId !== bookId) return doc.destroy() // closed while loading
       const page = spreadStart(
-        Math.min(Math.max(1, book?.lastPage ?? 1), doc.numPages),
+        Math.min(Math.max(1, startPage ?? book?.lastPage ?? 1), doc.numPages),
         get().layout
       )
       set({ doc, page, status: 'ready', passwordRequest: null })

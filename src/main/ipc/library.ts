@@ -53,6 +53,10 @@ export function registerLibraryIpc(repo: BooksRepo, win: BrowserWindow): void {
     return res.canceled || res.filePaths.length === 0 ? [] : importAsBooks(repo, res.filePaths)
   })
 
+  ipcMain.handle(Channels.librarySetLiked, (_e, id: unknown, liked: unknown) => {
+    repo.setLiked(getRow(id).id, parse(z.boolean(), liked))
+  })
+
   ipcMain.handle(Channels.libraryRemove, async (_e, id: unknown, deleteAnnotations: unknown) => {
     const row = getRow(id)
     if (parse(z.boolean(), deleteAnnotations)) repo.purge(row.id)

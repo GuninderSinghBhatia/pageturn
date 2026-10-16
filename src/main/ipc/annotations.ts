@@ -10,7 +10,11 @@ import {
   NoteSchema,
   PageSchema
 } from '@shared/ipc'
+import { existsSync } from 'node:fs'
+import type { NotesGroup } from '@shared/ipc'
 import type { BookAnnotations } from '@shared/types'
+import { toBook } from '../library/import'
+import { thumbDir } from './library'
 import type { AnnotationsRepo } from '../db/repositories/annotations'
 import type { BooksRepo } from '../db/repositories/books'
 import type { InkRepo } from '../db/repositories/ink'
@@ -69,6 +73,21 @@ export function registerAnnotationsIpc(
         id === undefined || id === null ? undefined : parse(IdSchema, id)
       )
   )
+
+  // Notes for the home page: grouped by book in order of each book's newest note; books that
+  // were removed from the library are left out.
+  ipcMain.handle(Channels.annotationsListAllNotes, (): NotesGroup[] => {
+    const visible = new Map(books.list().map((b) => [b.id, b]))
+    const groups = new Map<string, NotesGroup>()
+    for (const row of annotations.listAllNotes()) {
+      const book = visible.get(row.note.bookId)
+      if (!book) continue
+      let g = groups.get(book.id)
+      if (!g) groups.set(book.id, (g = { book: toBook(book, existsSync, thumbDir()), notes: [] }))
+      g.notes.push(row)
+    }
+    return [...groups.values()]
+  })
 
   ipcMain.handle(Channels.annotationsRenameBookmark, (_e, id: unknown, label: unknown) =>
     annotations.renameBookmark(parse(IdSchema, id), parse(BookmarkLabelSchema, label) ?? null)

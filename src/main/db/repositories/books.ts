@@ -22,6 +22,7 @@ type DbRow = {
   last_page: number
   added_at: number
   last_opened_at: number | null
+  liked: number
 }
 
 const toRow = (r: DbRow): BookRow => ({
@@ -32,7 +33,8 @@ const toRow = (r: DbRow): BookRow => ({
   numPages: r.num_pages,
   lastPage: r.last_page,
   addedAt: r.added_at,
-  lastOpenedAt: r.last_opened_at
+  lastOpenedAt: r.last_opened_at,
+  liked: r.liked === 1
 })
 
 export class BooksRepo {
@@ -97,6 +99,10 @@ export class BooksRepo {
         meta.numPages,
         id
       )
+  }
+
+  setLiked(id: string, liked: boolean): void {
+    this.db.prepare('UPDATE books SET liked = ? WHERE id = ?').run(liked ? 1 : 0, id)
   }
 
   /** Removes from the library but keeps annotations; re-importing (upsert) restores it. */

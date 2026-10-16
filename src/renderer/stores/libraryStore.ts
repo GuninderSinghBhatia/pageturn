@@ -8,6 +8,8 @@ type LibraryState = {
   refresh(): Promise<void>
   importPaths(paths: string[]): Promise<Book[]>
   openBook(id: string): void
+  /** Heart on the card; optimistic, reverted if saving fails. */
+  setLiked(id: string, liked: boolean): void
 }
 
 const attempted = new Set<string>() // books we already tried to thumbnail this session
@@ -46,5 +48,11 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     await get().refresh()
     return books
   },
-  openBook: (id) => useNav.getState().goReader(id)
+  openBook: (id) => useNav.getState().goReader(id),
+  setLiked: (id, liked) => {
+    const put = (v: boolean): void =>
+      set({ books: get().books.map((b) => (b.id === id ? { ...b, liked: v } : b)) })
+    put(liked)
+    window.api.library.setLiked(id, liked).catch(() => put(!liked))
+  }
 }))

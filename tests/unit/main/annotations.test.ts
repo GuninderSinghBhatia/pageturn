@@ -201,3 +201,26 @@ describe('book removal', () => {
     expect(books.get(bookId)).not.toBeNull()
   })
 })
+
+describe('home page data', () => {
+  it('books can be liked, and the flag persists', () => {
+    expect(books.list()[0].liked).toBe(false)
+    books.setLiked(bookId, true)
+    expect(books.list()[0].liked).toBe(true)
+    books.setLiked(bookId, false)
+    expect(books.get(bookId)!.liked).toBe(false)
+  })
+
+  it('listAllNotes returns every note with its highlighted passage, newest first', () => {
+    const h = highlight({ text: 'the passage' })
+    repo.upsertHighlight(h)
+    repo.upsertNote(
+      note({ anchor: { highlightId: h.id }, body: 'on the passage', updatedAt: 2000 })
+    )
+    repo.upsertNote(note({ page: 9, body: 'free note', updatedAt: 3000 }))
+    expect(repo.listAllNotes().map((r) => [r.note.body, r.quote, r.note.bookId])).toEqual([
+      ['free note', null, bookId],
+      ['on the passage', 'the passage', bookId]
+    ])
+  })
+})

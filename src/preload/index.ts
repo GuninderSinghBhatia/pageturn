@@ -15,6 +15,7 @@ const api: Api = {
     getFile: (bookId) => invoke(Channels.libraryGetFile, bookId),
     saveThumbnail: (bookId, png) => invoke(Channels.librarySaveThumbnail, bookId, png),
     updateMeta: (bookId, meta) => invoke(Channels.libraryUpdateMeta, bookId, meta),
+    setLiked: (bookId, liked) => invoke(Channels.librarySetLiked, bookId, liked),
     onOpenRequest: (cb) => {
       const listener = (_e: IpcRendererEvent, book: Book): void => cb(book)
       ipcRenderer.on(Channels.libraryOpenRequest, listener)
@@ -44,7 +45,8 @@ const api: Api = {
     deleteInk: (ids) => invoke(Channels.annotationsDeleteInk, ids),
     toggleBookmark: (bookId, page, label, id) =>
       invoke(Channels.annotationsToggleBookmark, bookId, page, label, id),
-    renameBookmark: (id, label) => invoke(Channels.annotationsRenameBookmark, id, label)
+    renameBookmark: (id, label) => invoke(Channels.annotationsRenameBookmark, id, label),
+    listAllNotes: () => invoke(Channels.annotationsListAllNotes)
   },
   window: {
     fitAspect: (aspect) => invoke(Channels.windowFitAspect, aspect),

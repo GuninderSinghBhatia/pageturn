@@ -7,6 +7,7 @@ export type Book = {
   lastPage: number
   addedAt: number
   lastOpenedAt: number | null
+  liked: boolean
   missing: boolean
   thumbnailUrl: string | null
 }

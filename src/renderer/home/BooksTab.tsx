@@ -1,27 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNav } from '../app/nav'
+import { displayTitle } from '../library/displayTitle'
+import { RemoveDialog } from '../library/RemoveDialog'
 import { useLibraryStore } from '../stores/libraryStore'
 import { BookCard } from './BookCard'
-import { displayTitle } from './displayTitle'
-import styles from './LibraryView.module.css'
-import { RemoveDialog } from './RemoveDialog'
+import styles from './Home.module.css'
 
-type Sort = 'recent' | 'title'
 type Menu = { bookId: string; x: number; y: number } | null
 
-export function LibraryView(): React.JSX.Element {
-  const { books, refresh, importPaths, openBook } = useLibraryStore()
-  const openSettings = useNav((s) => s.openSettings)
-  const [query, setQuery] = useState('')
-  const [sort, setSort] = useState<Sort>('recent')
+/** Every book as a card grid; filtered by the top bar's search. Drop PDFs anywhere to add. */
+export function BooksTab({ query, onAdd }: { query: string; onAdd(): void }): React.JSX.Element {
+  const { books, refresh, importPaths, openBook, setLiked } = useLibraryStore()
   const [menu, setMenu] = useState<Menu>(null)
   const [dragging, setDragging] = useState(false)
   const [removing, setRemoving] = useState<string | null>(null)
-
-  useEffect(() => {
-    void refresh()
-    return window.api.library.onChanged(() => void refresh())
-  }, [refresh])
 
   // Window-wide drop zone for PDFs.
   useEffect(() => {
@@ -57,75 +48,45 @@ export function LibraryView(): React.JSX.Element {
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const list = q ? books.filter((b) => displayTitle(b).toLowerCase().includes(q)) : [...books]
-    if (sort === 'title') {
-      list.sort((a, b) =>
-        displayTitle(a).localeCompare(displayTitle(b), undefined, { sensitivity: 'base' })
-      )
-    }
-    return list
-  }, [books, query, sort])
+    if (!q) return books
+    return books.filter(
+      (b) => displayTitle(b).toLowerCase().includes(q) || (b.author ?? '').toLowerCase().includes(q)
+    )
+  }, [books, query])
 
   const relocate = async (id: string): Promise<void> => {
     if (await window.api.library.relocate(id)) await refresh()
   }
+  const removingBook = books.find((b) => b.id === removing)
 
   return (
-    <div className={styles.page}>
-      <header className={`${styles.toolbar} app-drag`}>
-        <h1 className={styles.brand}>PageTurn</h1>
-        <input
-          className={styles.search}
-          type="search"
-          placeholder="Search titles"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <label className={styles.sortLabel}>
-          Sort
-          <select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
-            <option value="recent">Recent</option>
-            <option value="title">Title</option>
-          </select>
-        </label>
-        <button
-          className={styles.primary}
-          onClick={async () => {
-            if ((await window.api.library.openDialog()).length) await refresh()
-          }}
-        >
-          Open PDF
-        </button>
-        <button
-          className={styles.iconBtn}
-          onClick={openSettings}
-          title="Settings"
-          aria-label="Settings"
-        >
-          ⚙
-        </button>
-      </header>
-
+    <>
       {books.length === 0 ? (
-        <div className={styles.empty}>
-          <p>Your library is empty.</p>
-          <p>Drop PDF files here, or use “Open PDF”.</p>
+        <div className={styles.emptyCard}>
+          <h2>Your library is empty</h2>
+          <p>Add PDFs to start reading, or drop them anywhere in this window.</p>
+          <button className={styles.primary} onClick={onAdd}>
+            Add books
+          </button>
         </div>
+      ) : visible.length === 0 ? (
+        <p className={styles.muted}>No books match “{query}”.</p>
       ) : (
-        <main className={styles.grid}>
+        <div className={styles.grid}>
           {visible.map((b) => (
             <BookCard
               key={b.id}
               book={b}
               onOpen={() => openBook(b.id)}
               onRelocate={() => void relocate(b.id)}
+              onLike={(liked) => setLiked(b.id, liked)}
               onContextMenu={(e) => {
                 e.preventDefault()
                 setMenu({ bookId: b.id, x: e.clientX, y: e.clientY })
               }}
             />
           ))}
-        </main>
+        </div>
       )}
 
       {menu && (
@@ -144,10 +105,7 @@ export function LibraryView(): React.JSX.Element {
 
       {removing && (
         <RemoveDialog
-          title={(() => {
-            const b = books.find((x) => x.id === removing)
-            return b ? displayTitle(b) : 'this book'
-          })()}
+          title={removingBook ? displayTitle(removingBook) : 'this book'}
           onCancel={() => setRemoving(null)}
           onConfirm={async (deleteAnnotations) => {
             const id = removing
@@ -157,7 +115,8 @@ export function LibraryView(): React.JSX.Element {
           }}
         />
       )}
+
       {dragging && <div className={styles.dropOverlay}>Drop PDFs to add them</div>}
-    </div>
+    </>
   )
 }
