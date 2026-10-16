@@ -1,13 +1,16 @@
 import { create } from 'zustand'
 
-export type View = 'library' | { reader: string }
+export type View = 'library' | { reader: string; page?: number }
+export type HomeTab = 'books' | 'notes' | 'online' | 'settings'
 
 type NavState = {
   view: View
   settingsOpen: boolean
+  homeTab: HomeTab
   goLibrary(): void
-  goReader(bookId: string): void
+  goReader(bookId: string, page?: number): void
   openSettings(): void
+  setHomeTab(tab: HomeTab): void
   closeSettings(): void
 }
 
@@ -18,8 +21,10 @@ type NavState = {
 export const useNav = create<NavState>((set) => ({
   view: 'library',
   settingsOpen: false,
+  homeTab: 'books',
   goLibrary: () => set({ view: 'library', settingsOpen: false }),
-  goReader: (bookId) => set({ view: { reader: bookId }, settingsOpen: false }),
+  goReader: (bookId, page) => set({ view: { reader: bookId, page }, settingsOpen: false }),
   openSettings: () => set({ settingsOpen: true }),
+  setHomeTab: (homeTab) => set({ homeTab }),
   closeSettings: () => set({ settingsOpen: false })
 }))

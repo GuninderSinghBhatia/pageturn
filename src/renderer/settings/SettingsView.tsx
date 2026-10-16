@@ -67,25 +67,38 @@ function Choice<K extends keyof Settings>({
 }
 
 /** Reading preferences; every change is saved immediately. */
-export function SettingsView({ onBack }: { onBack(): void }): React.JSX.Element {
+export function SettingsView({
+  onBack,
+  embedded
+}: {
+  onBack?: () => void
+  embedded?: boolean // shown as the home page's Settings tab
+}): React.JSX.Element {
   const turnSound = useSettingsStore((s) => s.settings.turnSound)
   const showBookmarkTabs = useSettingsStore((s) => s.settings.showBookmarkTabs)
   const set = useSettingsStore((s) => s.set)
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onBack()
+      if (e.key === 'Escape') onBack?.()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onBack])
   return (
-    <div className={styles.page} role="dialog" aria-label="Settings" data-testid="settings">
-      <header className={`${styles.toolbar} app-drag`}>
-        <button className={styles.back} onClick={onBack}>
-          ← Back
-        </button>
-        <h1 className={styles.title}>Settings</h1>
-      </header>
+    <div
+      className={embedded ? styles.embedded : styles.page}
+      role={embedded ? undefined : 'dialog'}
+      aria-label="Settings"
+      data-testid="settings"
+    >
+      {!embedded && (
+        <header className={`${styles.toolbar} app-drag`}>
+          <button className={styles.back} onClick={onBack}>
+            ← Back
+          </button>
+          <h1 className={styles.title}>Settings</h1>
+        </header>
+      )}
       <main className={styles.body}>
         <h2 className={styles.section}>Reading</h2>
         <ThemeSetting />

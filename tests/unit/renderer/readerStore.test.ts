@@ -6,6 +6,7 @@ vi.mock('@renderer/reader/pdf/pdfService', () => ({
 }))
 
 import { useReaderStore } from '@renderer/stores/readerStore'
+import { openPdf } from '@renderer/reader/pdf/pdfService'
 import type { OpenedDoc } from '@renderer/reader/pdf/pdfService'
 
 const saveProgress = vi.fn(async () => {})
@@ -75,5 +76,25 @@ describe('readerStore navigation', () => {
     expect(useReaderStore.getState().zoom).toBe(4)
     useReaderStore.getState().setZoom(0.8)
     expect(useReaderStore.getState().zoom).toBe(1)
+  })
+
+  it('open(bookId, page) starts at that page instead of the saved one', async () => {
+    vi.useRealTimers()
+    const doc = { numPages: 200, destroy: vi.fn(), pageSize: () => ({ width: 1, height: 1 }) }
+    vi.mocked(openPdf).mockResolvedValue(doc as unknown as OpenedDoc)
+    ;(globalThis as unknown as { window: unknown }).window = {
+      api: {
+        reader: { saveProgress },
+        library: {
+          list: vi.fn(async () => [{ id: bookId, lastPage: 10, numPages: 200 }]),
+          getFile: vi.fn(async () => new ArrayBuffer(8)),
+          updateMeta: vi.fn(async () => {})
+        }
+      }
+    }
+    await useReaderStore.getState().open(bookId, 41)
+    expect(useReaderStore.getState().page).toBe(40) // spread start of page 41
+    await useReaderStore.getState().open(bookId)
+    expect(useReaderStore.getState().page).toBe(10)
   })
 })

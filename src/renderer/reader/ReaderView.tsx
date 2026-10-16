@@ -40,7 +40,13 @@ const bookmarkFirstVisible = (): void => {
 }
 
 /** The open book and nothing else; tools appear on demand (top edge, right-click, keys). */
-export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
+export function ReaderView({
+  bookId,
+  startPage
+}: {
+  bookId: string
+  startPage?: number
+}): React.JSX.Element {
   const { goLibrary } = useNav()
   const r = useReaderStore()
   const settings = useSettingsStore((s) => s.settings)
@@ -52,7 +58,7 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
   useEffect(() => {
     const s = useReaderStore.getState()
     s.setLayoutMode(useSettingsStore.getState().settings.layout)
-    void s.open(bookId)
+    void s.open(bookId, startPage)
     void useAnnotationStore
       .getState()
       .load(bookId)
@@ -62,7 +68,7 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
       useAnnotationStore.getState().clear()
       resetChrome()
     }
-  }, [bookId])
+  }, [bookId, startPage])
 
   useEffect(() => {
     if (r.status === 'cancelled') goLibrary()

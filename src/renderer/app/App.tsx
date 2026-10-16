@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { LibraryView } from '../library/LibraryView'
+import { HomeView } from '../home/HomeView'
 import { ReaderView } from '../reader/ReaderView'
 import { SettingsView } from '../settings/SettingsView'
 import { useLibraryStore } from '../stores/libraryStore'
@@ -27,7 +27,11 @@ function App(): React.JSX.Element {
 
   return (
     <>
-      {view === 'library' ? <LibraryView /> : <ReaderView key={view.reader} bookId={view.reader} />}
+      {view === 'library' ? (
+        <HomeView />
+      ) : (
+        <ReaderView key={view.reader} bookId={view.reader} startPage={view.page} />
+      )}
       {settingsOpen && <SettingsView onBack={closeSettings} />}
       <Toasts />
     </>

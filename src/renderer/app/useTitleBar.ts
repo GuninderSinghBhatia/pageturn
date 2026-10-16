@@ -23,7 +23,17 @@ export function useTitleBar(): void {
   useEffect(() => {
     const darkUi = document.documentElement.dataset.theme === 'dark'
     const reading = view !== 'library' && !settingsOpen
-    const color = reading ? PAPER[paperTint] : darkUi ? '#262320' : '#fffdf9'
+    // Home page top bar: #24253D dark / white light; Settings overlay uses the app surface.
+    const home = view === 'library' && !settingsOpen
+    const color = reading
+      ? PAPER[paperTint]
+      : home
+        ? darkUi
+          ? '#24253d'
+          : '#ffffff'
+        : darkUi
+          ? '#262320'
+          : '#fffdf9'
     const darkBg = reading ? paperTint === 'dark' : darkUi
     void window.api.window.setTitleBar({ color, symbolColor: darkBg ? '#dadada' : '#5b5550' })
   }, [view, settingsOpen, theme, paperTint])

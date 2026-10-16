@@ -164,6 +164,18 @@ export class AnnotationsRepo {
     this.db.prepare('UPDATE bookmarks SET label = ? WHERE id = ?').run(label, id)
   }
 
+  /** Every note in the library, newest first, with the passage of its highlight (if any). */
+  listAllNotes(): { note: Note; quote: string | null }[] {
+    const rows = this.db
+      .prepare(
+        `SELECT notes.*, highlights.text AS quote FROM notes
+         LEFT JOIN highlights ON highlights.id = json_extract(notes.anchor_json, '$.highlightId')
+         ORDER BY notes.updated_at DESC`
+      )
+      .all() as (NoteRow & { quote: string | null })[]
+    return rows.map((r) => ({ note: toNote(r), quote: r.quote }))
+  }
+
   deleteAllForBook(bookId: string): void {
     this.db.transaction(() => {
       for (const t of ['highlights', 'notes', 'bookmarks', 'ink_strokes']) {

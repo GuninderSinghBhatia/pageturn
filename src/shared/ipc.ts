@@ -23,6 +23,7 @@ export const Channels = {
   libraryGetFile: 'library:getFile',
   librarySaveThumbnail: 'library:saveThumbnail',
   libraryUpdateMeta: 'library:updateMeta',
+  librarySetLiked: 'library:setLiked',
   libraryOpenRequest: 'library:openRequest', // event: main → renderer
   libraryChanged: 'library:changed', // event: main → renderer (import/remove/relocate)
   readerSaveProgress: 'reader:saveProgress',
@@ -37,6 +38,7 @@ export const Channels = {
   annotationsDeleteInk: 'annotations:deleteInk',
   annotationsToggleBookmark: 'annotations:toggleBookmark',
   annotationsRenameBookmark: 'annotations:renameBookmark',
+  annotationsListAllNotes: 'annotations:listAllNotes',
   windowFitAspect: 'window:fitAspect',
   windowSetTitleBar: 'window:setTitleBar'
 } as const
@@ -149,6 +151,7 @@ export const BookmarkLabelSchema = z.string().max(200).nullable().optional()
 
 export type BookMeta = z.infer<typeof BookMetaSchema>
 export type SettingsPartial = Partial<Settings>
+export type NotesGroup = { book: Book; notes: { note: Note; quote: string | null }[] }
 
 export interface Api {
   library: {
@@ -161,6 +164,7 @@ export interface Api {
     getFile(bookId: string): Promise<ArrayBuffer>
     saveThumbnail(bookId: string, png: ArrayBuffer): Promise<string>
     updateMeta(bookId: string, meta: BookMeta): Promise<void>
+    setLiked(bookId: string, liked: boolean): Promise<void>
     onOpenRequest(cb: (book: Book) => void): () => void
     onChanged(cb: () => void): () => void
     /** Absolute path of a dropped File (Electron webUtils). */
@@ -189,6 +193,8 @@ export interface Api {
       id?: string
     ): Promise<Bookmark | null>
     renameBookmark(id: string, label: string | null): Promise<void>
+    /** Notes across the whole library, grouped by book (newest activity first). */
+    listAllNotes(): Promise<NotesGroup[]>
   }
   window: {
     /** Keeps a normal window in the book's shape (width / height); 0 releases it. */

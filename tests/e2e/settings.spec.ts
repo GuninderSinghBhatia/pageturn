@@ -36,10 +36,8 @@ test('settings apply live to the open book and persist across restarts', async (
   ;({ app, page } = await launchApp(userData))
   try {
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-    await page.getByRole('button', { name: 'Settings' }).click()
+    await page.getByRole('tab', { name: 'Settings' }).click()
     await expect(page.getByRole('radio', { name: 'Slide' })).toBeChecked()
-    await page.keyboard.press('Escape')
-    await expect(page.getByTestId('settings')).toHaveCount(0)
   } finally {
     await app.close()
   }
