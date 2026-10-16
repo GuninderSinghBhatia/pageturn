@@ -7,6 +7,7 @@ type Handlers = {
   onFocusPageBox(): void
   onEscape(): void
   onHighlight(): boolean // highlight the current text selection; false if there is none
+  onBookmark(): void
 }
 
 const ZOOM_STEP = 1.25
@@ -22,16 +23,26 @@ function toggleFullscreen(): void {
 }
 
 /** Reader keyboard shortcuts (spec §4.8 subset). */
-export function useReaderKeys({ onFind, onFocusPageBox, onEscape, onHighlight }: Handlers): void {
+export function useReaderKeys({
+  onFind,
+  onFocusPageBox,
+  onEscape,
+  onHighlight,
+  onBookmark
+}: Handlers): void {
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       const s = useReaderStore.getState()
       if (!s.doc || useNav.getState().settingsOpen) return
       const ctrl = e.ctrlKey || e.metaKey
+      const typing = isTyping(e.target)
       if (ctrl) {
         const k = e.key.toLowerCase()
         if (k === 'f') onFind()
         else if (k === 'g') onFocusPageBox()
+        // Everything else is left to text fields (Ctrl+Z is text undo there, etc.).
+        else if (typing) return
+        else if (k === 'd') onBookmark()
         else if (k === '=' || k === '+') s.setZoom(s.zoom * ZOOM_STEP)
         else if (k === '-') s.setZoom(s.zoom / ZOOM_STEP)
         else if (k === '0') s.setZoom(1)
@@ -49,7 +60,7 @@ export function useReaderKeys({ onFind, onFocusPageBox, onEscape, onHighlight }:
         toggleFullscreen()
         return
       }
-      if (isTyping(e.target)) return
+      if (typing) return
       const canTurn = s.zoom <= 1 // zoomed in: keys scroll/pan instead
       switch (e.key) {
         case 'ArrowRight':
@@ -80,5 +91,5 @@ export function useReaderKeys({ onFind, onFocusPageBox, onEscape, onHighlight }:
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onFind, onFocusPageBox, onEscape, onHighlight])
+  }, [onFind, onFocusPageBox, onEscape, onHighlight, onBookmark])
 }
