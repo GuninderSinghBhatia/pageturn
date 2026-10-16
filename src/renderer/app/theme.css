@@ -6,6 +6,7 @@
   --surface: #fffdf9;
   --paper: #fbf7ef;
   --desk: #e9e4dc;
+  --reader-bg: linear-gradient(#7f8d9c, #6e7c8b);
   --text: #2a2723;
   --muted: #7a736a;
   --border: #e3ddd3;
@@ -22,6 +23,7 @@
   --surface: #262320;
   --paper: #2e2a26;
   --desk: #161412;
+  --reader-bg: #1e1f22;
   --text: #ece6dc;
   --muted: #a39a8e;
   --border: #3b3631;

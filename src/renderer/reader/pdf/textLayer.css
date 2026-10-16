@@ -49,7 +49,7 @@
 }
 
 .textLayer ::selection {
-  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  background: rgb(191 217 242 / 0.7); /* #BFD9F2 */
   color: transparent;
 }
 

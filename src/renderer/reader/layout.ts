@@ -3,8 +3,10 @@ import type { LayoutMode } from '@shared/types'
 export type ResolvedLayout = 'spread' | 'single'
 export type Spread = { left: number | null; right: number | null } // 1-based page numbers
 
-export function resolveLayout(mode: LayoutMode, aspect: number): ResolvedLayout {
-  if (mode === 'auto') return aspect >= 1.2 ? 'spread' : 'single'
+const MIN_SPREAD_WIDTH = 1000 // px: narrower windows show one page
+
+export function resolveLayout(mode: LayoutMode, aspect: number, width = Infinity): ResolvedLayout {
+  if (mode === 'auto') return aspect >= 1.2 && width >= MIN_SPREAD_WIDTH ? 'spread' : 'single'
   return mode
 }
 
@@ -51,7 +53,7 @@ export function fitPageSize(
   pageSize: { width: number; height: number },
   viewport: { width: number; height: number },
   layout: ResolvedLayout,
-  margin = 32
+  margin = 24
 ): { width: number; height: number } {
   const availW = Math.max(1, viewport.width - 2 * margin) / (layout === 'spread' ? 2 : 1)
   const availH = Math.max(1, viewport.height - 2 * margin)

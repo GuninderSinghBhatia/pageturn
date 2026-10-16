@@ -2,7 +2,17 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--desk, #e9e4dc);
+  background: var(--reader-bg);
+}
+
+.viewport > * {
+  animation: bookIn 250ms ease-out;
+}
+
+@keyframes bookIn {
+  from {
+    opacity: 0;
+  }
 }
 
 /* ---- Nav bar ---- */
@@ -103,7 +113,7 @@
 .spread {
   display: flex;
   position: relative;
-  filter: drop-shadow(0 8px 18px rgb(0 0 0 / 0.18));
+  filter: drop-shadow(0 20px 40px rgb(0 0 0 / 0.25));
 }
 
 .gutter {
@@ -117,9 +127,9 @@
   background: linear-gradient(
     to right,
     transparent,
-    rgb(0 0 0 / 0.12) 45%,
-    rgb(0 0 0 / 0.18) 50%,
-    rgb(0 0 0 / 0.12) 55%,
+    rgb(0 0 0 / 0.05) 40%,
+    rgb(0 0 0 / 0.08) 50%,
+    rgb(0 0 0 / 0.05) 60%,
     transparent
   );
 }

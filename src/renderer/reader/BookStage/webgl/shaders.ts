@@ -89,7 +89,7 @@ vec3 tone(vec3 c) {
     float y = dot(c, vec3(0.299, 0.587, 0.114));
     c = clamp(c + (1.0 - 2.0 * y), 0.0, 1.0);
     // Soften the extremes: paper becomes warm charcoal, ink an off-white.
-    c = mix(vec3(0.13, 0.12, 0.11), vec3(0.88, 0.86, 0.82), c);
+    c = mix(vec3(0.165), vec3(0.855), c); // page #2A2A2A, text #DADADA
   }
   return c;
 }
@@ -99,7 +99,7 @@ void main() {
     vec2 half_ = u_inner.zw * 0.5;
     vec2 q = abs(v_px - (u_inner.xy + half_)) - half_;
     float dist = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0);
-    float a = 0.28 * (1.0 - smoothstep(0.0, 22.0, dist));
+    float a = 0.25 * (1.0 - smoothstep(0.0, 40.0, dist));
     outColor = vec4(0.0, 0.0, 0.0, a);
     return;
   }
@@ -133,7 +133,7 @@ void main() {
     }
     if (u_gutter != 0.0) {
       float g = u_gutter > 0.0 ? 1.0 - v_uv.x : v_uv.x;
-      c *= 1.0 - 0.22 * exp(-g / 0.03);
+      c *= 1.0 - 0.08 * max(0.0, 1.0 - g / 0.055); // ~8% fading over ~24px
     }
   }
   outColor = vec4(c, 1.0);

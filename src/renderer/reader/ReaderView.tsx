@@ -70,7 +70,8 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
   // Resolve spread/single from the user's mode and the window shape.
   const { setLayout } = r
   useEffect(() => {
-    if (viewport.width > 0) setLayout(resolveLayout(r.layoutMode, viewport.width / viewport.height))
+    if (viewport.width > 0)
+      setLayout(resolveLayout(r.layoutMode, viewport.width / viewport.height, viewport.width))
   }, [viewport, r.layoutMode, setLayout])
 
   const spread = r.doc ? spreadFor(r.page, r.doc.numPages, r.layout) : { left: null, right: null }

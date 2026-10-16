@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/types'
 import { SettingsView } from '@renderer/settings/SettingsView'
-import { applyTheme } from '@renderer/app/theme'
+import { applyTheme, themeChoice } from '@renderer/app/theme'
 import { useSettingsStore } from '@renderer/stores/settingsStore'
 
 let stored: Settings
@@ -37,15 +37,20 @@ describe('SettingsView', () => {
   it('choosing the Dark theme sets data-theme on <html>', async () => {
     render(<SettingsView onBack={() => {}} />)
     fireEvent.click(screen.getByRole('radio', { name: 'Dark' }))
+    expect(setSpy).toHaveBeenCalledWith({ theme: 'dark', paperTint: 'dark' })
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe('dark'))
   })
 
-  it('saves paper tint, default layout and turn sound', async () => {
+  it('saves theme, default layout, turn sound and bookmark tabs', async () => {
     render(<SettingsView onBack={() => {}} />)
+    expect((screen.getByRole('radio', { name: 'Light' }) as HTMLInputElement).checked).toBe(true)
+    expect(screen.queryByRole('radio', { name: 'System' })).toBeNull()
     fireEvent.click(screen.getByRole('radio', { name: 'Sepia' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /show bookmark tabs/i }))
+    expect(setSpy).toHaveBeenCalledWith({ showBookmarkTabs: false })
     fireEvent.click(screen.getByRole('radio', { name: 'Two pages' }))
     fireEvent.click(screen.getByRole('checkbox', { name: /turn sound/i }))
-    expect(setSpy).toHaveBeenCalledWith({ paperTint: 'sepia' })
+    expect(setSpy).toHaveBeenCalledWith({ theme: 'light', paperTint: 'sepia' })
     expect(setSpy).toHaveBeenCalledWith({ layout: 'spread' })
     expect(setSpy).toHaveBeenCalledWith({ turnSound: true })
   })
@@ -75,5 +80,15 @@ describe('applyTheme', () => {
     expect(document.documentElement.dataset.theme).toBe('dark')
     applyTheme('light')
     expect(document.documentElement.dataset.theme).toBe('light')
+  })
+})
+
+describe('themeChoice', () => {
+  it('maps stored theme + paper to Light / Sepia / Dark', () => {
+    expect(themeChoice({ theme: 'system', paperTint: 'white' })).toBe('light')
+    expect(themeChoice({ theme: 'light', paperTint: 'cream' })).toBe('light')
+    expect(themeChoice({ theme: 'light', paperTint: 'sepia' })).toBe('sepia')
+    expect(themeChoice({ theme: 'dark', paperTint: 'cream' })).toBe('dark')
+    expect(themeChoice({ theme: 'light', paperTint: 'dark' })).toBe('dark')
   })
 })
