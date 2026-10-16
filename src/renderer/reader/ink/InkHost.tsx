@@ -7,8 +7,7 @@ type Props = { viewportRef: RefObject<HTMLElement | null> }
 
 /** Pen input for the reader viewport (options live in the reader toolbar). */
 export function InkHost({ viewportRef }: Props): null {
-  const mode = useInkStore((s) => s.mode)
-  const { drawWithMouse, penColor, penWidth } = useSettingsStore((s) => s.settings)
+  const { penColor, penWidth } = useSettingsStore((s) => s.settings)
 
   // Defaults from Settings; toolbar changes last for the session.
   useEffect(
@@ -26,8 +25,8 @@ export function InkHost({ viewportRef }: Props): null {
 
   useInkInput({
     viewportRef,
-    mode,
-    drawWithMouse,
+    getMode: () => useInkStore.getState().mode,
+    getDrawWithMouse: () => useSettingsStore.getState().settings.drawWithMouse,
     onLive: (page, stroke) => useInkStore.getState().setLive(stroke && { page, stroke }),
     onCommit: (page, s) =>
       useInkStore

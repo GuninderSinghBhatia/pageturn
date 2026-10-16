@@ -5,6 +5,7 @@ import { useReaderStore } from '../../stores/readerStore'
 import { spreadFor, spreadPages } from '../layout'
 import { InkHistory, type InkOp } from './history'
 import type { InkMode } from './inkInput'
+import { hitHighlight } from '../annotations/rects'
 import { strokeHit } from './strokes'
 
 const ERASER_RADIUS = 0.012 // page widths
@@ -56,6 +57,10 @@ export const useInkStore = create<InkState>((set, get) => ({
 
   eraseAt: (page, p, aspect) => {
     const a = useAnnotationStore.getState()
+    // Highlights, underlines and note lines under the eraser go too (not undoable).
+    const onPage = Object.values(a.highlights).filter((h) => h.page === page)
+    const hl = hitHighlight(onPage, p)
+    if (hl) a.deleteHighlight(hl.id)
     const hits = Object.values(a.ink).filter(
       (s) => s.page === page && strokeHit(s, p, ERASER_RADIUS, aspect)
     )

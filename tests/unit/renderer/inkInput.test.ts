@@ -30,6 +30,7 @@ describe('inkAction', () => {
   it('the eraser tool erases', () => {
     expect(inkAction(pen, mode({ tool: 'eraser' }), false)).toBe('erase')
     expect(inkAction(mouse, mode({ tool: 'eraser' }), true)).toBe('erase')
+    expect(inkAction(mouse, mode({ tool: 'eraser' }), false)).toBe('erase') // chosen explicitly
   })
 
   it('touch always pans/turns', () => {

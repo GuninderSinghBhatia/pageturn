@@ -13,6 +13,7 @@ import { BookStage } from './BookStage/BookStage'
 import { SlideStage } from './BookStage/SlideStage'
 import { resetChrome, useChromeStore } from './chrome/chromeStore'
 import { ReaderToolbar } from './chrome/ReaderToolbar'
+import { useTextTool } from './chrome/useTextTool'
 import { InkHost } from './ink/InkHost'
 import inkStyles from './ink/Ink.module.css'
 import { useInkStore } from './ink/inkStore'
@@ -47,6 +48,7 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
   const viewportRef = useRef<HTMLDivElement>(null)
   const viewport = useViewportSize(viewportRef)
   usePan(viewportRef, r.zoom > 1)
+  useTextTool(viewportRef)
 
   useEffect(() => {
     const s = useReaderStore.getState()
