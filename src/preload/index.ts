@@ -9,7 +9,8 @@ const api: Api = {
     list: () => invoke(Channels.libraryList),
     import: (paths) => invoke(Channels.libraryImport, paths),
     openDialog: () => invoke(Channels.libraryOpenDialog),
-    remove: (bookId) => invoke(Channels.libraryRemove, bookId),
+    remove: (bookId, deleteAnnotations) =>
+      invoke(Channels.libraryRemove, bookId, deleteAnnotations),
     relocate: (bookId) => invoke(Channels.libraryRelocate, bookId),
     getFile: (bookId) => invoke(Channels.libraryGetFile, bookId),
     saveThumbnail: (bookId, png) => invoke(Channels.librarySaveThumbnail, bookId, png),
@@ -32,6 +33,17 @@ const api: Api = {
   settings: {
     get: () => invoke(Channels.settingsGet),
     set: (partial) => invoke(Channels.settingsSet, partial)
+  },
+  annotations: {
+    listForBook: (bookId) => invoke(Channels.annotationsList, bookId),
+    upsertHighlight: (h) => invoke(Channels.annotationsUpsertHighlight, h),
+    deleteHighlight: (id) => invoke(Channels.annotationsDeleteHighlight, id),
+    upsertNote: (n) => invoke(Channels.annotationsUpsertNote, n),
+    deleteNote: (id) => invoke(Channels.annotationsDeleteNote, id),
+    addInk: (strokes) => invoke(Channels.annotationsAddInk, strokes),
+    deleteInk: (ids) => invoke(Channels.annotationsDeleteInk, ids),
+    toggleBookmark: (bookId, page, label, id) =>
+      invoke(Channels.annotationsToggleBookmark, bookId, page, label, id)
   }
 }
 

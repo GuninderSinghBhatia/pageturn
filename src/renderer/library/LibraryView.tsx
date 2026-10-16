@@ -4,6 +4,7 @@ import { useLibraryStore } from '../stores/libraryStore'
 import { BookCard } from './BookCard'
 import { displayTitle } from './displayTitle'
 import styles from './LibraryView.module.css'
+import { RemoveDialog } from './RemoveDialog'
 
 type Sort = 'recent' | 'title'
 type Menu = { bookId: string; x: number; y: number } | null
@@ -15,6 +16,7 @@ export function LibraryView(): React.JSX.Element {
   const [sort, setSort] = useState<Sort>('recent')
   const [menu, setMenu] = useState<Menu>(null)
   const [dragging, setDragging] = useState(false)
+  const [removing, setRemoving] = useState<string | null>(null)
 
   useEffect(() => {
     void refresh()
@@ -130,10 +132,9 @@ export function LibraryView(): React.JSX.Element {
         <div className={styles.menu} style={{ left: menu.x, top: menu.y }} role="menu">
           <button
             role="menuitem"
-            onClick={async () => {
-              await window.api.library.remove(menu.bookId)
+            onClick={() => {
+              setRemoving(menu.bookId)
               setMenu(null)
-              await refresh()
             }}
           >
             Remove from library
@@ -141,6 +142,21 @@ export function LibraryView(): React.JSX.Element {
         </div>
       )}
 
+      {removing && (
+        <RemoveDialog
+          title={(() => {
+            const b = books.find((x) => x.id === removing)
+            return b ? displayTitle(b) : 'this book'
+          })()}
+          onCancel={() => setRemoving(null)}
+          onConfirm={async (deleteAnnotations) => {
+            const id = removing
+            setRemoving(null)
+            await window.api.library.remove(id, deleteAnnotations)
+            await refresh()
+          }}
+        />
+      )}
       {dragging && <div className={styles.dropOverlay}>Drop PDFs to add them</div>}
     </div>
   )

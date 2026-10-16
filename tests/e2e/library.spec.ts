@@ -24,3 +24,41 @@ test('imported book appears with a cover and survives restart', async () => {
     await app.close()
   }
 })
+
+test('remove asks whether to keep annotations; kept ones return on re-import', async () => {
+  const { app, page } = await launchApp()
+  try {
+    const [book] = await page.evaluate((p) => window.api.library.import([p]), TEXT500)
+    await page.evaluate((id) => window.api.annotations.toggleBookmark(id, 4), book.id)
+    const bookmarks = (): Promise<number> =>
+      page.evaluate(
+        async (id) => (await window.api.annotations.listForBook(id)).bookmarks.length,
+        book.id
+      )
+
+    const remove = async (deleteAnnotations: boolean): Promise<void> => {
+      await page.getByTestId('book-card').click({ button: 'right' })
+      await page.getByRole('menuitem', { name: 'Remove from library' }).click()
+      const dialog = page.getByRole('dialog', { name: 'Remove book' })
+      const box = dialog.getByRole('checkbox', {
+        name: 'Also delete highlights, notes and drawings'
+      })
+      await expect(box).not.toBeChecked()
+      if (deleteAnnotations) await box.check()
+      await dialog.getByRole('button', { name: 'Remove' }).click()
+      await expect(page.getByTestId('book-card')).toHaveCount(0)
+    }
+
+    await remove(false)
+    await page.evaluate((p) => window.api.library.import([p]), TEXT500)
+    await expect(page.getByTestId('book-card')).toHaveCount(1)
+    expect(await bookmarks()).toBe(1)
+
+    await remove(true)
+    await page.evaluate((p) => window.api.library.import([p]), TEXT500)
+    await expect(page.getByTestId('book-card')).toHaveCount(1)
+    expect(await bookmarks()).toBe(0)
+  } finally {
+    await app.close()
+  }
+})
