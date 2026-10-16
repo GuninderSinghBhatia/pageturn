@@ -53,6 +53,7 @@ const hl: Highlight = {
   rects: [{ x: 0.1, y: 0.2, w: 0.5, h: 0.02 }],
   text: '',
   color: 'green',
+  style: 'highlight',
   noteId: null,
   createdAt: 1,
   updatedAt: 1
@@ -110,5 +111,23 @@ describe('drawPageAnnotations', () => {
     )
     expect(calls.filter((c) => c.op === 'fill')).toHaveLength(2)
     expect(state()).toMatchObject({ composite: 'source-over', alpha: 1 })
+  })
+
+  it('underline styles draw lines under each rect instead of filling it', () => {
+    for (const style of ['underline', 'wavy', 'note'] as const) {
+      const { ctx, calls } = recordingCtx()
+      drawPageAnnotations(ctx, ann({ highlights: [{ ...hl, style }] }), 400, 600)
+      expect(calls.find((c) => c.op === 'fillRect')).toBeUndefined()
+      const strokes = calls.filter((c) => c.op === 'stroke')
+      expect(strokes.length).toBeGreaterThan(0)
+      const ys = calls.filter((c) => c.op === 'lineTo').map((c) => c.args[1] as number)
+      const bottom = (0.2 + 0.02) * 600
+      for (const y of ys) expect(Math.abs(y - bottom)).toBeLessThan(5) // hugs the line's foot
+      const dashed = calls.some((c) => c.op === 'setLineDash' && (c.args[0] as number[]).length > 0)
+      expect(dashed).toBe(style === 'note')
+      const segments = calls.filter((c) => c.op === 'lineTo').length
+      if (style === 'wavy') expect(segments).toBeGreaterThan(8)
+      else expect(segments).toBe(1)
+    }
   })
 })
