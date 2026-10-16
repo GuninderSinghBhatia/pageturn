@@ -1,13 +1,17 @@
 import { useEffect } from 'react'
 import { LibraryView } from '../library/LibraryView'
 import { ReaderView } from '../reader/ReaderView'
+import { SettingsView } from '../settings/SettingsView'
 import { useLibraryStore } from '../stores/libraryStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useNav } from './nav'
+import { useThemeSync } from './theme'
+import './theme.css'
 import './base.css'
 
 function App(): React.JSX.Element {
-  const { view, goReader } = useNav()
+  const { view, goReader, settingsOpen, closeSettings } = useNav()
+  useThemeSync(useSettingsStore((s) => s.settings.theme))
 
   useEffect(() => {
     void useSettingsStore.getState().load()
@@ -18,8 +22,12 @@ function App(): React.JSX.Element {
     })
   }, [goReader])
 
-  if (view === 'library') return <LibraryView />
-  return <ReaderView key={view.reader} bookId={view.reader} />
+  return (
+    <>
+      {view === 'library' ? <LibraryView /> : <ReaderView key={view.reader} bookId={view.reader} />}
+      {settingsOpen && <SettingsView onBack={closeSettings} />}
+    </>
+  )
 }
 
 export default App

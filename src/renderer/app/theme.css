@@ -1,0 +1,38 @@
+/* Colour tokens. `data-theme` on <html> is set by applyTheme() (app/theme.ts). */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f6f3ee;
+  --surface: #fffdf9;
+  --paper: #fbf7ef;
+  --desk: #e9e4dc;
+  --text: #2a2723;
+  --muted: #7a736a;
+  --border: #e3ddd3;
+  --hover: #f0ebe3;
+  --accent: #8a5a2b;
+  --accent-text: #fff;
+  --danger: #a3332b;
+  --danger-bg: #f8e3e0;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #1c1a18;
+  --surface: #262320;
+  --paper: #2e2a26;
+  --desk: #161412;
+  --text: #ece6dc;
+  --muted: #a39a8e;
+  --border: #3b3631;
+  --hover: #332f2a;
+  --accent: #d19a5e;
+  --accent-text: #1c1a18;
+  --danger: #f08a80;
+  --danger-bg: #4a2522;
+}
+
+:root {
+  --serif: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  --sans: 'Segoe UI', system-ui, sans-serif;
+}

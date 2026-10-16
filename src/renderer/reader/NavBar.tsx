@@ -17,6 +17,7 @@ type Props = {
   onToggleToc(): void
   onToggleFind(): void
   onZoom(z: number): void
+  onSettings(): void
 }
 
 export const NavBar = forwardRef<HTMLInputElement, Props>(function NavBar(p, pageBoxRef) {
@@ -85,6 +86,14 @@ export const NavBar = forwardRef<HTMLInputElement, Props>(function NavBar(p, pag
       </button>
       <button className={styles.navBtn} onClick={p.onToggleFind} title="Find (Ctrl+F)">
         Find
+      </button>
+      <button
+        className={styles.navBtn}
+        onClick={p.onSettings}
+        title="Settings"
+        aria-label="Settings"
+      >
+        ⚙
       </button>
     </header>
   )

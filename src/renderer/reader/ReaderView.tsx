@@ -21,7 +21,7 @@ const ZOOM_SETTLE_MS = 150
 const reducedMotion = (): boolean => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
-  const { goLibrary } = useNav()
+  const { goLibrary, openSettings } = useNav()
   const r = useReaderStore()
   const settings = useSettingsStore((s) => s.settings)
   const book = useLibraryStore((s) => s.books.find((b) => b.id === bookId))
@@ -149,6 +149,7 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
           onToggleLayout={() => r.setLayoutMode(r.layout === 'spread' ? 'single' : 'spread')}
           onToggleToc={() => setTocOpen((o) => !o)}
           onToggleFind={() => setFindOpen((o) => !o)}
+          onSettings={openSettings}
           onZoom={r.setZoom}
         />
       )}

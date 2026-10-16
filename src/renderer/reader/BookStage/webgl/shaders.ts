@@ -88,6 +88,8 @@ vec3 tone(vec3 c) {
     // Invert luminance only, keeping hue (images stay reasonably natural).
     float y = dot(c, vec3(0.299, 0.587, 0.114));
     c = clamp(c + (1.0 - 2.0 * y), 0.0, 1.0);
+    // Soften the extremes: paper becomes warm charcoal, ink an off-white.
+    c = mix(vec3(0.13, 0.12, 0.11), vec3(0.88, 0.86, 0.82), c);
   }
   return c;
 }

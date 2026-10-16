@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/types'
+import { applyTheme } from '../app/theme'
 
 type SettingsState = {
   settings: Settings
@@ -11,6 +12,14 @@ type SettingsState = {
 export const useSettingsStore = create<SettingsState>((set) => ({
   settings: DEFAULT_SETTINGS,
   loaded: false,
-  load: async () => set({ settings: await window.api.settings.get(), loaded: true }),
-  set: async (partial) => set({ settings: await window.api.settings.set(partial) })
+  load: async () => {
+    const settings = await window.api.settings.get()
+    applyTheme(settings.theme)
+    set({ settings, loaded: true })
+  },
+  set: async (partial) => {
+    const settings = await window.api.settings.set(partial)
+    applyTheme(settings.theme)
+    set({ settings })
+  }
 }))

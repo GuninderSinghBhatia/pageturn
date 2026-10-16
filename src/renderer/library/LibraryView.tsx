@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNav } from '../app/nav'
 import { useLibraryStore } from '../stores/libraryStore'
 import { BookCard } from './BookCard'
 import { displayTitle } from './displayTitle'
@@ -9,6 +10,7 @@ type Menu = { bookId: string; x: number; y: number } | null
 
 export function LibraryView(): React.JSX.Element {
   const { books, refresh, importPaths, openBook } = useLibraryStore()
+  const openSettings = useNav((s) => s.openSettings)
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<Sort>('recent')
   const [menu, setMenu] = useState<Menu>(null)
@@ -91,6 +93,14 @@ export function LibraryView(): React.JSX.Element {
           }}
         >
           Open PDF
+        </button>
+        <button
+          className={styles.iconBtn}
+          onClick={openSettings}
+          title="Settings"
+          aria-label="Settings"
+        >
+          ⚙
         </button>
       </header>
 
