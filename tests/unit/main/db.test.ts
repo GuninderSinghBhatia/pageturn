@@ -17,7 +17,7 @@ describe('openDb', () => {
     const file = join(mkdtempSync(join(tmpdir(), 'pageturn-db-')), 'test.db')
     openDb(file).close()
     const db = openDb(file)
-    expect(db.pragma('user_version', { simple: true })).toBe(1)
+    expect(db.pragma('user_version', { simple: true })).toBe(2)
     expect(db.pragma('foreign_keys', { simple: true })).toBe(1)
     db.close()
   })
@@ -83,7 +83,7 @@ describe('BooksRepo', () => {
     expect(row.lastOpenedAt).not.toBeNull()
   })
 
-  it('updateMeta, setPath and remove', () => {
+  it('updateMeta, setPath and purge', () => {
     repo.upsert({ id: idA, path: 'a.pdf' })
     repo.updateMeta(idA, { title: 'T', author: null, numPages: 7 })
     repo.setPath(idA, 'moved.pdf')
@@ -93,7 +93,7 @@ describe('BooksRepo', () => {
       numPages: 7,
       path: 'moved.pdf'
     })
-    repo.remove(idA)
+    repo.purge(idA)
     expect(repo.get(idA)).toBeNull()
   })
 })

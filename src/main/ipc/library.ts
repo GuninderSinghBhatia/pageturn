@@ -54,7 +54,7 @@ export function registerLibraryIpc(repo: BooksRepo, win: BrowserWindow): void {
 
   ipcMain.handle(Channels.libraryRemove, async (_e, id: unknown) => {
     const row = getRow(id)
-    repo.remove(row.id)
+    repo.purge(row.id)
     await rm(thumbnailPath(thumbDir(), row.id), { force: true })
     notifyChanged()
   })

@@ -46,6 +46,7 @@ export class BooksRepo {
          VALUES (@id, @path, @title, @author, @numPages, 1, @now)
          ON CONFLICT(id) DO UPDATE SET
            path = excluded.path,
+           removed_at = NULL,
            title = COALESCE(excluded.title, title),
            author = COALESCE(excluded.author, author),
            num_pages = COALESCE(excluded.num_pages, num_pages)`
@@ -67,7 +68,10 @@ export class BooksRepo {
 
   list(): BookRow[] {
     const rows = this.db
-      .prepare('SELECT * FROM books ORDER BY last_opened_at DESC NULLS LAST, added_at DESC')
+      .prepare(
+        `SELECT * FROM books WHERE removed_at IS NULL
+         ORDER BY last_opened_at DESC NULLS LAST, added_at DESC`
+      )
       .all() as DbRow[]
     return rows.map(toRow)
   }
@@ -95,7 +99,13 @@ export class BooksRepo {
       )
   }
 
-  remove(id: string): void {
+  /** Removes from the library but keeps annotations; re-importing (upsert) restores it. */
+  hide(id: string): void {
+    this.db.prepare('UPDATE books SET removed_at = ? WHERE id = ?').run(Date.now(), id)
+  }
+
+  /** Deletes the book and (via ON DELETE CASCADE) all of its annotations. */
+  purge(id: string): void {
     this.db.prepare('DELETE FROM books WHERE id = ?').run(id)
   }
 }
