@@ -23,6 +23,7 @@ const highlight = (over: Partial<Highlight> = {}): Highlight => ({
   ],
   text: 'Lorem ipsum',
   color: 'yellow',
+  style: 'highlight',
   noteId: null,
   createdAt: 1000,
   updatedAt: 1000,
@@ -83,6 +84,20 @@ describe('AnnotationsRepo highlights', () => {
     expect(got.color).toBe('green')
     expect(got.updatedAt).toBe(2000)
     expect(got.createdAt).toBe(1000)
+  })
+})
+
+describe('AnnotationsRepo styles and labels', () => {
+  it('round-trips the highlight style', () => {
+    const h = highlight({ style: 'wavy' })
+    repo.upsertHighlight(h)
+    expect(repo.listForBook(bookId).highlights[0].style).toBe('wavy')
+  })
+
+  it('renames a bookmark', () => {
+    const b = repo.toggleBookmark(bookId, 4)!
+    repo.renameBookmark(b.id, 'Proof of lemma')
+    expect(repo.listForBook(bookId).bookmarks[0].label).toBe('Proof of lemma')
   })
 })
 

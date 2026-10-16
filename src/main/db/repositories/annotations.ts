@@ -1,6 +1,13 @@
 import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
-import type { BookAnnotations, Bookmark, Highlight, HighlightColor, Note } from '@shared/types'
+import type {
+  BookAnnotations,
+  Bookmark,
+  Highlight,
+  HighlightColor,
+  HighlightStyle,
+  Note
+} from '@shared/types'
 
 type HighlightRow = {
   id: string
@@ -9,6 +16,7 @@ type HighlightRow = {
   rects_json: string
   text: string
   color: string
+  style: string
   note_id: string | null
   created_at: number
   updated_at: number
@@ -37,6 +45,7 @@ const toHighlight = (r: HighlightRow): Highlight => ({
   rects: JSON.parse(r.rects_json),
   text: r.text,
   color: r.color as HighlightColor,
+  style: (r.style ?? 'highlight') as HighlightStyle,
   noteId: r.note_id,
   createdAt: r.created_at,
   updatedAt: r.updated_at
@@ -79,10 +88,10 @@ export class AnnotationsRepo {
   upsertHighlight(h: Highlight): void {
     this.db
       .prepare(
-        `INSERT INTO highlights (id, book_id, page, rects_json, text, color, note_id, created_at, updated_at)
-         VALUES (@id, @bookId, @page, @rects, @text, @color, @noteId, @createdAt, @updatedAt)
+        `INSERT INTO highlights (id, book_id, page, rects_json, text, color, style, note_id, created_at, updated_at)
+         VALUES (@id, @bookId, @page, @rects, @text, @color, @style, @noteId, @createdAt, @updatedAt)
          ON CONFLICT(id) DO UPDATE SET rects_json = excluded.rects_json, text = excluded.text,
-           color = excluded.color, note_id = excluded.note_id, updated_at = excluded.updated_at`
+           color = excluded.color, style = excluded.style, note_id = excluded.note_id, updated_at = excluded.updated_at`
       )
       .run({ ...h, rects: JSON.stringify(h.rects) })
   }
@@ -149,6 +158,10 @@ export class AnnotationsRepo {
         .run(b)
       return b
     })()
+  }
+
+  renameBookmark(id: string, label: string | null): void {
+    this.db.prepare('UPDATE bookmarks SET label = ? WHERE id = ?').run(label, id)
   }
 
   deleteAllForBook(bookId: string): void {

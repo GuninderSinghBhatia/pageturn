@@ -29,6 +29,7 @@ const highlight = (over: Partial<Highlight> = {}): Highlight => ({
   rects: [{ x: 0.1, y: 0.2, w: 0.5, h: 0.02 }],
   text: 'Lorem',
   color: 'yellow',
+  style: 'highlight',
   noteId: null,
   createdAt: 1,
   updatedAt: 1,

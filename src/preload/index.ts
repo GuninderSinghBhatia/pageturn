@@ -43,7 +43,8 @@ const api: Api = {
     addInk: (strokes) => invoke(Channels.annotationsAddInk, strokes),
     deleteInk: (ids) => invoke(Channels.annotationsDeleteInk, ids),
     toggleBookmark: (bookId, page, label, id) =>
-      invoke(Channels.annotationsToggleBookmark, bookId, page, label, id)
+      invoke(Channels.annotationsToggleBookmark, bookId, page, label, id),
+    renameBookmark: (id, label) => invoke(Channels.annotationsRenameBookmark, id, label)
   }
 }
 

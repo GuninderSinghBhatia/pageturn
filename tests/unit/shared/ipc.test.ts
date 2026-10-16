@@ -63,12 +63,15 @@ describe('IPC schemas', () => {
       rects: [{ x: 0.1, y: 0.1, w: 0.5, h: 0.02 }],
       text: 'Lorem',
       color: 'yellow',
+      style: 'highlight',
       noteId: null,
       createdAt: 1,
       updatedAt: 1
     }
     expect(HighlightSchema.safeParse(h).success).toBe(true)
     expect(HighlightSchema.safeParse({ ...h, color: 'red' }).success).toBe(false)
+    expect(HighlightSchema.safeParse({ ...h, style: 'wavy' }).success).toBe(true)
+    expect(HighlightSchema.safeParse({ ...h, style: 'strike' }).success).toBe(false)
   })
 
   it('SettingsPartialSchema only accepts the three pen widths and six ink colours', () => {

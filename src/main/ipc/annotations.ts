@@ -69,4 +69,8 @@ export function registerAnnotationsIpc(
         id === undefined || id === null ? undefined : parse(IdSchema, id)
       )
   )
+
+  ipcMain.handle(Channels.annotationsRenameBookmark, (_e, id: unknown, label: unknown) =>
+    annotations.renameBookmark(parse(IdSchema, id), parse(BookmarkLabelSchema, label) ?? null)
+  )
 }
