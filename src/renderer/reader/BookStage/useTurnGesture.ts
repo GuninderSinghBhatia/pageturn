@@ -65,6 +65,7 @@ export function useTurnGesture({ stageRef, controller, rects, onChange }: Option
       dir: 1 | -1
     } | null = null
     let clickDir: 1 | -1 | null = null
+    let clickOnText = false
     let lastWheel = 0
 
     const pos = (e: PointerEvent | WheelEvent): { x: number; y: number } => {
@@ -74,12 +75,16 @@ export function useTurnGesture({ stageRef, controller, rects, onChange }: Option
 
     const down = (e: PointerEvent): void => {
       if (e.button !== 0) return
+      clickDir = null
+      const target = e.target instanceof Element ? e.target : null
+      if (target?.closest('[data-no-turn]')) return // annotation controls handle their own clicks
+      // On text, a press may start a selection: never curl from it, only click-turn (see up).
+      clickOnText = !!target?.closest('.textLayer')
       const { x, y } = pos(e)
       const hit = hitTest(rects(), x, y)
-      clickDir = null
       if (!hit) return
       const dir = hit.side === 'right' ? 1 : -1
-      if (hit.edge) {
+      if (hit.edge && !clickOnText) {
         const corner =
           `${hit.local.y < hit.rect.height / hit.rect.width / 2 ? 't' : 'b'}${hit.side === 'right' ? 'r' : 'l'}` as Corner
         controller.pointerDown(corner, hit.local)
@@ -123,9 +128,12 @@ export function useTurnGesture({ stageRef, controller, rects, onChange }: Option
         }
         onChange()
       } else if (clickDir) {
-        controller.turn(clickDir)
+        const selecting = clickOnText && !(window.getSelection()?.isCollapsed ?? true)
+        if (!selecting) {
+          controller.turn(clickDir)
+          onChange()
+        }
         clickDir = null
-        onChange()
       }
     }
 

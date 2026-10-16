@@ -5,6 +5,7 @@ import { useLibraryStore } from '../stores/libraryStore'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useReaderStore } from '../stores/readerStore'
 import { useSettingsStore } from '../stores/settingsStore'
+import { PageOverlay } from './annotations/PageOverlay'
 import { BookStage } from './BookStage/BookStage'
 import { SlideStage } from './BookStage/SlideStage'
 import { FindBar } from './FindBar'
@@ -137,6 +138,12 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
   const useCurl =
     settings.pageTurnStyle === 'curl' && !webglFailed && r.zoom <= 1 && !reducedMotion()
 
+  const renderOverlay = useCallback(
+    (p: number, size: { width: number; height: number }) =>
+      doc ? <PageOverlay doc={doc} page={p} width={size.width} height={size.height} /> : null,
+    [doc]
+  )
+
   const title = book ? displayTitle(book) : 'PageTurn'
 
   return (
@@ -173,6 +180,7 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
               scaleFor={scaleFor}
               tint={settings.paperTint}
               onFallback={onWebglFailed}
+              renderOverlay={renderOverlay}
             />
           )}
           {r.doc && viewport.width > 0 && !useCurl && (
@@ -184,6 +192,7 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
               zoom={r.zoom}
               scaleFor={scaleFor}
               animate={settings.pageTurnStyle !== 'instant' && !reducedMotion()}
+              renderOverlay={renderOverlay}
             />
           )}
           {r.status === 'loading' && !r.passwordRequest && (

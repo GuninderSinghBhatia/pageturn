@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { OpenedDoc } from '../pdf/pdfService'
 import styles from '../Reader.module.css'
 
@@ -11,10 +11,19 @@ type Props = {
   height: number
   scale: number // render scale; may lag width while zoom settles (old bitmap is stretched)
   onState(page: number, state: PageState): void
+  overlay?: ReactNode // annotation/text overlay, laid over the canvas
 }
 
 /** One PDF page drawn at devicePixelRatio × displayed size, with a retry on failure. */
-export function PageCanvas({ doc, page, width, height, scale, onState }: Props): React.JSX.Element {
+export function PageCanvas({
+  doc,
+  page,
+  width,
+  height,
+  scale,
+  onState,
+  overlay
+}: Props): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [state, setState] = useState<PageState>('loading')
   const [attempt, setAttempt] = useState(0)
@@ -49,6 +58,7 @@ export function PageCanvas({ doc, page, width, height, scale, onState }: Props):
   return (
     <div className={styles.page} style={{ width, height }} data-page={page}>
       <canvas ref={canvasRef} className={styles.canvas} style={{ width, height }} />
+      {state === 'ready' && overlay}
       {state === 'error' && (
         <div className={styles.pageError}>
           <p>Couldn’t render page {page}</p>

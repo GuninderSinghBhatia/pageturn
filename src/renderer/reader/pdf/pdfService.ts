@@ -1,4 +1,4 @@
-import { getDocument, GlobalWorkerOptions, PasswordResponses } from 'pdfjs-dist'
+import { getDocument, GlobalWorkerOptions, PasswordResponses, TextLayer } from 'pdfjs-dist'
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { PageCache } from './pageCache'
@@ -17,6 +17,12 @@ export interface OpenedDoc {
   renderPage(page: number, scale: number): Promise<ImageBitmap>
   getText(page: number): Promise<TextItem[]>
   hasText(page: number): Promise<boolean>
+  /** Lays out pdf.js's selectable text runs for a page drawn `cssWidth` CSS px wide. */
+  renderTextLayer(
+    page: number,
+    container: HTMLElement,
+    cssWidth: number
+  ): { done: Promise<void>; cancel(): void }
   destroy(): void
 }
 
@@ -172,6 +178,34 @@ class Doc implements OpenedDoc {
 
   async hasText(n: number): Promise<boolean> {
     return (await this.getText(n)).some((t) => t.str.trim().length > 0)
+  }
+
+  renderTextLayer(
+    n: number,
+    container: HTMLElement,
+    cssWidth: number
+  ): { done: Promise<void>; cancel(): void } {
+    let layer: TextLayer | null = null
+    let cancelled = false
+    const done = (async () => {
+      const page = await this.page(n)
+      if (cancelled) return
+      const scale = cssWidth / page.getViewport({ scale: 1 }).width
+      container.style.setProperty('--total-scale-factor', String(scale))
+      layer = new TextLayer({
+        textContentSource: page.streamTextContent(),
+        container,
+        viewport: page.getViewport({ scale })
+      })
+      await layer.render()
+    })()
+    return {
+      done,
+      cancel: () => {
+        cancelled = true
+        layer?.cancel()
+      }
+    }
   }
 
   destroy(): void {

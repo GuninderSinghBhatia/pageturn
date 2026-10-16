@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { spreadPages, type ResolvedLayout, type Spread } from '../layout'
+import type { OverlayRenderer } from '../annotations/PageOverlay'
 import type { OpenedDoc } from '../pdf/pdfService'
 import { PageCanvas, type PageState } from './PageCanvas'
 import styles from '../Reader.module.css'
@@ -12,6 +13,7 @@ type Props = {
   zoom: number
   scaleFor(page: number): number // pdf.js render scale for a page
   animate: boolean // false for 'instant' turns
+  renderOverlay?: OverlayRenderer
 }
 
 /**
@@ -25,7 +27,8 @@ export function SlideStage({
   pageSize,
   zoom,
   scaleFor,
-  animate
+  animate,
+  renderOverlay
 }: Props): React.JSX.Element {
   const pages = spreadPages(spread)
   const key = pages.join('-')
@@ -53,7 +56,17 @@ export function SlideStage({
     if (layout === 'single' && side === 'left') return null
     const size = slot(p, pages[0])
     if (p === null) return <div className={styles.emptySlot} style={size} />
-    return <PageCanvas key={p} doc={doc} page={p} {...size} scale={scaleFor(p)} onState={onState} />
+    return (
+      <PageCanvas
+        key={p}
+        doc={doc}
+        page={p}
+        {...size}
+        scale={scaleFor(p)}
+        onState={onState}
+        overlay={renderOverlay?.(p, size)}
+      />
+    )
   }
 
   const anim = !animate || dir === 0 ? '' : dir > 0 ? styles.slideFromRight : styles.slideFromLeft
