@@ -102,6 +102,12 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
       useOverlayUi.getState().closeAll()
       useInkStore.getState().setMode({ active: false })
     }, []),
+    onEraser: useCallback(
+      () => useInkStore.getState().setMode({ active: true, tool: 'eraser' }),
+      []
+    ),
+    onUndo: useCallback(() => useInkStore.getState().undo(), []),
+    onRedo: useCallback(() => useInkStore.getState().redo(), []),
     onTogglePen: useCallback(() => {
       const ink = useInkStore.getState()
       ink.setMode({

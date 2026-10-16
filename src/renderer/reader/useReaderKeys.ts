@@ -9,6 +9,9 @@ type Handlers = {
   onHighlight(): boolean // highlight the current text selection; false if there is none
   onBookmark(): void
   onTogglePen(): void
+  onEraser(): void
+  onUndo(): boolean // false when there was nothing to undo
+  onRedo(): boolean
 }
 
 const ZOOM_STEP = 1.25
@@ -30,7 +33,10 @@ export function useReaderKeys({
   onEscape,
   onHighlight,
   onBookmark,
-  onTogglePen
+  onTogglePen,
+  onEraser,
+  onUndo,
+  onRedo
 }: Handlers): void {
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -45,6 +51,8 @@ export function useReaderKeys({
         // Everything else is left to text fields (Ctrl+Z is text undo there, etc.).
         else if (typing) return
         else if (k === 'd') onBookmark()
+        else if (k === 'z' && !e.shiftKey) onUndo()
+        else if (k === 'y' || (k === 'z' && e.shiftKey)) onRedo()
         else if (k === '=' || k === '+') s.setZoom(s.zoom * ZOOM_STEP)
         else if (k === '-') s.setZoom(s.zoom / ZOOM_STEP)
         else if (k === '0') s.setZoom(1)
@@ -90,6 +98,10 @@ export function useReaderKeys({
         case 'P':
           onTogglePen()
           break
+        case 'e':
+        case 'E':
+          onEraser()
+          break
         default:
           return
       }
@@ -97,5 +109,15 @@ export function useReaderKeys({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onFind, onFocusPageBox, onEscape, onHighlight, onBookmark, onTogglePen])
+  }, [
+    onFind,
+    onFocusPageBox,
+    onEscape,
+    onHighlight,
+    onBookmark,
+    onTogglePen,
+    onEraser,
+    onUndo,
+    onRedo
+  ])
 }

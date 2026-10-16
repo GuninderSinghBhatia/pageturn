@@ -1,9 +1,9 @@
 import { useEffect, type RefObject } from 'react'
-import { useAnnotationStore } from '../../stores/annotationStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { useInkInput } from './inkInput'
 import { useInkStore } from './inkStore'
 import { InkToolbar } from './InkToolbar'
+import toolbar from './Ink.module.css'
 
 type Props = { viewportRef: RefObject<HTMLElement | null>; children?: React.ReactNode }
 
@@ -19,7 +19,10 @@ export function InkHost({ viewportRef, children }: Props): React.JSX.Element | n
   )
   // Leaving the book leaves pen mode.
   useEffect(
-    () => () => useInkStore.setState((s) => ({ mode: { ...s.mode, active: false }, live: null })),
+    () => () => {
+      useInkStore.setState((s) => ({ mode: { ...s.mode, active: false }, live: null }))
+      useInkStore.getState().reset()
+    },
     []
   )
 
@@ -29,11 +32,32 @@ export function InkHost({ viewportRef, children }: Props): React.JSX.Element | n
     drawWithMouse,
     onLive: (page, stroke) => useInkStore.getState().setLive(stroke && { page, stroke }),
     onCommit: (page, s) =>
-      useAnnotationStore
+      useInkStore
         .getState()
-        .addInk([{ page, points: s.points, color: s.color, width: s.width, tool: s.tool }]),
-    onErase: () => undefined // Task 10
+        .commit(page, { page, points: s.points, color: s.color, width: s.width, tool: s.tool }),
+    onErase: (page, p, aspect) => useInkStore.getState().eraseAt(page, p, aspect),
+    onEraseEnd: (page) => useInkStore.getState().endErase(page)
   })
 
-  return mode.active ? <InkToolbar>{children}</InkToolbar> : null
+  return mode.active ? (
+    <InkToolbar>
+      <button
+        className={toolbar.btn}
+        aria-label="Undo"
+        title="Undo (Ctrl+Z)"
+        onClick={() => useInkStore.getState().undo()}
+      >
+        ↶
+      </button>
+      <button
+        className={toolbar.btn}
+        aria-label="Redo"
+        title="Redo (Ctrl+Y)"
+        onClick={() => useInkStore.getState().redo()}
+      >
+        ↷
+      </button>
+      {children}
+    </InkToolbar>
+  ) : null
 }

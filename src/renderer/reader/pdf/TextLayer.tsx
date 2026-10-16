@@ -12,11 +12,20 @@ export function TextLayer({ doc, page, width, inert }: Props): React.JSX.Element
     const el = ref.current
     if (!el || width <= 0) return
     el.replaceChildren()
+    delete el.dataset.rendered
+    let current = true // a cancelled render must not mark its successor as done
     const job = doc.renderTextLayer(page, el, width)
-    job.done.catch((err: unknown) => {
-      if ((err as Error)?.name !== 'AbortException') console.warn(`Text layer ${page}`, err)
-    })
-    return () => job.cancel()
+    job.done
+      .then(() => {
+        if (current) el.dataset.rendered = 'true'
+      })
+      .catch((err: unknown) => {
+        if ((err as Error)?.name !== 'AbortException') console.warn(`Text layer ${page}`, err)
+      })
+    return () => {
+      current = false
+      job.cancel()
+    }
   }, [doc, page, width])
 
   return <div ref={ref} className={`textLayer${inert ? ' inert' : ''}`} />

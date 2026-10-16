@@ -78,3 +78,42 @@ test('pen mode draws persistent ink (mouse only when enabled)', async () => {
     await app.close()
   }
 })
+
+test('eraser and undo/redo, limited to visible pages', async () => {
+  const { app, page } = await launchApp()
+  const count = async (): Promise<number> => (await stored(page)).ink.length
+  try {
+    await openAtSpread2(page)
+    await enableDrawWithMouse(page)
+    await page.keyboard.press('p')
+    await stroke(page, 2, [0.3, 0.8], [0.7, 0.8])
+    await stroke(page, 2, [0.3, 0.9], [0.7, 0.9])
+    await expect.poll(count).toBe(2)
+
+    await page.keyboard.press('Control+z')
+    await expect.poll(count).toBe(1)
+    await page.keyboard.press('Control+y')
+    await expect.poll(count).toBe(2)
+
+    await page.keyboard.press('e')
+    await expect(page.getByRole('button', { name: 'Eraser' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    await stroke(page, 2, [0.5, 0.75], [0.5, 0.85]) // crosses the first stroke only
+    await expect.poll(count).toBe(1)
+    expect(await inkAlpha(page, 2, [0.5, 0.8])).toBe(0)
+    expect(await inkAlpha(page, 2, [0.5, 0.9])).toBeGreaterThan(0)
+    await page.keyboard.press('Control+z')
+    await expect.poll(count).toBe(2)
+
+    await page.getByTestId('page-box').fill('4')
+    await page.getByTestId('page-box').press('Enter')
+    await expect(page.getByTestId('book-stage')).toHaveAttribute('data-pages', '4,5')
+    await page.keyboard.press('Control+z')
+    await page.waitForTimeout(300)
+    expect(await count()).toBe(2)
+  } finally {
+    await app.close()
+  }
+})
