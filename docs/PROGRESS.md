@@ -1,5 +1,7 @@
 # PageTurn Plan 1 — Progress
 
+**Plan 1 complete (2026-10-16):** 73 unit + 10 e2e tests, lint, typecheck and build all green. Next: Plan 2 (Annotations + Ink).
+
 Plan: `docs/superpowers/plans/2026-10-16-pageturn-plan1-core-reader.md`
 Spec: `docs/superpowers/specs/2026-10-16-pdf-book-reader-design.md`
 
@@ -15,7 +17,7 @@ Spec: `docs/superpowers/specs/2026-10-16-pdf-book-reader-design.md`
 | 8 Prefetch | done | 54dadb2 | `PageCanvas` takes a `scale` prop; `SlideStage` takes `scaleFor(page)`. ReaderView: `renderZoom` (150 ms debounce) + `scaleAt(p, zoom)`; Prefetcher prefetches at min(zoom,1) so neighbour keys match fit-size renders. Measured: turns painted in 6–10 ms after prefetch |
 | 9 Curl math | done | 3a0c4e1 | y-down page-local coords; right corners mirror to x=-1, left to x=2. `shouldComplete(progress, vx, dir)`: dir = screen-x direction of completion (-1 for forward turns). Extra exports: `cornerPos`, `mirroredCorner` |
 | 10 WebGL stage | done | 4d54add | Curl look approved by user; baseline `tests/e2e/curl.spec.ts-snapshots/curl-mid-win32.png`. Turns route through `readerStore.requestTurn(dir)` → stage's `turnHandler` (falls back to next/prev). Fragment shader needs `precision highp int` (u_mode shared with VS). `PAGETURN_DISABLE_WEBGL=1` → `webPreferences.webgl: false` (`--disable-webgl` switch doesn't stop WebGL2). Gesture ignores `pointermove` with `buttons===0` (Chromium/Playwright screenshots emit synthetic moves). Stage exposes `data-stage` (curl/slide), `data-settled`, `data-right-rect`. Perf: p95 7.1 ms |
-| 11 Settings/theme | todo | | then run full test/e2e/lint and give launch command |
+| 11 Settings/theme | done | 1ab0c08 | Settings is an **overlay** (`useNav().settingsOpen` / `openSettings` / `closeSettings`), not a view, so the open book stays loaded and changes apply live; Esc closes; reader keys ignored while open. Gear button in NavBar and library toolbar. Tokens moved from `base.css` to `app/theme.css` (`data-theme` light/dark). `applyTheme`/`useThemeSync` in `app/theme.ts`; settingsStore applies theme on load/set. Night tint remapped to warm charcoal/off-white in shader. Extra e2e `settings.spec.ts`. Tint only affects the WebGL stage (slide fallback shows untinted pages) |
 
 ## Notes for next sessions
 - Env: Node 22.23, npm 10.9, Git 2.49, VS Build Tools 2019 (C++). No qpdf; no `python` on PATH (use `py`).
