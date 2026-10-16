@@ -1,14 +1,13 @@
 import type { PageAnnotations } from '../../stores/annotationStore'
 import { drawPageAnnotations } from '../annotations/draw'
 
-export type PageSide = 'left' | 'right'
-type Bake = (bmp: ImageBitmap, ann: PageAnnotations, side: PageSide) => ImageBitmap
+type Bake = (bmp: ImageBitmap, ann: PageAnnotations) => ImageBitmap
 
 const isEmpty = (a: PageAnnotations): boolean =>
-  a.highlights.length === 0 && a.ink.length === 0 && a.freeNotes.length === 0 && !a.bookmark
+  a.highlights.length === 0 && a.ink.length === 0 && a.freeNotes.length === 0
 
 /** Page bitmap with its annotations painted in, for the curl textures. */
-export function bakePage(bmp: ImageBitmap, ann: PageAnnotations, side: PageSide): ImageBitmap {
+export function bakePage(bmp: ImageBitmap, ann: PageAnnotations): ImageBitmap {
   const w = bmp.width
   const h = bmp.height
   const canvas = new OffscreenCanvas(w, h)
@@ -22,21 +21,6 @@ export function bakePage(bmp: ImageBitmap, ann: PageAnnotations, side: PageSide)
     ctx.strokeStyle = '#d9b84a'
     ctx.fillRect(n.anchor.point!.x * w - s / 2, n.anchor.point!.y * h - s / 2, s, s)
     ctx.strokeRect(n.anchor.point!.x * w - s / 2, n.anchor.point!.y * h - s / 2, s, s)
-  }
-  if (ann.bookmark) {
-    const rw = 22 * unit
-    const rh = 40 * unit
-    const x = side === 'left' ? 28 * unit : w - 28 * unit - rw
-    ctx.fillStyle =
-      getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#8a5a2b'
-    ctx.beginPath()
-    ctx.moveTo(x, 0)
-    ctx.lineTo(x + rw, 0)
-    ctx.lineTo(x + rw, rh)
-    ctx.lineTo(x + rw / 2, rh * 0.78)
-    ctx.lineTo(x, rh)
-    ctx.closePath()
-    ctx.fill()
   }
   return canvas.transferToImageBitmap()
 }
@@ -52,13 +36,7 @@ export class BakeCache {
 
   constructor(private bake: Bake = bakePage) {}
 
-  get(
-    page: number,
-    bmp: ImageBitmap,
-    revision: number,
-    ann: PageAnnotations,
-    side: PageSide = 'right'
-  ): ImageBitmap {
+  get(page: number, bmp: ImageBitmap, revision: number, ann: PageAnnotations): ImageBitmap {
     if (isEmpty(ann)) {
       this.drop(page)
       return bmp
@@ -66,7 +44,7 @@ export class BakeCache {
     const hit = this.entries.get(page)
     if (hit && hit.bmp === bmp && hit.revision === revision) return hit.baked
     this.drop(page)
-    const baked = this.bake(bmp, ann, side)
+    const baked = this.bake(bmp, ann)
     this.entries.set(page, { bmp, revision, baked })
     return baked
   }

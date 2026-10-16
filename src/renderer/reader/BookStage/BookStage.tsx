@@ -80,10 +80,9 @@ export function BookStage({
       const raw = bitmaps.current.get(p)?.bmp
       if (!raw) return undefined
       const a = useAnnotationStore.getState()
-      const side = layout === 'spread' && p % 2 === 0 ? 'left' : 'right'
-      return bakes.get(p, raw, a.revision[p] ?? 0, selectPage(a, p), side)
+      return bakes.get(p, raw, a.revision[p] ?? 0, selectPage(a, p))
     },
-    [bakes, layout]
+    [bakes]
   )
 
   // Settled pages use raw bitmaps (the DOM overlay draws annotations on top); turning pages

@@ -8,7 +8,7 @@ import { drawPageAnnotations } from './draw'
 import { FreeNotes } from './FreeNotes'
 import { HighlightPopover } from './HighlightPopover'
 import { hitHighlight } from './rects'
-import { Ribbon } from './Ribbon'
+import { BookmarkTabs } from './BookmarkTabs'
 import { useOverlayUi } from './uiStore'
 import styles from './Annotations.module.css'
 
@@ -99,7 +99,7 @@ export function PageOverlay({ doc, page, width, height }: Props): React.JSX.Elem
       <canvas ref={canvasRef} className={styles.annotationCanvas} style={{ width, height }} />
       <TextLayer doc={doc} page={page} width={width} inert={penActive} />
       <FreeNotes page={page} notes={ann.freeNotes} width={width} height={height} />
-      <Ribbon page={page} bookmarked={!!ann.bookmark} side={side} />
+      {side === 'right' && <BookmarkTabs doc={doc} />}
       {highlights
         .filter((h) => h.noteId && notes[h.noteId])
         .map((h) => (
