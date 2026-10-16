@@ -1,5 +1,7 @@
 # PageTurn Plan 1 — Progress
 
+**Plan 2 complete (2026-10-16, branch `plan2-annotations`):** highlights, notes, bookmarks, ink with eraser/undo, annotations baked into the curl. Plan: `docs/superpowers/plans/2026-10-16-pageturn-plan2-annotations-ink.md`. 143 unit + 24 e2e green. Notes: settings overlay/ink/annotation UI state live in small zustand stores (`annotations/uiStore.ts`, `ink/inkStore.ts`); e2e helpers in `tests/e2e/annotationHelpers.ts` (import helpers from there, never from a spec); text layers expose `data-rendered`. Chromium sends synthetic button-less pointermoves — every drag handler must ignore `buttons === 0`.
+
 **Plan 1 complete (2026-10-16):** 73 unit + 10 e2e tests, lint, typecheck and build all green. Next: Plan 2 (Annotations + Ink).
 
 Plan: `docs/superpowers/plans/2026-10-16-pageturn-plan1-core-reader.md`
