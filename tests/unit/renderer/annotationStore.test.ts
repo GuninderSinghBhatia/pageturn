@@ -21,7 +21,8 @@ beforeEach(async () => {
     deleteNote: vi.fn(async () => {}),
     addInk: vi.fn(async () => {}),
     deleteInk: vi.fn(async () => {}),
-    toggleBookmark: vi.fn(async () => null)
+    toggleBookmark: vi.fn(async () => null),
+    renameBookmark: vi.fn(async () => {})
   }
   ;(globalThis as unknown as { window: unknown }).window = { api: { annotations: api } }
   useToastStore.setState({ toasts: [] })
@@ -98,6 +99,25 @@ describe('annotationStore', () => {
     expect(s().bookmarks[4]).toBeUndefined()
     await vi.advanceTimersByTimeAsync(0)
     expect(api.toggleBookmark).toHaveBeenCalledTimes(2)
+  })
+
+  it('highlights default to style "highlight" and keep a given style', () => {
+    const [plain] = s().addHighlights([{ page: 2, rects: [rect], text: 'a', color: 'blue' }])
+    const [wavy] = s().addHighlights([
+      { page: 2, rects: [rect], text: 'b', color: 'blue', style: 'wavy' }
+    ])
+    expect(plain.style).toBe('highlight')
+    expect(wavy.style).toBe('wavy')
+    expect(api.upsertHighlight).toHaveBeenLastCalledWith(expect.objectContaining({ style: 'wavy' }))
+  })
+
+  it('renameBookmark updates the label and persists it', async () => {
+    s().toggleBookmark(6)
+    const id = s().bookmarks[6].id
+    s().renameBookmark(6, 'Key result')
+    expect(s().bookmarks[6].label).toBe('Key result')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(api.renameBookmark).toHaveBeenCalledWith(id, 'Key result')
   })
 
   it('ink can be removed and restored', () => {

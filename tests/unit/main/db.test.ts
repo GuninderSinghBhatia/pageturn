@@ -17,7 +17,7 @@ describe('openDb', () => {
     const file = join(mkdtempSync(join(tmpdir(), 'pageturn-db-')), 'test.db')
     openDb(file).close()
     const db = openDb(file)
-    expect(db.pragma('user_version', { simple: true })).toBe(2)
+    expect(db.pragma('user_version', { simple: true })).toBe(3)
     expect(db.pragma('foreign_keys', { simple: true })).toBe(1)
     db.close()
   })

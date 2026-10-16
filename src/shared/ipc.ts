@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import {
   HIGHLIGHT_COLORS,
+  HIGHLIGHT_STYLES,
   INK_COLORS,
   INK_WIDTHS,
   type Book,
@@ -34,7 +35,8 @@ export const Channels = {
   annotationsDeleteNote: 'annotations:deleteNote',
   annotationsAddInk: 'annotations:addInk',
   annotationsDeleteInk: 'annotations:deleteInk',
-  annotationsToggleBookmark: 'annotations:toggleBookmark'
+  annotationsToggleBookmark: 'annotations:toggleBookmark',
+  annotationsRenameBookmark: 'annotations:renameBookmark'
 } as const
 
 export type Channel = (typeof Channels)[keyof typeof Channels]
@@ -55,7 +57,8 @@ export const SettingsPartialSchema = z
     highlightColor: z.enum(HIGHLIGHT_COLORS),
     drawWithMouse: z.boolean(),
     penColor: z.enum(INK_COLORS),
-    penWidth: z.union(INK_WIDTHS.map((w) => z.literal(w)))
+    penWidth: z.union(INK_WIDTHS.map((w) => z.literal(w))),
+    showBookmarkTabs: z.boolean()
   })
   .partial()
   .strict()
@@ -89,6 +92,7 @@ export const HighlightSchema = z
     rects: z.array(RectSchema).min(1).max(500),
     text: z.string().max(20_000),
     color: z.enum(HIGHLIGHT_COLORS),
+    style: z.enum(HIGHLIGHT_STYLES),
     noteId: IdSchema.nullable(),
     createdAt: TimeSchema,
     updatedAt: TimeSchema
@@ -175,5 +179,6 @@ export interface Api {
       label?: string | null,
       id?: string
     ): Promise<Bookmark | null>
+    renameBookmark(id: string, label: string | null): Promise<void>
   }
 }

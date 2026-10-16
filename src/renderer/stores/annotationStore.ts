@@ -9,7 +9,9 @@ export type PageAnnotations = {
   bookmark: Bookmark | null
 }
 
-type NewHighlight = Pick<Highlight, 'page' | 'rects' | 'text' | 'color'>
+type NewHighlight = Pick<Highlight, 'page' | 'rects' | 'text' | 'color'> & {
+  style?: Highlight['style']
+}
 type NewInk = Omit<InkStroke, 'id' | 'bookId' | 'createdAt'>
 type NoteInput = { id?: string; page: number; anchor: Note['anchor']; body: string }
 
@@ -32,6 +34,7 @@ type AnnotationState = {
   removeInk(ids: string[]): void
   restoreInk(strokes: InkStroke[]): void
   toggleBookmark(page: number): void
+  renameBookmark(page: number, label: string | null): void
 }
 
 const RETRY_DELAYS_MS = [200, 400, 800]
@@ -112,6 +115,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => {
       const now = Date.now()
       const created = hs.map((h): Highlight => ({
         ...h,
+        style: h.style ?? 'highlight',
         id: crypto.randomUUID(),
         bookId,
         noteId: null,
@@ -276,6 +280,19 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => {
       void persist(
         () => api().toggleBookmark(bookId, page, null, next?.id),
         () => apply([page], put(prev))
+      )
+    },
+
+    renameBookmark: (page, label) => {
+      const prev = get().bookmarks[page]
+      if (!prev) return
+      const set1 = (b: Bookmark) => (s: AnnotationState) => ({
+        bookmarks: { ...s.bookmarks, [page]: b }
+      })
+      apply([page], set1({ ...prev, label }))
+      void persist(
+        () => api().renameBookmark(prev.id, label),
+        () => apply([page], set1(prev))
       )
     }
   }

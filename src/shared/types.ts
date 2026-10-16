@@ -32,6 +32,9 @@ export const INK_COLORS = [
 ] as const
 export const INK_WIDTHS = [0.0025, 0.005, 0.01] as const
 
+export const HIGHLIGHT_STYLES = ['highlight', 'underline', 'wavy', 'note'] as const
+export type HighlightStyle = (typeof HIGHLIGHT_STYLES)[number]
+
 export type Rect = { x: number; y: number; w: number; h: number }
 
 export type Highlight = {
@@ -41,6 +44,7 @@ export type Highlight = {
   rects: Rect[]
   text: string
   color: HighlightColor
+  style: HighlightStyle
   noteId: string | null
   createdAt: number
   updatedAt: number
@@ -94,6 +98,7 @@ export type Settings = {
   drawWithMouse: boolean
   penColor: string // one of INK_COLORS
   penWidth: number // one of INK_WIDTHS
+  showBookmarkTabs: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -105,5 +110,6 @@ export const DEFAULT_SETTINGS: Settings = {
   highlightColor: 'yellow',
   drawWithMouse: false,
   penColor: '#1f1f1f',
-  penWidth: 0.005
+  penWidth: 0.005,
+  showBookmarkTabs: true
 }
