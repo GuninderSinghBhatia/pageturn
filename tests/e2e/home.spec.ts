@@ -2,16 +2,17 @@ import { test, expect } from '@playwright/test'
 import { bodyLine, dragSelect, openAtSpread2, showToolbar, TEXT500 } from './annotationHelpers'
 import { launchApp, makeUserDataDir } from './helpers'
 
-test('home: tabs and grid; a like survives a restart; a note opens its book at its page', async () => {
+test('home: tabs and slider; a like survives a restart; a note opens its book at its page', async () => {
   const userData = makeUserDataDir()
   let { app, page } = await launchApp(userData)
   try {
     await page.evaluate((p) => window.api.library.import([p]), TEXT500)
     await expect(page.getByRole('tab')).toHaveText(['Books', 'Notes', 'Search Online', 'Settings'])
-    const card = page.getByTestId('book-card')
-    await expect(card.getByText('Page 1 / 500')).toBeVisible()
-    await card.getByRole('button', { name: 'Like Text 500' }).click()
-    await expect(card.getByRole('button', { name: 'Like Text 500' })).toHaveAttribute(
+    const selected = page.getByRole('region', { name: 'Selected book' })
+    await expect(selected.getByRole('heading', { name: 'Text 500' })).toBeVisible()
+    await expect(selected.getByText(/500 pages · Page 1 \(0%\)/)).toBeVisible()
+    await selected.getByRole('button', { name: 'Like Text 500' }).click()
+    await expect(selected.getByRole('button', { name: 'Like Text 500' })).toHaveAttribute(
       'aria-pressed',
       'true'
     )

@@ -79,34 +79,65 @@ describe('HomeView', () => {
     const tabs = screen.getAllByRole('tab').map((t) => t.textContent)
     expect(tabs).toEqual(['Books', 'Notes', 'Search Online', 'Settings'])
     expect(screen.getByRole('tab', { name: 'Books' }).getAttribute('aria-selected')).toBe('true')
-    await screen.findByText('Zeta Functions')
+    await screen.findAllByTestId('book-card')
   })
 
-  it('cards show title, author, a like button and the page reached with a progress bar', async () => {
+  it('shows the books in a slider with the focused book in the middle and its details below', async () => {
     render(<HomeView />)
-    const card = (await screen.findByText('Zeta Functions')).closest('[data-testid="book-card"]')!
-    const c = within(card as HTMLElement)
-    expect(c.getByText('Riemann')).toBeTruthy()
-    expect(c.getByText('Page 50 / 100')).toBeTruthy()
-    expect(c.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('50')
-    const heart = c.getByRole('button', { name: 'Like Zeta Functions' })
+    await screen.findAllByTestId('book-card')
+    expect(titles()).toEqual(['Zeta Functions', 'alpha-notes', 'Middlemarch'])
+    expect(screen.getAllByTestId('book-card')[0].getAttribute('aria-current')).toBe('true')
+    const details = screen.getByRole('region', { name: 'Selected book' })
+    expect(within(details).getByRole('heading', { name: 'Zeta Functions' })).toBeTruthy()
+    expect(within(details).getByText('Riemann · 100 pages · Page 50 (50%)')).toBeTruthy()
+    expect(within(details).getByRole('button', { name: /Continue reading/ })).toBeTruthy()
+  })
+
+  it('arrows, keys and clicking a side cover move the focus; the centre cover opens', async () => {
+    render(<HomeView />)
+    await screen.findAllByTestId('book-card')
+    const heading = (): string =>
+      within(screen.getByRole('region', { name: 'Selected book' })).getByRole('heading')
+        .textContent!
+    fireEvent.click(screen.getByRole('button', { name: 'Next book' }))
+    expect(heading()).toBe('alpha-notes')
+    fireEvent.keyDown(window, { key: 'ArrowRight' })
+    expect(heading()).toBe('Middlemarch')
+    fireEvent.keyDown(window, { key: 'ArrowLeft' })
+    fireEvent.click(screen.getByRole('button', { name: 'Previous book' }))
+    expect(heading()).toBe('Zeta Functions')
+    fireEvent.click(screen.getByRole('button', { name: 'Open alpha-notes' })) // a side cover
+    expect(heading()).toBe('alpha-notes')
+    expect(useNav.getState().view).toBe('library') // focused, not opened
+    fireEvent.click(screen.getByRole('button', { name: 'Open alpha-notes' })) // now centred
+    expect(useNav.getState().view).toEqual({ reader: '2'.repeat(64), page: undefined })
+  })
+
+  it('like toggles from the details row', async () => {
+    render(<HomeView />)
+    await screen.findAllByTestId('book-card')
+    const heart = screen.getByRole('button', { name: 'Like Zeta Functions' })
     expect(heart.getAttribute('aria-pressed')).toBe('false')
     fireEvent.click(heart)
     expect(setLiked).toHaveBeenCalledWith(zeta.id, true)
     await waitFor(() => expect(heart.getAttribute('aria-pressed')).toBe('true'))
   })
 
-  it('uses the filename when a book has no title, and marks missing files', async () => {
+  it('Details shows the book facts and offers Remove; missing files are marked', async () => {
     render(<HomeView />)
-    await screen.findByText('Zeta Functions')
-    expect(titles()).toEqual(['Zeta Functions', 'alpha-notes', 'Middlemarch'])
-    const card = screen.getByText('Middlemarch').closest('[data-testid="book-card"]')!
-    expect(within(card as HTMLElement).getByText('Missing')).toBeTruthy()
+    await screen.findAllByTestId('book-card')
+    fireEvent.click(screen.getByRole('button', { name: 'Details' }))
+    const panel = screen.getByRole('dialog', { name: 'Book details' })
+    expect(within(panel).getByText('C:\\books\\file.pdf')).toBeTruthy()
+    expect(within(panel).getByRole('button', { name: 'Remove from library' })).toBeTruthy()
+    fireEvent.keyDown(window, { key: 'End' })
+    const details = screen.getByRole('region', { name: 'Selected book' })
+    expect(within(details).getByText('Missing')).toBeTruthy()
   })
 
-  it('the search icon opens a filter for the grid', async () => {
+  it('the search icon narrows the slider', async () => {
     render(<HomeView />)
-    await screen.findByText('Zeta Functions')
+    await screen.findAllByTestId('book-card')
     fireEvent.click(screen.getByRole('button', { name: 'Search library' }))
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'eliot' } })
     expect(titles()).toEqual(['Middlemarch'])

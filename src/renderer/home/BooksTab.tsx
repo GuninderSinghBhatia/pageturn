@@ -1,18 +1,77 @@
 import { useEffect, useMemo, useState } from 'react'
+import type { Book } from '@shared/types'
 import { displayTitle } from '../library/displayTitle'
 import { RemoveDialog } from '../library/RemoveDialog'
 import { useLibraryStore } from '../stores/libraryStore'
-import { BookCard } from './BookCard'
+import { BookSlider } from './BookSlider'
+import { SelectedBook } from './SelectedBook'
 import styles from './Home.module.css'
+import slider from './Slider.module.css'
 
 type Menu = { bookId: string; x: number; y: number } | null
 
-/** Every book as a card grid; filtered by the top bar's search. Drop PDFs anywhere to add. */
+const isTyping = (t: EventTarget | null): boolean =>
+  t instanceof HTMLElement &&
+  (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
+
+/** Every book in a cover slider, filtered by the top bar's search. Drop PDFs anywhere to add. */
 export function BooksTab({ query, onAdd }: { query: string; onAdd(): void }): React.JSX.Element {
   const { books, refresh, importPaths, openBook, setLiked } = useLibraryStore()
   const [menu, setMenu] = useState<Menu>(null)
   const [dragging, setDragging] = useState(false)
   const [removing, setRemoving] = useState<string | null>(null)
+  const [focusId, setFocusId] = useState<string | null>(null)
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return books
+    return books.filter(
+      (b) => displayTitle(b).toLowerCase().includes(q) || (b.author ?? '').toLowerCase().includes(q)
+    )
+  }, [books, query])
+
+  // Focus is kept by book id so it survives refreshes and filtering.
+  const focus = Math.max(
+    0,
+    visible.findIndex((b) => b.id === focusId)
+  )
+  const focused: Book | undefined = visible[focus]
+  const focusAt = (i: number): void => {
+    const b = visible[Math.min(visible.length - 1, Math.max(0, i))]
+    if (b) setFocusId(b.id)
+  }
+
+  const relocate = async (id: string): Promise<void> => {
+    if (await window.api.library.relocate(id)) await refresh()
+  }
+  const open = (b: Book): void => (b.missing ? void relocate(b.id) : openBook(b.id))
+
+  // ← → Home End move through the slider; Enter opens the focused book.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (isTyping(e.target) || e.ctrlKey || e.altKey || e.metaKey) return
+      const idx = Math.max(
+        0,
+        visible.findIndex((b) => b.id === focusId)
+      )
+      const go = (i: number): void => {
+        const b = visible[Math.min(visible.length - 1, Math.max(0, i))]
+        if (b) setFocusId(b.id)
+      }
+      if (e.key === 'ArrowRight') go(idx + 1)
+      else if (e.key === 'ArrowLeft') go(idx - 1)
+      else if (e.key === 'Home') go(0)
+      else if (e.key === 'End') go(visible.length - 1)
+      else if (e.key === 'Enter' && visible[idx] && !(e.target instanceof HTMLButtonElement)) {
+        const b = visible[idx]
+        if (b.missing) void window.api.library.relocate(b.id)
+        else openBook(b.id)
+      } else return
+      e.preventDefault()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [visible, focusId, openBook])
 
   // Window-wide drop zone for PDFs.
   useEffect(() => {
@@ -46,17 +105,6 @@ export function BooksTab({ query, onAdd }: { query: string; onAdd(): void }): Re
     return () => window.removeEventListener('click', close)
   }, [menu])
 
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return books
-    return books.filter(
-      (b) => displayTitle(b).toLowerCase().includes(q) || (b.author ?? '').toLowerCase().includes(q)
-    )
-  }, [books, query])
-
-  const relocate = async (id: string): Promise<void> => {
-    if (await window.api.library.relocate(id)) await refresh()
-  }
   const removingBook = books.find((b) => b.id === removing)
 
   return (
@@ -69,23 +117,40 @@ export function BooksTab({ query, onAdd }: { query: string; onAdd(): void }): Re
             Add books
           </button>
         </div>
-      ) : visible.length === 0 ? (
+      ) : !focused ? (
         <p className={styles.muted}>No books match “{query}”.</p>
       ) : (
-        <div className={styles.grid}>
-          {visible.map((b) => (
-            <BookCard
-              key={b.id}
-              book={b}
-              onOpen={() => openBook(b.id)}
-              onRelocate={() => void relocate(b.id)}
-              onLike={(liked) => setLiked(b.id, liked)}
-              onContextMenu={(e) => {
-                e.preventDefault()
-                setMenu({ bookId: b.id, x: e.clientX, y: e.clientY })
-              }}
+        <div className={slider.stage}>
+          {/* Soft glow of the focused cover behind the slider; cross-fades on change. */}
+          {focused.thumbnailUrl && (
+            <div
+              key={focused.id}
+              className={slider.ambient}
+              style={{ backgroundImage: `url(${focused.thumbnailUrl})` }}
+              aria-hidden="true"
             />
-          ))}
+          )}
+          <BookSlider
+            books={visible}
+            focus={focus}
+            onFocus={focusAt}
+            onOpen={open}
+            onContextMenu={(b, e) => {
+              e.preventDefault()
+              setMenu({ bookId: b.id, x: e.clientX, y: e.clientY })
+            }}
+          />
+          <SelectedBook
+            book={focused}
+            canPrev={focus > 0}
+            canNext={focus < visible.length - 1}
+            onPrev={() => focusAt(focus - 1)}
+            onNext={() => focusAt(focus + 1)}
+            onOpen={() => open(focused)}
+            onLike={(liked) => setLiked(focused.id, liked)}
+            onRelocate={() => void relocate(focused.id)}
+            onRemove={() => setRemoving(focused.id)}
+          />
         </div>
       )}
 
