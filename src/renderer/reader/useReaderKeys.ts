@@ -54,12 +54,12 @@ export function useReaderKeys({ onFind, onFocusPageBox, onEscape }: Handlers): v
         case 'PageDown':
         case ' ':
           if (!canTurn) return
-          s.next()
+          s.requestTurn(1)
           break
         case 'ArrowLeft':
         case 'PageUp':
           if (!canTurn) return
-          s.prev()
+          s.requestTurn(-1)
           break
         case 'Home':
           s.goTo(1)

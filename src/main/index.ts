@@ -12,6 +12,10 @@ import { importAsBooks } from './ipc/library'
 // Tests (and power users) can isolate all app data in a custom folder.
 if (process.env.PAGETURN_USER_DATA) app.setPath('userData', process.env.PAGETURN_USER_DATA)
 
+// Forces the slide-transition fallback (tests, troubleshooting GPU problems).
+const disableWebgl = process.env.PAGETURN_DISABLE_WEBGL === '1'
+if (disableWebgl) app.disableHardwareAcceleration()
+
 function createWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
     width: 1280,
@@ -24,7 +28,8 @@ function createWindow(): BrowserWindow {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      sandbox: true,
+      webgl: !disableWebgl
     }
   })
 

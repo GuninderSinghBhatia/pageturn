@@ -34,6 +34,10 @@ type ReaderState = {
   setLayoutMode(mode: LayoutMode): void
   submitPassword(password: string | null): void
   close(): void
+  /** Animated turn: routed to the active stage (curl) if one registered, else next/prev. */
+  requestTurn(dir: 1 | -1): void
+  turnHandler: ((dir: 1 | -1) => void) | null
+  setTurnHandler(h: ((dir: 1 | -1) => void) | null): void
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null
@@ -106,6 +110,15 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     const page = spreadStart(clamped, layout)
     if (page !== get().page) set({ page })
     scheduleSave(bookId, page)
+  },
+
+  turnHandler: null,
+  setTurnHandler: (turnHandler) => set({ turnHandler }),
+  requestTurn: (dir) => {
+    const { turnHandler } = get()
+    if (turnHandler) turnHandler(dir)
+    else if (dir === 1) get().next()
+    else get().prev()
   },
 
   next: () => {

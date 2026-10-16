@@ -62,6 +62,8 @@ export function SlideStage({
     <div
       className={styles.stage}
       data-testid="book-stage"
+      data-stage="slide"
+      data-settled={ready ? 'true' : 'false'}
       data-ready={ready ? 'true' : 'false'}
       data-pages={pages.join(',')}
     >
