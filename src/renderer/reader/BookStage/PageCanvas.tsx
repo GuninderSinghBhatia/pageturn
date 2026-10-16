@@ -27,6 +27,8 @@ export function PageCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [state, setState] = useState<PageState>('loading')
   const [attempt, setAttempt] = useState(0)
+  // Once drawn, keep the overlay while re-rendering at a new zoom (no text/highlight flicker).
+  const [rendered, setRendered] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -44,6 +46,7 @@ export function PageCanvas({
         canvas.width = bmp.width
         canvas.height = bmp.height
         canvas.getContext('2d')!.drawImage(bmp, 0, 0)
+        setRendered(true)
         report('ready')
       })
       .catch((err) => {
@@ -58,7 +61,7 @@ export function PageCanvas({
   return (
     <div className={styles.page} style={{ width, height }} data-page={page}>
       <canvas ref={canvasRef} className={styles.canvas} style={{ width, height }} />
-      {state === 'ready' && overlay}
+      {(state === 'ready' || rendered) && overlay}
       {state === 'error' && (
         <div className={styles.pageError}>
           <p>Couldn’t render page {page}</p>

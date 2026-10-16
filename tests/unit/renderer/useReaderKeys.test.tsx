@@ -8,7 +8,8 @@ import { useReaderStore } from '@renderer/stores/readerStore'
 const handlers = {
   onFind: vi.fn(),
   onFocusPageBox: vi.fn(),
-  onEscape: vi.fn(),
+  onEscape: vi.fn(() => false),
+  onToggleToolbar: vi.fn(),
   onHighlight: vi.fn(() => true),
   onBookmark: vi.fn(),
   onTogglePen: vi.fn(),
@@ -54,6 +55,7 @@ describe('useReaderKeys', () => {
       { key: 'h' },
       { key: 'p' },
       { key: 'e' },
+      { key: 't' },
       { key: 'Home' },
       { key: 'd', ctrlKey: true },
       { key: 'z', ctrlKey: true },

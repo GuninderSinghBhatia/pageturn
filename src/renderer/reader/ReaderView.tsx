@@ -1,28 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNav } from '../app/nav'
-import { displayTitle } from '../library/displayTitle'
-import { useLibraryStore } from '../stores/libraryStore'
 import { useAnnotationStore } from '../stores/annotationStore'
 import { useReaderStore } from '../stores/readerStore'
 import { useSettingsStore } from '../stores/settingsStore'
-import { PageOverlay } from './annotations/PageOverlay'
+import { useToastStore } from '../stores/toastStore'
 import { PageMenu } from './annotations/PageMenu'
+import { PageOverlay } from './annotations/PageOverlay'
 import { highlightSelection } from './annotations/selection'
-import { useOverlayUi } from './annotations/uiStore'
-import { InkHost } from './ink/InkHost'
-import { useInkStore } from './ink/inkStore'
-import inkStyles from './ink/Ink.module.css'
 import { SelectionToolbarHost } from './annotations/SelectionToolbar'
+import { useOverlayUi } from './annotations/uiStore'
 import { BookStage } from './BookStage/BookStage'
 import { SlideStage } from './BookStage/SlideStage'
-import { FindBar } from './FindBar'
+import { resetChrome, useChromeStore } from './chrome/chromeStore'
+import { ReaderToolbar } from './chrome/ReaderToolbar'
+import { InkHost } from './ink/InkHost'
+import inkStyles from './ink/Ink.module.css'
+import { useInkStore } from './ink/inkStore'
 import { fitPageSize, resolveLayout, spreadFor, spreadPages } from './layout'
-import { NavBar } from './NavBar'
 import { PasswordPrompt } from './PasswordPrompt'
 import { Prefetcher } from './pdf/prefetch'
-import { TocSidebar } from './TocSidebar'
+import { toggleFullscreen, useReaderKeys } from './useReaderKeys'
 import { usePan, useViewportSize } from './useViewport'
-import { useReaderKeys } from './useReaderKeys'
 import styles from './Reader.module.css'
 
 const ZOOM_SETTLE_MS = 150
@@ -35,16 +33,17 @@ function spreadPagesNow(): number[] {
 
 const reducedMotion = (): boolean => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
+const bookmarkFirstVisible = (): void => {
+  const first = spreadPagesNow()[0]
+  if (first) useAnnotationStore.getState().toggleBookmark(first)
+}
+
+/** The open book and nothing else; tools appear on demand (top edge, right-click, keys). */
 export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
-  const { goLibrary, openSettings } = useNav()
+  const { goLibrary } = useNav()
   const r = useReaderStore()
   const settings = useSettingsStore((s) => s.settings)
-  const book = useLibraryStore((s) => s.books.find((b) => b.id === bookId))
-  const [tocOpen, setTocOpen] = useState(false)
-  const [findOpen, setFindOpen] = useState(false)
-  const [banner, setBanner] = useState(false)
-  const bannerShown = useRef(false)
-  const pageBoxRef = useRef<HTMLInputElement>(null)
+  const scannedNoticeShown = useRef(false)
   const viewportRef = useRef<HTMLDivElement>(null)
   const viewport = useViewportSize(viewportRef)
   usePan(viewportRef, r.zoom > 1)
@@ -60,6 +59,7 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
     return () => {
       useReaderStore.getState().close()
       useAnnotationStore.getState().clear()
+      resetChrome()
     }
   }, [bookId])
 
@@ -81,12 +81,12 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
   // One-time notice when a visible page has no text layer (scanned).
   const { doc } = r
   useEffect(() => {
-    if (!doc || bannerShown.current) return
+    if (!doc || scannedNoticeShown.current) return
     let cancelled = false
     void Promise.all(pages.map((p) => doc.hasText(p))).then((has) => {
-      if (cancelled || bannerShown.current || has.every(Boolean)) return
-      bannerShown.current = true
-      setBanner(true)
+      if (cancelled || scannedNoticeShown.current || has.every(Boolean)) return
+      scannedNoticeShown.current = true
+      useToastStore.getState().show('This page has no selectable text.')
     })
     return () => {
       cancelled = true
@@ -95,31 +95,30 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
   }, [doc, pages.join(',')])
 
   useReaderKeys({
-    onFind: useCallback(() => setFindOpen(true), []),
-    onFocusPageBox: useCallback(() => pageBoxRef.current?.select(), []),
+    onFind: useCallback(() => useChromeStore.getState().openWith('search'), []),
+    onFocusPageBox: useCallback(() => useChromeStore.getState().openPageBox(), []),
+    onToggleToolbar: useCallback(() => useChromeStore.getState().toggleToolbar(), []),
     onEscape: useCallback(() => {
-      setFindOpen(false)
-      setTocOpen(false)
-      useOverlayUi.getState().closeAll()
-      useInkStore.getState().setMode({ active: false })
+      const ui = useOverlayUi.getState()
+      const hadCard = !!(ui.menu || ui.openNote)
+      ui.closeAll()
+      return useChromeStore.getState().escape() || hadCard
     }, []),
-    onEraser: useCallback(
-      () => useInkStore.getState().setMode({ active: true, tool: 'eraser' }),
-      []
-    ),
+    onEraser: useCallback(() => {
+      useChromeStore.getState().setTextTool(null)
+      useInkStore.getState().setMode({ active: true, tool: 'eraser' })
+    }, []),
     onUndo: useCallback(() => useInkStore.getState().undo(), []),
     onRedo: useCallback(() => useInkStore.getState().redo(), []),
     onTogglePen: useCallback(() => {
       const ink = useInkStore.getState()
+      useChromeStore.getState().setTextTool(null)
       ink.setMode({
         active: !ink.mode.active,
         tool: ink.mode.tool === 'eraser' ? 'pen' : ink.mode.tool
       })
     }, []),
-    onBookmark: useCallback(() => {
-      const first = useReaderStore.getState().doc && spreadPagesNow()[0]
-      if (first) useAnnotationStore.getState().toggleBookmark(first)
-    }, []),
+    onBookmark: bookmarkFirstVisible,
     onHighlight: useCallback(
       () =>
         highlightSelection(
@@ -185,35 +184,25 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
     [doc]
   )
 
-  const title = book ? displayTitle(book) : 'PageTurn'
   const penActive = useInkStore((s) => s.mode.active)
 
   return (
     <div className={styles.reader}>
       {r.doc && (
-        <NavBar
-          ref={pageBoxRef}
-          title={title}
+        <ReaderToolbar
+          doc={r.doc}
           visiblePage={visibleLast}
-          page={r.page}
-          numPages={r.doc.numPages}
-          layout={r.layout}
           zoom={r.zoom}
+          layout={r.layout}
           onBack={goLibrary}
           onGoTo={r.goTo}
-          onPrev={() => r.requestTurn(-1)}
-          onNext={() => r.requestTurn(1)}
-          onToggleLayout={() => r.setLayoutMode(r.layout === 'spread' ? 'single' : 'spread')}
-          onToggleToc={() => setTocOpen((o) => !o)}
-          onToggleFind={() => setFindOpen((o) => !o)}
-          onSettings={openSettings}
-          penActive={penActive}
-          onTogglePen={() => useInkStore.getState().setMode({ active: !penActive })}
+          onBookmark={bookmarkFirstVisible}
           onZoom={r.setZoom}
+          onLayout={(l) => r.setLayoutMode(l)}
+          onFullscreen={toggleFullscreen}
         />
       )}
       <div className={styles.body}>
-        {tocOpen && r.doc && <TocSidebar outline={r.doc.outline} onGoTo={r.goTo} />}
         {r.doc && <InkHost viewportRef={viewportRef} />}
         <div
           ref={viewportRef}
@@ -257,20 +246,6 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
       </div>
       {r.doc && <SelectionToolbarHost rootRef={viewportRef} />}
       {r.doc && <PageMenu rootRef={viewportRef} />}
-      {findOpen && r.doc && (
-        <FindBar
-          doc={r.doc}
-          visibleLast={visibleLast}
-          onJump={r.goTo}
-          onClose={() => setFindOpen(false)}
-        />
-      )}
-      {banner && (
-        <div className={styles.banner} role="status">
-          This page has no selectable text.
-          <button onClick={() => setBanner(false)}>Dismiss</button>
-        </div>
-      )}
       {r.passwordRequest && (
         <PasswordPrompt retry={r.passwordRequest.retry} onSubmit={r.submitPassword} />
       )}

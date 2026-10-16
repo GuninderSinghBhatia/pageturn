@@ -1,7 +1,7 @@
 import type { OutlineItem } from './pdf/pdfService'
 import styles from './Reader.module.css'
 
-type Props = { outline: OutlineItem[]; onGoTo(page: number): void }
+type Props = { outline: OutlineItem[]; onGoTo(page: number): void; variant?: 'popover' }
 
 function Items({
   items,
@@ -29,9 +29,12 @@ function Items({
   )
 }
 
-export function TocSidebar({ outline, onGoTo }: Props): React.JSX.Element {
+export function TocSidebar({ outline, onGoTo, variant }: Props): React.JSX.Element {
   return (
-    <aside className={styles.toc} aria-label="Table of contents">
+    <aside
+      className={variant === 'popover' ? styles.tocPopover : styles.toc}
+      aria-label="Table of contents"
+    >
       <h2 className={styles.tocHeading}>Contents</h2>
       {outline.length === 0 ? (
         <p className={styles.tocEmpty}>This PDF has no table of contents.</p>

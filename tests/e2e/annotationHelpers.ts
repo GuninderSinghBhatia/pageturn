@@ -10,8 +10,7 @@ export async function openAtSpread2(page: Page, file = TEXT500): Promise<void> {
   await page.getByTestId('book-card').getByRole('button').first().click()
   const stage = page.getByTestId('book-stage')
   await expect(stage).toHaveAttribute('data-settled', 'true')
-  await page.getByTestId('page-box').fill('2')
-  await page.getByTestId('page-box').press('Enter')
+  await goToPage(page, 2)
   await expect(stage).toHaveAttribute('data-pages', '2,3')
   await expect(stage).toHaveAttribute('data-settled', 'true')
   await page.waitForFunction(() => document.getAnimations().length === 0) // slide-in finished
@@ -64,4 +63,50 @@ export async function highlightPoint(
   const box = (await page.locator(`[data-page-overlay="${hl.page}"]`).boundingBox())!
   const r = hl.rects[0]
   return { x: box.x + (r.x + r.w / 2) * box.width, y: box.y + (r.y + r.h / 2) * box.height }
+}
+
+const toolbar = (page: Page): ReturnType<Page['getByRole']> =>
+  page.getByRole('toolbar', { name: 'Reader tools' })
+
+/** Whether the app considers the toolbar shown (not its CSS state mid-animation). */
+const shown = async (page: Page): Promise<boolean> =>
+  (await page.locator('[data-visible]').first().getAttribute('data-visible')) === 'true'
+
+/** Reveals the hidden reader toolbar (T) if it isn't showing. */
+export async function showToolbar(page: Page): Promise<void> {
+  if (!(await shown(page))) await page.keyboard.press('t')
+  await expect(page.locator('[data-visible]').first()).toHaveAttribute('data-visible', 'true')
+  await expect(toolbar(page)).toBeVisible()
+}
+
+/** Hides the toolbar again unless a tool pins it. */
+export async function hideToolbar(page: Page): Promise<void> {
+  if (await shown(page)) await page.keyboard.press('t')
+}
+
+/** Types a page number into the toolbar's page box. */
+export async function goToPage(page: Page, n: number): Promise<void> {
+  await showToolbar(page)
+  await page.getByTestId('page-box').fill(String(n))
+  await page.getByTestId('page-box').press('Enter')
+  await hideToolbar(page)
+}
+
+/** Clicks a button in the Display (Aa) menu, then closes the menu and toolbar. */
+export async function displayAction(page: Page, name: string): Promise<void> {
+  await showToolbar(page)
+  await toolbar(page).getByRole('button', { name: 'Display' }).click()
+  await page.getByRole('dialog', { name: 'Display' }).getByRole('button', { name }).click()
+  await page.keyboard.press('Escape') // closes the menu
+  await hideToolbar(page)
+}
+
+/** Opens Settings from the reader (Display menu → Settings…). */
+export async function openReaderSettings(page: Page): Promise<void> {
+  await showToolbar(page)
+  await toolbar(page).getByRole('button', { name: 'Display' }).click()
+  await page
+    .getByRole('dialog', { name: 'Display' })
+    .getByRole('button', { name: 'Settings' })
+    .click()
 }

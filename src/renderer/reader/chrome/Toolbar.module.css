@@ -1,0 +1,255 @@
+/* Hidden top toolbar: a dark floating pill that slides in from the top edge. */
+.zone {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transform: translate(-50%, calc(-100% - 12px));
+  opacity: 0;
+  visibility: hidden; /* after the slide-out: truly hidden, not just transparent */
+  pointer-events: none;
+  transition:
+    transform 180ms ease-out,
+    opacity 180ms ease-out,
+    visibility 0s linear 180ms;
+  font-family: var(--sans);
+}
+
+.shown {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+
+.pill,
+.subrow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgb(30 30 30 / 0.85);
+  backdrop-filter: blur(12px);
+  color: rgb(255 255 255 / 0.8);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+  white-space: nowrap;
+}
+
+.subrow {
+  gap: 6px;
+  padding: 5px 10px;
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.icon:hover {
+  color: #fff;
+  background: rgb(255 255 255 / 0.08);
+}
+
+.icon[aria-pressed='true'] {
+  color: #fff;
+  background: rgb(255 255 255 / 0.18);
+}
+
+.icon:focus-visible,
+.chip:focus-visible,
+.swatch:focus-visible {
+  outline: 2px solid #bfd9f2;
+  outline-offset: 1px;
+}
+
+.sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 6px;
+  background: rgb(255 255 255 / 0.18);
+}
+
+.pages {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 6px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pageBox {
+  width: 44px;
+  padding: 3px 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #fff;
+  text-align: right;
+}
+
+.pageBox:hover,
+.pageBox:focus {
+  border-color: rgb(255 255 255 / 0.25);
+  background: rgb(255 255 255 / 0.08);
+  outline: none;
+}
+
+.pageTotal {
+  color: rgb(255 255 255 / 0.6);
+}
+
+.swatch {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.swatch[aria-pressed='true'] {
+  border-color: #fff;
+}
+
+.chip {
+  padding: 4px 10px;
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chip:hover {
+  color: #fff;
+  background: rgb(255 255 255 / 0.08);
+}
+
+.chip[aria-pressed='true'] {
+  border-color: rgb(255 255 255 / 0.6);
+  color: #fff;
+}
+
+.dot {
+  display: block;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Light popovers under the pill (contents, display). */
+.popover {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 260px;
+  max-height: 60vh;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff;
+  color: #2b2b2b;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+}
+
+.popover .chip {
+  border-color: #ddd;
+  color: #2b2b2b;
+}
+
+.popover .chip[aria-pressed='true'] {
+  border-color: #2b2b2b;
+  color: #000;
+}
+
+.popover .chip:hover {
+  background: #f2f2f2;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.zoom {
+  min-width: 48px;
+  text-align: center;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.theme_light {
+  background: #faf8f4 !important;
+}
+
+.theme_sepia {
+  background: #f4ecd8 !important;
+}
+
+.theme_dark {
+  background: #2a2a2a !important;
+  color: #dadada !important;
+}
+
+.menuLink {
+  align-self: flex-start;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: #2b2b2b;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.menuLink:hover {
+  text-decoration: underline;
+}
+
+/* Find input inline in the pill. */
+.find {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 4px;
+}
+
+.findInput {
+  width: 180px;
+  padding: 4px 10px;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.08);
+  color: #fff;
+  font-size: 13px;
+}
+
+.findInput::placeholder {
+  color: rgb(255 255 255 / 0.5);
+}
+
+.findInput:focus {
+  outline: none;
+  border-color: rgb(255 255 255 / 0.45);
+}
+
+.findCount {
+  color: rgb(255 255 255 / 0.6);
+  font-size: 12px;
+}

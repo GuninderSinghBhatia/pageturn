@@ -1,34 +1,29 @@
 import { INK_COLORS, INK_WIDTHS } from '@shared/types'
+import { Icons } from '../chrome/icons'
+import styles from '../chrome/Toolbar.module.css'
+import { WIDTH_LABELS } from './inkInput'
 import { useInkStore } from './inkStore'
-import { WIDTH_LABELS, type InkMode } from './inkInput'
-import styles from './Ink.module.css'
 
-const TOOLS: { tool: InkMode['tool']; label: string; glyph: string }[] = [
-  { tool: 'pen', label: 'Pen', glyph: '✎' },
-  { tool: 'highlighter', label: 'Highlighter', glyph: '▌' },
-  { tool: 'eraser', label: 'Eraser', glyph: '⌫' }
-]
-
-type Props = { children?: React.ReactNode } // extra controls (undo/redo)
-
-/** Floating pen toolbar shown while pen mode is on. */
-export function InkToolbar({ children }: Props): React.JSX.Element {
+/** Options row under the toolbar while the pen is active: kind, colour, width, undo/redo. */
+export function PenOptions(): React.JSX.Element {
   const mode = useInkStore((s) => s.mode)
   const setMode = useInkStore((s) => s.setMode)
   return (
-    <div className={styles.toolbar} role="toolbar" aria-label="Pen" data-no-turn>
-      {TOOLS.map((t) => (
-        <button
-          key={t.tool}
-          className={styles.btn}
-          aria-label={t.label}
-          aria-pressed={mode.tool === t.tool}
-          title={t.label}
-          onClick={() => setMode({ tool: t.tool })}
-        >
-          {t.glyph}
-        </button>
-      ))}
+    <div className={styles.subrow} role="group" aria-label="Pen options">
+      <button
+        className={styles.chip}
+        aria-pressed={mode.tool === 'pen'}
+        onClick={() => setMode({ tool: 'pen' })}
+      >
+        Pen
+      </button>
+      <button
+        className={styles.chip}
+        aria-pressed={mode.tool === 'highlighter'}
+        onClick={() => setMode({ tool: 'highlighter' })}
+      >
+        Marker
+      </button>
       <span className={styles.sep} />
       {INK_COLORS.map((c) => (
         <button
@@ -37,27 +32,37 @@ export function InkToolbar({ children }: Props): React.JSX.Element {
           style={{ background: c }}
           aria-label={`Ink colour ${c}`}
           aria-pressed={mode.color === c}
-          onClick={() => setMode({ color: c, tool: mode.tool === 'eraser' ? 'pen' : mode.tool })}
+          onClick={() => setMode({ color: c })}
         />
       ))}
       <span className={styles.sep} />
       {INK_WIDTHS.map((w, i) => (
         <button
           key={w}
-          className={styles.btn}
+          className={styles.icon}
           aria-label={WIDTH_LABELS[i]}
           aria-pressed={mode.width === w}
-          title={WIDTH_LABELS[i]}
           onClick={() => setMode({ width: w })}
         >
           <span className={styles.dot} style={{ width: 4 + i * 4, height: 4 + i * 4 }} />
         </button>
       ))}
-      {children && <span className={styles.sep} />}
-      {children}
       <span className={styles.sep} />
-      <button className={styles.done} onClick={() => setMode({ active: false })}>
-        Done
+      <button
+        className={styles.icon}
+        aria-label="Undo"
+        title="Undo (Ctrl+Z)"
+        onClick={() => useInkStore.getState().undo()}
+      >
+        {Icons.undo}
+      </button>
+      <button
+        className={styles.icon}
+        aria-label="Redo"
+        title="Redo (Ctrl+Y)"
+        onClick={() => useInkStore.getState().redo()}
+      >
+        {Icons.redo}
       </button>
     </div>
   )
