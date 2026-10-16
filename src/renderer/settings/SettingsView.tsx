@@ -4,26 +4,19 @@ import {
   INK_WIDTHS,
   type LayoutMode,
   type PageTurnStyle,
-  type PaperTint,
-  type Settings,
-  type Theme
+  type Settings
 } from '@shared/types'
+import { THEME_SETTINGS, themeChoice, type ThemeChoice } from '../app/theme'
 import { WIDTH_LABELS } from '../reader/ink/inkInput'
 import { useSettingsStore } from '../stores/settingsStore'
 import styles from './SettingsView.module.css'
 
 type Option<T> = { value: T; label: string }
 
-const THEMES: Option<Theme>[] = [
-  { value: 'system', label: 'System' },
+const THEMES: Option<ThemeChoice>[] = [
   { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' }
-]
-const TINTS: Option<PaperTint>[] = [
-  { value: 'white', label: 'White' },
-  { value: 'cream', label: 'Cream' },
   { value: 'sepia', label: 'Sepia' },
-  { value: 'dark', label: 'Night' }
+  { value: 'dark', label: 'Dark' }
 ]
 const TURN_STYLES: Option<PageTurnStyle>[] = [
   { value: 'curl', label: 'Page curl' },
@@ -76,6 +69,7 @@ function Choice<K extends keyof Settings>({
 /** Reading preferences; every change is saved immediately. */
 export function SettingsView({ onBack }: { onBack(): void }): React.JSX.Element {
   const turnSound = useSettingsStore((s) => s.settings.turnSound)
+  const showBookmarkTabs = useSettingsStore((s) => s.settings.showBookmarkTabs)
   const set = useSettingsStore((s) => s.set)
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -94,13 +88,7 @@ export function SettingsView({ onBack }: { onBack(): void }): React.JSX.Element 
       </header>
       <main className={styles.body}>
         <h2 className={styles.section}>Reading</h2>
-        <Choice name="theme" legend="Theme" options={THEMES} />
-        <Choice
-          name="paperTint"
-          legend="Paper"
-          hint="Night inverts page brightness while keeping colours."
-          options={TINTS}
-        />
+        <ThemeSetting />
         <Choice
           name="pageTurnStyle"
           legend="Page turn"
@@ -122,6 +110,17 @@ export function SettingsView({ onBack }: { onBack(): void }): React.JSX.Element 
               onChange={(e) => void set({ turnSound: e.target.checked })}
             />
             Turn sound
+          </label>
+        </fieldset>
+        <fieldset className={styles.group}>
+          <legend className={styles.legend}>Bookmarks</legend>
+          <label className={styles.check}>
+            <input
+              type="checkbox"
+              checked={showBookmarkTabs}
+              onChange={(e) => void set({ showBookmarkTabs: e.target.checked })}
+            />
+            Show bookmark tabs
           </label>
         </fieldset>
         <h2 className={styles.section}>Pen</h2>
@@ -187,5 +186,33 @@ function PenSettings(): React.JSX.Element {
         </div>
       </fieldset>
     </>
+  )
+}
+
+/** Light / Sepia / Dark: sets the app theme and the paper tint together. */
+export function ThemeSetting(): React.JSX.Element {
+  const current = useSettingsStore((s) => themeChoice(s.settings))
+  const set = useSettingsStore((s) => s.set)
+  return (
+    <fieldset className={styles.group}>
+      <legend className={styles.legend}>Theme</legend>
+      <div className={styles.options}>
+        {THEMES.map((o) => (
+          <label
+            key={o.value}
+            className={`${styles.option} ${o.value === current ? styles.selected : ''}`}
+          >
+            <input
+              type="radio"
+              name="readerTheme"
+              checked={o.value === current}
+              onChange={() => void set(THEME_SETTINGS[o.value])}
+            />
+            {o.label}
+          </label>
+        ))}
+      </div>
+      <p className={styles.hint}>Dark inverts page brightness while keeping colours.</p>
+    </fieldset>
   )
 }

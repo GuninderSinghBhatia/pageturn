@@ -22,11 +22,12 @@ export type PageTextures = {
 
 const MESH_COLS = 40
 const MESH_ROWS = 60
-const SHADOW_PAD = 24
+const SHADOW_PAD = 40 // book drop shadow ≈ 0 20px 40px rgba(0,0,0,0.25)
+const SHADOW_DROP = 20
 const TINTS: Record<PaperTint, [number, number, number]> = {
   white: [1, 1, 1],
-  cream: [0.985, 0.955, 0.885],
-  sepia: [0.95, 0.88, 0.75],
+  cream: [0.98, 0.973, 0.957], // #FAF8F4
+  sepia: [0.957, 0.925, 0.847], // #F4ECD8
   dark: [1, 1, 1]
 }
 
@@ -228,11 +229,11 @@ export class CurlRenderer {
   private drawShadow(r: Rect): void {
     this.setRect({
       x: r.x - SHADOW_PAD,
-      y: r.y - SHADOW_PAD + 6,
+      y: r.y - SHADOW_PAD + SHADOW_DROP,
       width: r.width + 2 * SHADOW_PAD,
       height: r.height + 2 * SHADOW_PAD
     })
-    this.gl.uniform4f(this.u.u_inner, r.x, r.y + 6, r.width, r.height)
+    this.gl.uniform4f(this.u.u_inner, r.x, r.y + SHADOW_DROP, r.width, r.height)
     this.drawQuad(MODE.shadow)
   }
 
