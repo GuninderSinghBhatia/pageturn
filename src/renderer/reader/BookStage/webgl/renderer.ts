@@ -287,6 +287,7 @@ export class CurlRenderer {
     this.canvas.removeEventListener('webglcontextlost', this.handleLost)
     this.textures.dispose()
     this.gl.deleteProgram(this.program)
-    this.gl.getExtension('WEBGL_lose_context')?.loseContext()
+    // Free only our own GPU objects. Never force-lose the context: React StrictMode (dev) remounts
+    // on the same canvas, and a lost context would make every later shader compile fail.
   }
 }
