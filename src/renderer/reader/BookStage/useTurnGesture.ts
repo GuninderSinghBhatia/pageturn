@@ -139,6 +139,8 @@ export function useTurnGesture({ stageRef, controller, rects, onChange }: Option
 
     const wheel = (e: WheelEvent): void => {
       if (e.ctrlKey || e.deltaY === 0) return // Ctrl+wheel zooms (handled by the reader)
+      // Scrolling inside a popover or note scrolls it, not the book.
+      if (e.target instanceof Element && e.target.closest('[data-no-turn]')) return
       const now = e.timeStamp
       const fresh = now - lastWheel > WHEEL_DEBOUNCE_MS
       lastWheel = now

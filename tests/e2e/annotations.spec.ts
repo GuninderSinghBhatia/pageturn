@@ -269,3 +269,23 @@ test('annotations are baked into the curling page and overlays hide mid-turn', a
     await app.close()
   }
 })
+
+test('scrolling the wheel over an open note does not turn the page', async () => {
+  const { app, page } = await launchApp()
+  try {
+    await openAtSpread2(page)
+    const box = (await page.locator('[data-page-overlay="3"]').boundingBox())!
+    await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.3, { button: 'right' })
+    await page.getByRole('menuitem', { name: 'Add note here' }).click()
+    const note = page.getByRole('textbox', { name: 'Note' })
+    await note.fill('line\n'.repeat(30))
+    const nb = (await note.boundingBox())!
+    await page.mouse.move(nb.x + nb.width / 2, nb.y + nb.height / 2)
+    await page.mouse.wheel(0, 300)
+    await page.waitForTimeout(800)
+    await expect(page.getByTestId('book-stage')).toHaveAttribute('data-pages', '2,3')
+    await expect(note).toBeVisible()
+  } finally {
+    await app.close()
+  }
+})
