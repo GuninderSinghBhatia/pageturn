@@ -4,6 +4,7 @@ import type { Corner, Vec2 } from './webgl/curlMath'
 import type { TurnController } from './turnController'
 
 const EDGE_ZONE = 0.15 // fraction of page width/height near corners/edges that starts a drag
+const CLICK_ZONE = 0.15 // clicking the outer 15% of the book turns
 const CLICK_SLOP_PX = 5
 const WHEEL_DEBOUNCE_MS = 250
 
@@ -14,7 +15,7 @@ type Options = {
   onChange(): void // request a redraw
 }
 
-type Hit = { side: 'left' | 'right'; rect: Rect; local: Vec2; edge: boolean; outerThird: boolean }
+type Hit = { side: 'left' | 'right'; rect: Rect; local: Vec2; edge: boolean; outerZone: boolean }
 
 function hitTest(
   rects: { left: Rect | null; right: Rect | null },
@@ -38,7 +39,8 @@ function hitTest(
       rect,
       local: { x: u, y: v * (rect.height / rect.width) },
       edge: fromOuter < EDGE_ZONE || (nearCornerRow && fromOuter < 2 * EDGE_ZONE),
-      outerThird: fromOuter < 1 / 3
+      // 15% of the book: of one page in single layout, of two in a spread.
+      outerZone: fromOuter < (single ? CLICK_ZONE : 2 * CLICK_ZONE)
     }
   }
   return null
@@ -101,7 +103,7 @@ export function useTurnGesture({ stageRef, controller, rects, onChange }: Option
         }
         el.setPointerCapture(e.pointerId)
         onChange()
-      } else if (hit.outerThird) clickDir = dir
+      } else if (hit.outerZone) clickDir = dir
     }
 
     const move = (e: PointerEvent): void => {

@@ -202,3 +202,28 @@ test('bookmark tabs stick out of the right page: jump, rename, delete, hide', as
     await app.close()
   }
 })
+
+test('after 2s without movement the cursor and toolbar hide; clicking the outer 15% turns', async () => {
+  const { app, page } = await launchApp()
+  try {
+    await openAtSpread2(page)
+    const reader = page.locator('[data-reader]')
+    await page.mouse.move(300, 300)
+    await page.mouse.move(310, 310)
+    await expect(reader).toHaveAttribute('data-idle', 'false')
+    await expect(reader).toHaveAttribute('data-idle', 'true', { timeout: 3500 })
+    await page.mouse.move(320, 320)
+    await expect(reader).toHaveAttribute('data-idle', 'false')
+
+    // 32% of a page in from the edge (16% of the book) is outside the zone: no turn…
+    const box = (await page.locator('[data-page-overlay="3"]').boundingBox())!
+    await page.mouse.click(box.x + box.width * 0.68, box.y + box.height * 0.97)
+    await page.waitForTimeout(800)
+    await expect(page.getByTestId('book-stage')).toHaveAttribute('data-pages', '2,3')
+    // …but one in the outer 15% does.
+    await page.mouse.click(box.x + box.width * 0.85, box.y + box.height * 0.97)
+    await expect(page.getByTestId('book-stage')).toHaveAttribute('data-pages', '4,5')
+  } finally {
+    await app.close()
+  }
+})

@@ -14,6 +14,7 @@ import { BookStage } from './BookStage/BookStage'
 import { SlideStage } from './BookStage/SlideStage'
 import { resetChrome, useChromeStore } from './chrome/chromeStore'
 import { ReaderToolbar } from './chrome/ReaderToolbar'
+import { useIdle } from './chrome/useIdle'
 import { useTextTool } from './chrome/useTextTool'
 import { InkHost } from './ink/InkHost'
 import inkStyles from './ink/Ink.module.css'
@@ -197,9 +198,10 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
   )
 
   const penActive = useInkStore((s) => s.mode.active)
+  const idle = useIdle()
 
   return (
-    <div className={styles.reader}>
+    <div className={styles.reader} data-reader data-idle={String(idle && !penActive)}>
       {r.doc && (
         <ReaderToolbar
           doc={r.doc}

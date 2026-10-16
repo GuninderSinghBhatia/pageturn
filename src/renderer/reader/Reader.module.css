@@ -5,6 +5,12 @@
   background: var(--reader-bg);
 }
 
+/* Idle: the pointer hides (not while drawing). */
+.reader[data-idle='true'],
+.reader[data-idle='true'] * {
+  cursor: none !important;
+}
+
 .viewport > * {
   animation: bookIn 250ms ease-out;
 }
