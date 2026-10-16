@@ -1,4 +1,4 @@
-import type { HighlightColor, Rect } from '@shared/types'
+import type { Highlight, HighlightColor, HighlightStyle, Rect } from '@shared/types'
 import { useAnnotationStore } from '../../stores/annotationStore'
 import { mergeLineRects, normalizeRects } from './rects'
 
@@ -46,15 +46,26 @@ export function selectionByPage(sel: Selection, root: HTMLElement): PageSelectio
   return out
 }
 
-/** Highlights the current selection inside `root` in `color`; returns false if nothing to do. */
-export function highlightSelection(root: HTMLElement | null, color: HighlightColor): boolean {
+/** Annotates the current selection inside `root`; returns what was created (empty if nothing). */
+export function annotateSelection(
+  root: HTMLElement | null,
+  color: HighlightColor,
+  style: HighlightStyle = 'highlight'
+): Highlight[] {
   const sel = window.getSelection()
-  if (!root || !sel) return false
+  if (!root || !sel) return []
   const parts = selectionByPage(sel, root)
-  if (parts.length === 0) return false
-  useAnnotationStore.getState().addHighlights(parts.map((p) => ({ ...p, color })))
+  if (parts.length === 0) return []
+  const created = useAnnotationStore
+    .getState()
+    .addHighlights(parts.map((p) => ({ ...p, color, style })))
   sel.removeAllRanges()
-  return true
+  return created
+}
+
+/** Highlights the current selection in `color`; returns false if there was nothing to highlight. */
+export function highlightSelection(root: HTMLElement | null, color: HighlightColor): boolean {
+  return annotateSelection(root, color).length > 0
 }
 
 /** True when the selection is non-empty and sits in a page's text layer under `root`. */

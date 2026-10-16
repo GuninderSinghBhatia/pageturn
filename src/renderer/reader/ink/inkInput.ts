@@ -30,14 +30,19 @@ export function inkAction(
   ) {
     return 'erase'
   }
-  if (e.pointerType === 'mouse' && (!drawWithMouse || e.button !== 0)) return 'pass'
+  if (e.pointerType === 'mouse') {
+    if (e.button !== 0) return 'pass'
+    if (mode.tool === 'eraser') return 'erase' // picked explicitly: works with the mouse
+    if (!drawWithMouse) return 'pass'
+  }
   return mode.tool === 'eraser' ? 'erase' : 'draw'
 }
 
 type Options = {
   viewportRef: RefObject<HTMLElement | null>
-  mode: InkMode
-  drawWithMouse: boolean
+  /** Read live on each press, so a tool picked a moment ago already applies. */
+  getMode(): InkMode
+  getDrawWithMouse(): boolean
   onLive(page: number, stroke: InkStroke | null): void
   onCommit(page: number, stroke: InkStroke): void
   /** Eraser at p; `aspect` = page height / width (for distances in page widths). */
@@ -77,7 +82,8 @@ export function useInkInput(opts: Options): void {
 
     const down = (e: PointerEvent): void => {
       const o = latest.current
-      const action = inkAction(e, o.mode, o.drawWithMouse)
+      const mode = o.getMode()
+      const action = inkAction(e, mode, o.getDrawWithMouse())
       if (action === 'pass') return
       const hit = pageAt(root, e.clientX, e.clientY)
       if (!hit) return
@@ -86,7 +92,7 @@ export function useInkInput(opts: Options): void {
       root.setPointerCapture(e.pointerId)
       const box = root.querySelector(`[data-page-overlay="${hit.page}"]`)!.getBoundingClientRect()
       const p = local(box, e)
-      const tool = o.mode.tool === 'highlighter' ? 'highlighter' : 'pen'
+      const tool = mode.tool === 'highlighter' ? 'highlighter' : 'pen'
       active = {
         id: e.pointerId,
         page: hit.page,
@@ -97,8 +103,8 @@ export function useInkInput(opts: Options): void {
           bookId: '',
           page: hit.page,
           points: [[p.x, p.y, pressure(e)]],
-          color: o.mode.color,
-          width: o.mode.width,
+          color: mode.color,
+          width: mode.width,
           tool,
           createdAt: Date.now()
         }
