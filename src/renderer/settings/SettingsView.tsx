@@ -1,5 +1,14 @@
 import { useEffect } from 'react'
-import type { LayoutMode, PageTurnStyle, PaperTint, Settings, Theme } from '@shared/types'
+import {
+  INK_COLORS,
+  INK_WIDTHS,
+  type LayoutMode,
+  type PageTurnStyle,
+  type PaperTint,
+  type Settings,
+  type Theme
+} from '@shared/types'
+import { WIDTH_LABELS } from '../reader/ink/inkInput'
 import { useSettingsStore } from '../stores/settingsStore'
 import styles from './SettingsView.module.css'
 
@@ -115,7 +124,68 @@ export function SettingsView({ onBack }: { onBack(): void }): React.JSX.Element 
             Turn sound
           </label>
         </fieldset>
+        <h2 className={styles.section}>Pen</h2>
+        <PenSettings />
       </main>
     </div>
+  )
+}
+
+function PenSettings(): React.JSX.Element {
+  const { drawWithMouse, penColor, penWidth } = useSettingsStore((s) => s.settings)
+  const set = useSettingsStore((s) => s.set)
+  return (
+    <>
+      <fieldset className={styles.group}>
+        <legend className={styles.legend}>Input</legend>
+        <label className={styles.check}>
+          <input
+            type="checkbox"
+            checked={drawWithMouse}
+            onChange={(e) => void set({ drawWithMouse: e.target.checked })}
+          />
+          Draw with mouse
+        </label>
+        <p className={styles.hint}>
+          A pen or stylus always draws in pen mode; the mouse turns pages unless this is on.
+        </p>
+      </fieldset>
+      <fieldset className={styles.group}>
+        <legend className={styles.legend}>Default colour</legend>
+        <div className={styles.options}>
+          {INK_COLORS.map((c) => (
+            <label
+              key={c}
+              className={`${styles.colorOption} ${c === penColor ? styles.selected : ''}`}
+            >
+              <input
+                type="radio"
+                name="penColor"
+                aria-label={`Ink colour ${c}`}
+                checked={c === penColor}
+                onChange={() => void set({ penColor: c })}
+              />
+              <span className={styles.colorDot} style={{ background: c }} />
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <fieldset className={styles.group}>
+        <legend className={styles.legend}>Default width</legend>
+        <div className={styles.options}>
+          {INK_WIDTHS.map((w, i) => (
+            <label key={w} className={`${styles.option} ${w === penWidth ? styles.selected : ''}`}>
+              <input
+                type="radio"
+                name="penWidth"
+                checked={w === penWidth}
+                onChange={() => void set({ penWidth: w })}
+              />
+              {WIDTH_LABELS[i]}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+    </>
   )
 }

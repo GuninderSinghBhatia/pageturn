@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { InkStroke } from '@shared/types'
-import { strokeHit, strokeOutline } from '@renderer/reader/ink/strokes'
+import { needsSimulatedPressure, strokeHit, strokeOutline } from '@renderer/reader/ink/strokes'
 
 const stroke = (points: InkStroke['points'], width = 0.005): InkStroke => ({
   id: 's',
@@ -52,5 +52,22 @@ describe('strokeHit', () => {
 
   it('hits a single-point stroke (a dot)', () => {
     expect(strokeHit(stroke([[0.3, 0.3, 0.5]]), { x: 0.305, y: 0.3 }, 0.01, 1.5)).toBe(true)
+  })
+})
+
+describe('needsSimulatedPressure', () => {
+  it('is true for mouse strokes (constant 0.5) and false for real pen pressure', () => {
+    expect(
+      needsSimulatedPressure([
+        [0, 0, 0.5],
+        [1, 1, 0.5]
+      ])
+    ).toBe(true)
+    expect(
+      needsSimulatedPressure([
+        [0, 0, 0.3],
+        [1, 1, 0.7]
+      ])
+    ).toBe(false)
   })
 })
