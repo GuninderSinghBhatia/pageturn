@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNav } from '../app/nav'
 import { displayTitle } from '../library/displayTitle'
 import { useLibraryStore } from '../stores/libraryStore'
+import { useAnnotationStore } from '../stores/annotationStore'
 import { useReaderStore } from '../stores/readerStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { BookStage } from './BookStage/BookStage'
@@ -38,7 +39,14 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
     const s = useReaderStore.getState()
     s.setLayoutMode(useSettingsStore.getState().settings.layout)
     void s.open(bookId)
-    return () => useReaderStore.getState().close()
+    void useAnnotationStore
+      .getState()
+      .load(bookId)
+      .catch((err) => console.error('Could not load annotations', err))
+    return () => {
+      useReaderStore.getState().close()
+      useAnnotationStore.getState().clear()
+    }
   }, [bookId])
 
   useEffect(() => {

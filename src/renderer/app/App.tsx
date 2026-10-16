@@ -6,6 +6,7 @@ import { useLibraryStore } from '../stores/libraryStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useNav } from './nav'
 import { useThemeSync } from './theme'
+import { Toasts } from './Toasts'
 import './theme.css'
 import './base.css'
 
@@ -26,6 +27,7 @@ function App(): React.JSX.Element {
     <>
       {view === 'library' ? <LibraryView /> : <ReaderView key={view.reader} bookId={view.reader} />}
       {settingsOpen && <SettingsView onBack={closeSettings} />}
+      <Toasts />
     </>
   )
 }
