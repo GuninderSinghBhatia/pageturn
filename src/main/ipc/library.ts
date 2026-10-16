@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { z } from 'zod'
 import { BookIdSchema, BookMetaSchema, Channels, PathsSchema, PngSchema } from '@shared/ipc'
 import type { Book } from '@shared/types'
 import type { BooksRepo } from '../db/repositories/books'
@@ -52,9 +53,10 @@ export function registerLibraryIpc(repo: BooksRepo, win: BrowserWindow): void {
     return res.canceled || res.filePaths.length === 0 ? [] : importAsBooks(repo, res.filePaths)
   })
 
-  ipcMain.handle(Channels.libraryRemove, async (_e, id: unknown) => {
+  ipcMain.handle(Channels.libraryRemove, async (_e, id: unknown, deleteAnnotations: unknown) => {
     const row = getRow(id)
-    repo.purge(row.id)
+    if (parse(z.boolean(), deleteAnnotations)) repo.purge(row.id)
+    else repo.hide(row.id)
     await rm(thumbnailPath(thumbDir(), row.id), { force: true })
     notifyChanged()
   })

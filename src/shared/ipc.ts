@@ -1,5 +1,16 @@
 import { z } from 'zod'
-import { HIGHLIGHT_COLORS, INK_COLORS, INK_WIDTHS, type Book, type Settings } from './types'
+import {
+  HIGHLIGHT_COLORS,
+  INK_COLORS,
+  INK_WIDTHS,
+  type Book,
+  type BookAnnotations,
+  type Bookmark,
+  type Highlight,
+  type InkStroke,
+  type Note,
+  type Settings
+} from './types'
 
 /** IPC channel names: one per Api method (plus main → renderer events). */
 export const Channels = {
@@ -15,7 +26,15 @@ export const Channels = {
   libraryChanged: 'library:changed', // event: main → renderer (import/remove/relocate)
   readerSaveProgress: 'reader:saveProgress',
   settingsGet: 'settings:get',
-  settingsSet: 'settings:set'
+  settingsSet: 'settings:set',
+  annotationsList: 'annotations:list',
+  annotationsUpsertHighlight: 'annotations:upsertHighlight',
+  annotationsDeleteHighlight: 'annotations:deleteHighlight',
+  annotationsUpsertNote: 'annotations:upsertNote',
+  annotationsDeleteNote: 'annotations:deleteNote',
+  annotationsAddInk: 'annotations:addInk',
+  annotationsDeleteInk: 'annotations:deleteInk',
+  annotationsToggleBookmark: 'annotations:toggleBookmark'
 } as const
 
 export type Channel = (typeof Channels)[keyof typeof Channels]
@@ -123,7 +142,8 @@ export interface Api {
     list(): Promise<Book[]>
     import(paths: string[]): Promise<Book[]>
     openDialog(): Promise<Book[]>
-    remove(bookId: string): Promise<void>
+    /** Hides the book (annotations kept for a later re-import) unless deleteAnnotations. */
+    remove(bookId: string, deleteAnnotations: boolean): Promise<void>
     relocate(bookId: string): Promise<Book | null>
     getFile(bookId: string): Promise<ArrayBuffer>
     saveThumbnail(bookId: string, png: ArrayBuffer): Promise<string>
@@ -139,5 +159,21 @@ export interface Api {
   settings: {
     get(): Promise<Settings>
     set(partial: SettingsPartial): Promise<Settings>
+  }
+  annotations: {
+    listForBook(bookId: string): Promise<BookAnnotations>
+    upsertHighlight(h: Highlight): Promise<void>
+    deleteHighlight(id: string): Promise<void>
+    upsertNote(n: Note): Promise<void>
+    deleteNote(id: string): Promise<void>
+    addInk(strokes: InkStroke[]): Promise<void>
+    deleteInk(ids: string[]): Promise<void>
+    /** Adds a bookmark on the page or removes the existing one (null). */
+    toggleBookmark(
+      bookId: string,
+      page: number,
+      label?: string | null,
+      id?: string
+    ): Promise<Bookmark | null>
   }
 }
