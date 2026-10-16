@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { HIGHLIGHT_COLORS } from '@shared/types'
+import { WindowControls } from '../../app/WindowControls'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { HIGHLIGHT_HEX } from '../annotations/draw'
 import { FindBar } from '../FindBar'
@@ -93,55 +94,59 @@ export function ReaderToolbar(p: Props): React.JSX.Element {
       data-no-turn
       data-visible={visible}
     >
-      <div className={styles.pill} role="toolbar" aria-label="Reader tools">
-        {btn('Back to library', Icons.back, p.onBack)}
-        <span className={styles.sep} />
-        {btn(
-          'Highlighter',
-          Icons.highlighter,
-          () => setTextTool(isHighlight ? null : { kind: 'highlight' }),
-          isHighlight
-        )}
-        {btn(
-          'Underline',
-          Icons.underline,
-          () => setTextTool(isUnderline ? null : { kind: 'underline', style: 'underline' }),
-          isUnderline
-        )}
-        {btn(
-          'Pen',
-          Icons.pen,
-          () => {
-            setTextTool(null)
-            ui().setMode(isPen ? { active: false } : { active: true, tool: 'pen' })
-          },
-          isPen
-        )}
-        {btn(
-          'Eraser',
-          Icons.eraser,
-          () => {
-            setTextTool(null)
-            ui().setMode(isEraser ? { active: false } : { active: true, tool: 'eraser' })
-          },
-          isEraser
-        )}
-        <span className={styles.sep} />
-        {btn('Bookmark page', Icons.bookmark, p.onBookmark)}
-        {btn('Contents', Icons.contents, () => toggle('contents'), panel === 'contents')}
-        {btn('Search', Icons.search, () => toggle('search'), panel === 'search')}
-        {panel === 'search' && (
-          <FindBar
-            inline
-            doc={p.doc}
-            visibleLast={p.visiblePage}
-            onJump={p.onGoTo}
-            onClose={() => setPanel(null)}
-          />
-        )}
-        <PageIndicator visiblePage={p.visiblePage} numPages={p.doc.numPages} onGoTo={p.onGoTo} />
-        {btn('Display', Icons.display, () => toggle('display'), panel === 'display')}
-        {btn('Fullscreen', Icons.fullscreen, p.onFullscreen)}
+      <div className={styles.mainRow}>
+        <div className={styles.pill} role="toolbar" aria-label="Reader tools">
+          {btn('Back to library', Icons.back, p.onBack)}
+          <span className={styles.sep} />
+          {btn(
+            'Highlighter',
+            Icons.highlighter,
+            () => setTextTool(isHighlight ? null : { kind: 'highlight' }),
+            isHighlight
+          )}
+          {btn(
+            'Underline',
+            Icons.underline,
+            () => setTextTool(isUnderline ? null : { kind: 'underline', style: 'underline' }),
+            isUnderline
+          )}
+          {btn(
+            'Pen',
+            Icons.pen,
+            () => {
+              setTextTool(null)
+              ui().setMode(isPen ? { active: false } : { active: true, tool: 'pen' })
+            },
+            isPen
+          )}
+          {btn(
+            'Eraser',
+            Icons.eraser,
+            () => {
+              setTextTool(null)
+              ui().setMode(isEraser ? { active: false } : { active: true, tool: 'eraser' })
+            },
+            isEraser
+          )}
+          <span className={styles.sep} />
+          {btn('Bookmark page', Icons.bookmark, p.onBookmark)}
+          {btn('Contents', Icons.contents, () => toggle('contents'), panel === 'contents')}
+          {btn('Search', Icons.search, () => toggle('search'), panel === 'search')}
+          {panel === 'search' && (
+            <FindBar
+              inline
+              doc={p.doc}
+              visibleLast={p.visiblePage}
+              onJump={p.onGoTo}
+              onClose={() => setPanel(null)}
+            />
+          )}
+          <PageIndicator visiblePage={p.visiblePage} numPages={p.doc.numPages} onGoTo={p.onGoTo} />
+          {btn('Display', Icons.display, () => toggle('display'), panel === 'display')}
+          {btn('Fullscreen', Icons.fullscreen, p.onFullscreen)}
+        </div>
+        {/* Window buttons ride along with the tools, so they never cover the page. */}
+        <WindowControls inline />
       </div>
 
       {isHighlight && (

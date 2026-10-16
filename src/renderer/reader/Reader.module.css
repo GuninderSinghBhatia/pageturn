@@ -15,7 +15,7 @@
   position: fixed;
   top: 0;
   left: 0;
-  right: 150px; /* the window buttons handle their own area */
+  right: 0;
   height: 10px;
   z-index: 25;
 }

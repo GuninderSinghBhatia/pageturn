@@ -6,15 +6,14 @@ import { useLibraryStore } from '../stores/libraryStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useNav } from './nav'
 import { useThemeSync } from './theme'
-import { useTitleBar } from './useTitleBar'
 import { Toasts } from './Toasts'
+import { WindowControls } from './WindowControls'
 import './theme.css'
 import './base.css'
 
 function App(): React.JSX.Element {
   const { view, goReader, settingsOpen, closeSettings } = useNav()
   useThemeSync(useSettingsStore((s) => s.settings.theme))
-  useTitleBar()
 
   useEffect(() => {
     void useSettingsStore.getState().load()
@@ -34,6 +33,7 @@ function App(): React.JSX.Element {
       )}
       {settingsOpen && <SettingsView onBack={closeSettings} />}
       <Toasts />
+      <WindowControls />
     </>
   )
 }

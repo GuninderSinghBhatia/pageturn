@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron'
-import { Channels, type Api } from '@shared/ipc'
+import { Channels, type Api, type WindowState } from '@shared/ipc'
 import type { Book } from '@shared/types'
 
 const invoke = ipcRenderer.invoke.bind(ipcRenderer)
@@ -50,7 +50,14 @@ const api: Api = {
   },
   window: {
     fitAspect: (aspect) => invoke(Channels.windowFitAspect, aspect),
-    setTitleBar: (colors) => invoke(Channels.windowSetTitleBar, colors)
+    control: (action) => invoke(Channels.windowControl, action),
+    getState: () => invoke(Channels.windowGetState),
+    onState: (cb) => {
+      const listener = (_e: IpcRendererEvent, s: WindowState): void => cb(s)
+      ipcRenderer.on(Channels.windowState, listener)
+      return () => ipcRenderer.removeListener(Channels.windowState, listener)
+    },
+    platform: process.platform
   }
 }
 

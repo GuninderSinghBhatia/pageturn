@@ -28,6 +28,12 @@
   transition-delay: 0s;
 }
 
+.mainRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .pill,
 .subrow {
   display: flex;
