@@ -70,10 +70,10 @@ describe('readerStore navigation', () => {
     expect(saveProgress).toHaveBeenCalledWith(bookId, 30)
   })
 
-  it('setZoom clamps to 0.5..4', () => {
+  it('setZoom clamps to 1..4: the book never shrinks below its fitted size', () => {
     useReaderStore.getState().setZoom(10)
     expect(useReaderStore.getState().zoom).toBe(4)
-    useReaderStore.getState().setZoom(0.1)
-    expect(useReaderStore.getState().zoom).toBe(0.5)
+    useReaderStore.getState().setZoom(0.8)
+    expect(useReaderStore.getState().zoom).toBe(1)
   })
 })

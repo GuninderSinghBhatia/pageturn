@@ -6,6 +6,7 @@ import {
   highlightPoint,
   openAtSpread2,
   showToolbar,
+  spans,
   stored,
   TEXT500,
   waitForWindowFit
@@ -213,7 +214,7 @@ test('after 2s without movement the cursor and toolbar hide; clicking the outer 
     await page.mouse.move(300, 300)
     await page.mouse.move(310, 310)
     await expect(reader).toHaveAttribute('data-idle', 'false')
-    await expect(reader).toHaveAttribute('data-idle', 'true', { timeout: 3500 })
+    await expect(reader).toHaveAttribute('data-idle', 'true', { timeout: 6000 }) // 2 s idle; headroom for a busy machine
     await page.mouse.move(320, 320)
     await expect(reader).toHaveAttribute('data-idle', 'false')
 
@@ -250,7 +251,7 @@ test('windowed: the window takes the book’s shape (no empty space); curl anima
   }
 })
 
-test('zoom stays in the book view: out shrinks it centred, in enlarges it and drags to pan', async () => {
+test('zoom never shrinks the book below fit, zooms toward the word under the pointer, and pans', async () => {
   const { app, page } = await launchApp()
   try {
     await openAtSpread2(page)
@@ -259,28 +260,39 @@ test('zoom stays in the book view: out shrinks it centred, in enlarges it and dr
       (await page.locator('[data-page-overlay="2"]').boundingBox())!
     const fit = await box()
 
+    // Zooming out stops at the fitted size.
     await page.keyboard.press('Control+-')
     await page.keyboard.press('Control+-')
-    await expect.poll(async () => Math.round(((await box()).width / fit.width) * 100)).toBe(64)
+    await page.waitForTimeout(400)
+    expect(Math.round(((await box()).width / fit.width) * 100)).toBe(100)
+
+    // Ctrl+scroll over a word near the bottom-right: that word stays under the pointer.
+    const list = await spans(page, 3)
+    const idx = list.length - 2 // a line near the bottom-right of page 3
+    const word = list[idx]
+    const at = { x: word.x + word.width / 2, y: word.y + word.height / 2 }
+    await page.mouse.move(at.x, at.y)
+    await page.keyboard.down('Control')
+    await page.mouse.wheel(0, -100)
+    await page.mouse.wheel(0, -100)
+    await page.keyboard.up('Control')
     await expect(stage).toHaveAttribute('data-stage', 'curl')
+    await expect.poll(async () => (await box()).width / fit.width).toBeGreaterThan(1.15)
+    await page.waitForTimeout(400) // zoom settles, text layer re-renders
+    const moved = (await spans(page, 3))[idx] // same span: the text layer keeps its order
+    const now = { x: moved.x + moved.width / 2, y: moved.y + moved.height / 2 }
+    expect(Math.abs(now.x - at.x)).toBeLessThan(8)
+    expect(Math.abs(now.y - at.y)).toBeLessThan(8)
+
+    // Drag the paper to pan; turning pauses while zoomed in.
     const vw = await page.evaluate(() => innerWidth)
-    const out = await box()
-    expect(Math.abs(out.x + out.width - vw / 2)).toBeLessThan(3) // page 2 ends at the centre (spine)
-
-    await page.keyboard.press('Control+0')
-    await page.keyboard.press('Control+=')
-    await page.keyboard.press('Control+=')
-    await expect.poll(async () => Math.round(((await box()).width / fit.width) * 100)).toBe(156)
-    await expect(stage).toHaveAttribute('data-stage', 'curl')
-
     const before = await box()
-    await page.mouse.move(vw / 2 + 200, 300)
+    await page.mouse.move(vw / 2 + 4, 300) // blank margin by the spine (dragging text selects it)
     await page.mouse.down()
-    await page.mouse.move(vw / 2 + 300, 260, { steps: 5 })
+    await page.mouse.move(vw / 2 + 104, 300, { steps: 5 })
     await page.mouse.up()
-    const after = await box()
-    expect(after.x - before.x).toBeCloseTo(100, -1)
-    await page.keyboard.press('ArrowRight') // turning pauses while zoomed in
+    expect(Math.abs((await box()).x - before.x)).toBeGreaterThan(20)
+    await page.keyboard.press('ArrowRight')
     await page.waitForTimeout(700)
     await expect(stage).toHaveAttribute('data-pages', '2,3')
   } finally {

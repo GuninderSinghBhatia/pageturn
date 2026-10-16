@@ -57,3 +57,15 @@ export function clampPan(fit: Rects, vp: Size, zoom: number, pan: Pan): Pan {
   const clamp = (v: number, m: number): number => (Math.abs(v) <= m ? v : Math.sign(v) * m)
   return { x: clamp(pan.x, mx), y: clamp(pan.y, my) }
 }
+
+/**
+ * Pan that keeps the book point under `focus` (stage px) where it is when the zoom changes
+ * from `from` to `to`, so zooming grows the page around the word under the pointer.
+ */
+export function focalPan(pan: Pan, focus: Pan, centre: Pan, from: number, to: number): Pan {
+  const k = to / from
+  return {
+    x: focus.x - centre.x - (focus.x - centre.x - pan.x) * k,
+    y: focus.y - centre.y - (focus.y - centre.y - pan.y) * k
+  }
+}
