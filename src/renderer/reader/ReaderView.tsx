@@ -4,6 +4,7 @@ import { displayTitle } from '../library/displayTitle'
 import { useLibraryStore } from '../stores/libraryStore'
 import { useReaderStore } from '../stores/readerStore'
 import { useSettingsStore } from '../stores/settingsStore'
+import { BookStage } from './BookStage/BookStage'
 import { SlideStage } from './BookStage/SlideStage'
 import { FindBar } from './FindBar'
 import { fitPageSize, resolveLayout, spreadFor, spreadPages } from './layout'
@@ -122,6 +123,12 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
     if (prefetcher && viewport.width > 0) prefetcher.update(r.page, r.layout)
   }, [prefetcher, r.page, r.layout, viewport.width])
 
+  // WebGL curl unless the user chose slide/instant, motion is reduced, zoomed in, or WebGL failed.
+  const [webglFailed, setWebglFailed] = useState(false)
+  const onWebglFailed = useCallback(() => setWebglFailed(true), [])
+  const useCurl =
+    settings.pageTurnStyle === 'curl' && !webglFailed && r.zoom <= 1 && !reducedMotion()
+
   const title = book ? displayTitle(book) : 'PageTurn'
 
   return (
@@ -137,8 +144,8 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
           zoom={r.zoom}
           onBack={goLibrary}
           onGoTo={r.goTo}
-          onPrev={r.prev}
-          onNext={r.next}
+          onPrev={() => r.requestTurn(-1)}
+          onNext={() => r.requestTurn(1)}
           onToggleLayout={() => r.setLayoutMode(r.layout === 'spread' ? 'single' : 'spread')}
           onToggleToc={() => setTocOpen((o) => !o)}
           onToggleFind={() => setFindOpen((o) => !o)}
@@ -148,7 +155,18 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
       <div className={styles.body}>
         {tocOpen && r.doc && <TocSidebar outline={r.doc.outline} onGoTo={r.goTo} />}
         <div ref={viewportRef} className={`${styles.viewport} ${r.zoom > 1 ? styles.zoomed : ''}`}>
-          {r.doc && viewport.width > 0 && (
+          {r.doc && viewport.width > 0 && useCurl && (
+            <BookStage
+              doc={r.doc}
+              layout={r.layout}
+              viewport={viewport}
+              pageSize={pageSize}
+              scaleFor={scaleFor}
+              tint={settings.paperTint}
+              onFallback={onWebglFailed}
+            />
+          )}
+          {r.doc && viewport.width > 0 && !useCurl && (
             <SlideStage
               doc={r.doc}
               spread={spread}
