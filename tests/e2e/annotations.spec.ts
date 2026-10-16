@@ -241,3 +241,31 @@ test('Ctrl+D bookmarks the left page of the spread and survives a restart', asyn
     await app.close()
   }
 })
+
+test('annotations are baked into the curling page and overlays hide mid-turn', async () => {
+  const { app, page } = await launchApp()
+  try {
+    await openAtSpread2(page)
+    const line = await bodyLine(page, 3)
+    await dragSelect(page, line, line)
+    await page.keyboard.press('h')
+    await expect.poll(async () => (await stored(page)).highlights.length).toBe(1)
+
+    const stage = page.getByTestId('book-stage')
+    const [x, y, w, h] = (await stage.getAttribute('data-right-rect'))!.split(',').map(Number)
+    const box = (await stage.boundingBox())!
+    await page.mouse.move(box.x + x + w - 3, box.y + y + h - 3)
+    await page.mouse.down()
+    await page.mouse.move(box.x + x + w * 0.5, box.y + y + h * 0.7, { steps: 6 })
+    await expect(stage).toHaveAttribute('data-settled', 'false')
+    expect((await stage.getAttribute('data-baked'))!.split(',')).toContain('3')
+    await expect(page.locator('[data-page-overlay="3"]')).toBeHidden()
+    await page.mouse.move(box.x + x + w - 3, box.y + y + h - 3, { steps: 4 }) // back: cancel
+    await page.mouse.up()
+    await expect(stage).toHaveAttribute('data-settled', 'true')
+    await expect(stage).toHaveAttribute('data-pages', '2,3')
+    await expect(page.locator('[data-page-overlay="3"]')).toBeVisible()
+  } finally {
+    await app.close()
+  }
+})

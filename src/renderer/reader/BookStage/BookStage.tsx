@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PaperTint } from '@shared/types'
+import { selectPage, useAnnotationStore } from '../../stores/annotationStore'
 import { useReaderStore } from '../../stores/readerStore'
 import {
   nextSpreadStart,
@@ -11,6 +12,8 @@ import {
 } from '../layout'
 import type { OverlayRenderer } from '../annotations/PageOverlay'
 import type { OpenedDoc } from '../pdf/pdfService'
+import { BakeCache } from './bake'
+import { computeRects } from './pageRects'
 import { TurnController, turnPointer, type TurnDir, type TurnState } from './turnController'
 import { useTurnGesture } from './useTurnGesture'
 import type { Vec2 } from './webgl/curlMath'
@@ -27,29 +30,6 @@ type Props = {
   tint: PaperTint
   onFallback(): void // WebGL unavailable or context lost
   renderOverlay?: OverlayRenderer
-}
-
-/** Page rects (CSS px within the stage), centred on the spine; one shared rect in single mode. */
-function computeRects(
-  spread: Spread,
-  layout: ResolvedLayout,
-  vp: Size,
-  pageSize: (p: number) => Size
-): { left: Rect | null; right: Rect | null } {
-  const cx = vp.width / 2
-  const cy = vp.height / 2
-  const rect = (p: number, x: (w: number) => number): Rect => {
-    const s = pageSize(p)
-    return { x: x(s.width), y: cy - s.height / 2, width: s.width, height: s.height }
-  }
-  if (layout === 'single') {
-    const r = rect(spread.right!, (w) => cx - w / 2)
-    return { left: r, right: r }
-  }
-  return {
-    left: spread.left === null ? null : rect(spread.left, (w) => cx - w),
-    right: spread.right === null ? null : rect(spread.right, () => cx)
-  }
 }
 
 export function BookStage({
@@ -72,6 +52,7 @@ export function BookStage({
   // Plain object (not a ref) so the controller callbacks below may flip it.
   const [committing] = useState(() => ({ current: false }))
   const drawRef = useRef<() => void>(() => undefined)
+  const [bakes] = useState(() => new BakeCache())
   const page = useReaderStore((s) => s.page)
   const n = doc.numPages
 
@@ -93,10 +74,24 @@ export function BookStage({
       })
   )
 
+  /** Page bitmap with annotations painted in (the raw bitmap if it has none). */
+  const baked = useCallback(
+    (p: number): ImageBitmap | undefined => {
+      const raw = bitmaps.current.get(p)?.bmp
+      if (!raw) return undefined
+      const a = useAnnotationStore.getState()
+      const side = layout === 'spread' && p % 2 === 0 ? 'left' : 'right'
+      return bakes.get(p, raw, a.revision[p] ?? 0, selectPage(a, p), side)
+    },
+    [bakes, layout]
+  )
+
+  // Settled pages use raw bitmaps (the DOM overlay draws annotations on top); turning pages
+  // use baked ones so annotations move with the paper.
   const texturesFor = useCallback(
     (state: TurnState, cur: Spread): PageTextures => {
       const b = (p: number | null | undefined): ImageBitmap | undefined =>
-        p == null ? undefined : bitmaps.current.get(p)?.bmp
+        p == null ? undefined : state.phase === 'idle' ? bitmaps.current.get(p)?.bmp : baked(p)
       const single = layout === 'single'
       if (state.phase === 'idle') return { staticLeft: b(cur.left), staticRight: b(cur.right) }
       const start = cur.left ?? cur.right!
@@ -121,7 +116,7 @@ export function BookStage({
             back: b(to.right)
           }
     },
-    [layout, n]
+    [layout, n, baked]
   )
 
   const draw = useCallback(() => {
@@ -156,8 +151,15 @@ export function BookStage({
     if (rr) el.dataset.rightRect = [rr.x, rr.y, rr.width, rr.height].map(Math.round).join(',')
     if (s.turning === idle) useReaderStore.setState({ turning: !idle })
     if (!idle) frame.current = requestAnimationFrame(() => drawRef.current())
-    else r.preload([...bitmaps.current.values()].map((v) => v.bmp)) // upload while idle
-  }, [controller, layout, n, viewport, pageSize, texturesFor])
+    else {
+      // While idle, bake and upload everything a turn may need so it starts without a hitch.
+      const held = [...bitmaps.current.keys()]
+      bakes.retain(new Set(held))
+      const bakedNow = held.map(baked).filter((b): b is ImageBitmap => !!b)
+      r.preload([...[...bitmaps.current.values()].map((v) => v.bmp), ...bakedNow])
+    }
+    el.dataset.baked = bakes.bakedPages().join(',')
+  }, [controller, layout, n, viewport, pageSize, texturesFor, bakes, baked])
 
   useEffect(() => {
     drawRef.current = draw
@@ -192,10 +194,11 @@ export function BookStage({
       useReaderStore.getState().setTurnHandler(null)
       useReaderStore.setState({ turning: false })
       controller.reset()
+      bakes.clear()
       r.dispose()
       rendererRef.current = null
     }
-  }, [controller, onFallback, requestDraw])
+  }, [controller, onFallback, requestDraw, bakes])
 
   useEffect(() => {
     rendererRef.current?.setViewport(viewport.width, viewport.height)
@@ -216,6 +219,12 @@ export function BookStage({
         requestDraw()
       }),
     [controller, committing, requestDraw]
+  )
+
+  // Annotation edits re-bake (on the next draw) the pages they touch.
+  useEffect(
+    () => useAnnotationStore.subscribe((s, prev) => s.revision !== prev.revision && requestDraw()),
+    [requestDraw]
   )
 
   // Keep bitmaps for the current spread and one spread either side.
