@@ -119,3 +119,30 @@
   margin: 0;
   accent-color: var(--accent);
 }
+
+.colorOption {
+  display: flex;
+  align-items: center;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.colorOption input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.colorOption:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.colorDot {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}

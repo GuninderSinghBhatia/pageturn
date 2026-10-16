@@ -21,6 +21,11 @@ export function strokeOutline(
   }) as [number, number][]
 }
 
+/** Mouse/touch strokes are recorded at a constant 0.5 pressure; pens report real pressure. */
+export function needsSimulatedPressure(points: InkStroke['points']): boolean {
+  return points.every((p) => p[2] === 0.5)
+}
+
 /** Distance from p to segment ab (all in the same units). */
 function segmentDistance(
   p: { x: number; y: number },

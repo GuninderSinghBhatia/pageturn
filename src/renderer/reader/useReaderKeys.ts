@@ -8,6 +8,7 @@ type Handlers = {
   onEscape(): void
   onHighlight(): boolean // highlight the current text selection; false if there is none
   onBookmark(): void
+  onTogglePen(): void
 }
 
 const ZOOM_STEP = 1.25
@@ -28,7 +29,8 @@ export function useReaderKeys({
   onFocusPageBox,
   onEscape,
   onHighlight,
-  onBookmark
+  onBookmark,
+  onTogglePen
 }: Handlers): void {
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -84,6 +86,10 @@ export function useReaderKeys({
         case 'H':
           if (!onHighlight()) return
           break
+        case 'p':
+        case 'P':
+          onTogglePen()
+          break
         default:
           return
       }
@@ -91,5 +97,5 @@ export function useReaderKeys({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onFind, onFocusPageBox, onEscape, onHighlight, onBookmark])
+  }, [onFind, onFocusPageBox, onEscape, onHighlight, onBookmark, onTogglePen])
 }

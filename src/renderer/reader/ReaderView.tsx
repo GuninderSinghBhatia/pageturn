@@ -9,6 +9,9 @@ import { PageOverlay } from './annotations/PageOverlay'
 import { PageMenu } from './annotations/PageMenu'
 import { highlightSelection } from './annotations/selection'
 import { useOverlayUi } from './annotations/uiStore'
+import { InkHost } from './ink/InkHost'
+import { useInkStore } from './ink/inkStore'
+import inkStyles from './ink/Ink.module.css'
 import { SelectionToolbarHost } from './annotations/SelectionToolbar'
 import { BookStage } from './BookStage/BookStage'
 import { SlideStage } from './BookStage/SlideStage'
@@ -97,6 +100,14 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
       setFindOpen(false)
       setTocOpen(false)
       useOverlayUi.getState().closeAll()
+      useInkStore.getState().setMode({ active: false })
+    }, []),
+    onTogglePen: useCallback(() => {
+      const ink = useInkStore.getState()
+      ink.setMode({
+        active: !ink.mode.active,
+        tool: ink.mode.tool === 'eraser' ? 'pen' : ink.mode.tool
+      })
     }, []),
     onBookmark: useCallback(() => {
       const first = useReaderStore.getState().doc && spreadPagesNow()[0]
@@ -168,6 +179,7 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
   )
 
   const title = book ? displayTitle(book) : 'PageTurn'
+  const penActive = useInkStore((s) => s.mode.active)
 
   return (
     <div className={styles.reader}>
@@ -188,12 +200,18 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
           onToggleToc={() => setTocOpen((o) => !o)}
           onToggleFind={() => setFindOpen((o) => !o)}
           onSettings={openSettings}
+          penActive={penActive}
+          onTogglePen={() => useInkStore.getState().setMode({ active: !penActive })}
           onZoom={r.setZoom}
         />
       )}
       <div className={styles.body}>
         {tocOpen && r.doc && <TocSidebar outline={r.doc.outline} onGoTo={r.goTo} />}
-        <div ref={viewportRef} className={`${styles.viewport} ${r.zoom > 1 ? styles.zoomed : ''}`}>
+        {r.doc && <InkHost viewportRef={viewportRef} />}
+        <div
+          ref={viewportRef}
+          className={`${styles.viewport} ${r.zoom > 1 ? styles.zoomed : ''} ${penActive ? inkStyles.penMode : ''}`}
+        >
           {r.doc && viewport.width > 0 && useCurl && (
             <BookStage
               doc={r.doc}

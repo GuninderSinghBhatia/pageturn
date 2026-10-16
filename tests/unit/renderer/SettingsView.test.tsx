@@ -50,6 +50,16 @@ describe('SettingsView', () => {
     expect(setSpy).toHaveBeenCalledWith({ turnSound: true })
   })
 
+  it('saves pen preferences', () => {
+    render(<SettingsView onBack={() => {}} />)
+    fireEvent.click(screen.getByRole('checkbox', { name: /draw with mouse/i }))
+    fireEvent.click(screen.getByRole('radio', { name: 'Thick' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'Ink colour #2a62c9' }))
+    expect(setSpy).toHaveBeenCalledWith({ drawWithMouse: true })
+    expect(setSpy).toHaveBeenCalledWith({ penWidth: 0.01 })
+    expect(setSpy).toHaveBeenCalledWith({ penColor: '#2a62c9' })
+  })
+
   it('Back calls onBack', () => {
     const onBack = vi.fn()
     render(<SettingsView onBack={onBack} />)

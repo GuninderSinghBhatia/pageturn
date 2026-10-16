@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { selectPage, useAnnotationStore } from '../../stores/annotationStore'
 import { useReaderStore } from '../../stores/readerStore'
+import { useInkStore } from '../ink/inkStore'
 import type { OpenedDoc } from '../pdf/pdfService'
 import { TextLayer } from '../pdf/TextLayer'
 import { drawPageAnnotations } from './draw'
@@ -28,6 +29,8 @@ export function PageOverlay({ doc, page, width, height }: Props): React.JSX.Elem
   const rootRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const ann = useAnnotationStore((s) => selectPage(s, page))
+  const live = useInkStore((s) => (s.live?.page === page ? s.live.stroke : undefined))
+  const penActive = useInkStore((s) => s.mode.active)
   const [open, setOpen] = useState<Open | null>(null)
   const close = useCallback(() => setOpen(null), [])
   // In a spread, even pages sit on the left (page 1 is a cover on the right).
@@ -42,8 +45,8 @@ export function PageOverlay({ doc, page, width, height }: Props): React.JSX.Elem
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    drawPageAnnotations(ctx, ann, canvas.width, canvas.height)
-  }, [ann, width, height])
+    drawPageAnnotations(ctx, ann, canvas.width, canvas.height, live)
+  }, [ann, live, width, height])
 
   // Page-local point (CSS px and normalized) of a pointer event.
   const locate = useCallback((e: { clientX: number; clientY: number }) => {
@@ -84,7 +87,7 @@ export function PageOverlay({ doc, page, width, height }: Props): React.JSX.Elem
       onClick={onClick}
     >
       <canvas ref={canvasRef} className={styles.annotationCanvas} style={{ width, height }} />
-      <TextLayer doc={doc} page={page} width={width} />
+      <TextLayer doc={doc} page={page} width={width} inert={penActive} />
       <FreeNotes page={page} notes={ann.freeNotes} width={width} height={height} />
       <Ribbon page={page} bookmarked={!!ann.bookmark} side={side} />
       {openHighlight && (

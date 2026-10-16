@@ -1,6 +1,6 @@
 import type { HighlightColor, InkStroke } from '@shared/types'
 import type { PageAnnotations } from '../../stores/annotationStore'
-import { strokeOutline } from '../ink/strokes'
+import { needsSimulatedPressure, strokeOutline } from '../ink/strokes'
 
 export const HIGHLIGHT_HEX: Record<HighlightColor, string> = {
   yellow: '#ffd84d',
@@ -22,7 +22,7 @@ function fillStroke(ctx: Ctx, s: InkStroke, w: number, h: number): void {
     s.points,
     highlighter ? s.width * HIGHLIGHTER_SCALE : s.width,
     { w, h },
-    true // stored pressures are used as given; simulation smooths mouse input
+    needsSimulatedPressure(s.points)
   )
   if (outline.length === 0) return
   ctx.save()

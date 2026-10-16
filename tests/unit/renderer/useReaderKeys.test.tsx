@@ -10,7 +10,8 @@ const handlers = {
   onFocusPageBox: vi.fn(),
   onEscape: vi.fn(),
   onHighlight: vi.fn(() => true),
-  onBookmark: vi.fn()
+  onBookmark: vi.fn(),
+  onTogglePen: vi.fn()
 }
 const store = { requestTurn: vi.fn(), goTo: vi.fn(), setZoom: vi.fn() }
 

@@ -18,6 +18,8 @@ type Props = {
   onToggleFind(): void
   onZoom(z: number): void
   onSettings(): void
+  penActive: boolean
+  onTogglePen(): void
 }
 
 export const NavBar = forwardRef<HTMLInputElement, Props>(function NavBar(p, pageBoxRef) {
@@ -93,6 +95,15 @@ export const NavBar = forwardRef<HTMLInputElement, Props>(function NavBar(p, pag
         aria-label="Zoom in"
       >
         +
+      </button>
+      <button
+        className={styles.navBtn}
+        onClick={p.onTogglePen}
+        title="Pen mode (P)"
+        aria-label="Pen mode"
+        aria-pressed={p.penActive}
+      >
+        ✎
       </button>
       <button className={styles.navBtn} onClick={p.onToggleFind} title="Find (Ctrl+F)">
         Find
