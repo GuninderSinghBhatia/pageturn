@@ -10,6 +10,7 @@ export async function openAtSpread2(page: Page, file = TEXT500): Promise<void> {
   await page.getByTestId('book-card').getByRole('button').first().click()
   const stage = page.getByTestId('book-stage')
   await expect(stage).toHaveAttribute('data-settled', 'true')
+  await waitForWindowFit(page)
   await goToPage(page, 2)
   await expect(stage).toHaveAttribute('data-pages', '2,3')
   await expect(stage).toHaveAttribute('data-settled', 'true')
@@ -119,4 +120,20 @@ export async function openReaderSettings(page: Page): Promise<void> {
     .getByRole('dialog', { name: 'Display' })
     .getByRole('button', { name: 'Settings' })
     .click()
+}
+
+/** The window reshapes to the book just after it opens; wait until its size holds still. */
+export async function waitForWindowFit(page: Page): Promise<void> {
+  let last = ''
+  await expect
+    .poll(
+      async () => {
+        const now = await page.evaluate(() => `${innerWidth}x${innerHeight}`)
+        const stable = now === last
+        last = now
+        return stable
+      },
+      { intervals: [150, 150, 150, 250, 250] }
+    )
+    .toBe(true)
 }

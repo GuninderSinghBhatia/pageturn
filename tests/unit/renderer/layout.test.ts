@@ -66,14 +66,14 @@ describe('fitPageSize', () => {
   it('keeps aspect and fits two pages plus margins in spread mode', () => {
     const s = fitPageSize(page, { width: 1264, height: 664 }, 'spread')
     expect(s.width / s.height).toBeCloseTo(432 / 648)
-    expect(s.height).toBeCloseTo(616) // height-limited: 664 - 2*24 breathing room
-    expect(2 * s.width + 2 * 24).toBeLessThanOrEqual(1264)
+    expect(s.height).toBeCloseTo(664) // fills the window height: no margin
+    expect(2 * s.width).toBeLessThanOrEqual(1264)
   })
 
   it('is width-limited when the window is narrow', () => {
     const s = fitPageSize(page, { width: 464, height: 2000 }, 'spread', 32)
     expect(s.width).toBeCloseTo(200) // (464 - 64) / 2
     expect(s.width / s.height).toBeCloseTo(432 / 648)
-    expect(fitPageSize(page, { width: 464, height: 2000 }, 'single').width).toBeCloseTo(416) // 464 - 2*24
+    expect(fitPageSize(page, { width: 464, height: 2000 }, 'single').width).toBeCloseTo(464) // full width, no margin
   })
 })

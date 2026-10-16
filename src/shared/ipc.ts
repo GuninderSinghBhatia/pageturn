@@ -36,7 +36,8 @@ export const Channels = {
   annotationsAddInk: 'annotations:addInk',
   annotationsDeleteInk: 'annotations:deleteInk',
   annotationsToggleBookmark: 'annotations:toggleBookmark',
-  annotationsRenameBookmark: 'annotations:renameBookmark'
+  annotationsRenameBookmark: 'annotations:renameBookmark',
+  windowFitAspect: 'window:fitAspect'
 } as const
 
 export type Channel = (typeof Channels)[keyof typeof Channels]
@@ -134,6 +135,9 @@ export const InkStrokeSchema = z
 
 export const InkStrokesSchema = z.array(InkStrokeSchema).min(1).max(500)
 export const InkIdsSchema = z.array(IdSchema).min(1).max(500)
+/** Book width / height for the window to match; 0 releases the lock. */
+export const WindowAspectSchema = z.union([z.literal(0), z.number().min(0.3).max(4)])
+
 export const BookmarkLabelSchema = z.string().max(200).nullable().optional()
 
 // ---- Request/response types ----
@@ -180,5 +184,9 @@ export interface Api {
       id?: string
     ): Promise<Bookmark | null>
     renameBookmark(id: string, label: string | null): Promise<void>
+  }
+  window: {
+    /** Keeps a normal window in the book's shape (width / height); 0 releases it. */
+    fitAspect(aspect: number): Promise<void>
   }
 }

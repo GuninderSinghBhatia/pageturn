@@ -92,7 +92,7 @@ export function SettingsView({ onBack }: { onBack(): void }): React.JSX.Element 
         <Choice
           name="pageTurnStyle"
           legend="Page turn"
-          hint="Page curl falls back to Slide when WebGL is unavailable or reduced motion is on."
+          hint="Page curl falls back to Slide when WebGL is unavailable."
           options={TURN_STYLES}
         />
         <Choice

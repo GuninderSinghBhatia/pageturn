@@ -53,7 +53,7 @@ export function fitPageSize(
   pageSize: { width: number; height: number },
   viewport: { width: number; height: number },
   layout: ResolvedLayout,
-  margin = 24
+  margin = 0
 ): { width: number; height: number } {
   const availW = Math.max(1, viewport.width - 2 * margin) / (layout === 'spread' ? 2 : 1)
   const availH = Math.max(1, viewport.height - 2 * margin)

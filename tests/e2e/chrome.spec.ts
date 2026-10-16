@@ -7,7 +7,8 @@ import {
   openAtSpread2,
   showToolbar,
   stored,
-  TEXT500
+  TEXT500,
+  waitForWindowFit
 } from './annotationHelpers'
 import { launchApp } from './helpers'
 
@@ -18,6 +19,7 @@ test('the book opens with no chrome; the toolbar appears at the top edge and hid
     await page.getByTestId('book-card').getByRole('button').first().click()
     const stage = page.getByTestId('book-stage')
     await expect(stage).toHaveAttribute('data-settled', 'true')
+    await waitForWindowFit(page)
     const toolbar = page.getByRole('toolbar', { name: 'Reader tools' })
 
     await expect(toolbar).toBeHidden()
@@ -223,6 +225,26 @@ test('after 2s without movement the cursor and toolbar hide; clicking the outer 
     // …but one in the outer 15% does.
     await page.mouse.click(box.x + box.width * 0.85, box.y + box.height * 0.97)
     await expect(page.getByTestId('book-stage')).toHaveAttribute('data-pages', '4,5')
+  } finally {
+    await app.close()
+  }
+})
+
+test('windowed: the window takes the book’s shape (no empty space); curl animates despite OS reduced motion', async () => {
+  const { app, page } = await launchApp()
+  try {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await openAtSpread2(page)
+    const stage = page.getByTestId('book-stage')
+    await expect(stage).toHaveAttribute('data-stage', 'curl')
+    await expect
+      .poll(async () => {
+        const [, , w, h] = (await stage.getAttribute('data-right-rect'))!.split(',').map(Number)
+        const vp = await page.evaluate(() => ({ w: innerWidth, h: innerHeight }))
+        // Book (two pages) fills the window within a couple of pixels on every side.
+        return Math.abs(vp.w - 2 * w) <= 3 && Math.abs(vp.h - h) <= 3
+      })
+      .toBe(true)
   } finally {
     await app.close()
   }

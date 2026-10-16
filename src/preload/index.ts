@@ -45,6 +45,9 @@ const api: Api = {
     toggleBookmark: (bookId, page, label, id) =>
       invoke(Channels.annotationsToggleBookmark, bookId, page, label, id),
     renameBookmark: (id, label) => invoke(Channels.annotationsRenameBookmark, id, label)
+  },
+  window: {
+    fitAspect: (aspect) => invoke(Channels.windowFitAspect, aspect)
   }
 }
 

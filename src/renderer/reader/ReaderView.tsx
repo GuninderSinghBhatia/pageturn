@@ -34,8 +34,6 @@ function spreadPagesNow(): number[] {
   return s.doc ? spreadPages(spreadFor(s.page, s.doc.numPages, s.layout)) : []
 }
 
-const reducedMotion = (): boolean => window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
 const bookmarkFirstVisible = (): void => {
   const first = spreadPagesNow()[0]
   if (first) useAnnotationStore.getState().toggleBookmark(first)
@@ -185,11 +183,10 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
     if (prefetcher && viewport.width > 0) prefetcher.update(r.page, r.layout)
   }, [prefetcher, r.page, r.layout, viewport.width])
 
-  // WebGL curl unless the user chose slide/instant, motion is reduced, zoomed in, or WebGL failed.
+  // WebGL curl unless the user chose slide/instant (Settings), zoomed in, or WebGL failed.
   const [webglFailed, setWebglFailed] = useState(false)
   const onWebglFailed = useCallback(() => setWebglFailed(true), [])
-  const useCurl =
-    settings.pageTurnStyle === 'curl' && !webglFailed && r.zoom <= 1 && !reducedMotion()
+  const useCurl = settings.pageTurnStyle === 'curl' && !webglFailed && r.zoom <= 1
 
   const renderOverlay = useCallback(
     (p: number, size: { width: number; height: number }) =>
@@ -198,6 +195,18 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
   )
 
   const penActive = useInkStore((s) => s.mode.active)
+
+  // A normal window takes the book's shape (no empty space around the pages). A spread is
+  // always two pages wide (the cover sits on the right half).
+  const firstPage = pages[0]
+  const bookAspect = doc
+    ? ((r.layout === 'spread' ? 2 : 1) * doc.pageSize(firstPage ?? 1).width) /
+      doc.pageSize(firstPage ?? 1).height
+    : 0
+  useEffect(() => {
+    if (bookAspect > 0) void window.api.window.fitAspect(Math.round(bookAspect * 1000) / 1000)
+  }, [bookAspect])
+  useEffect(() => () => void window.api.window.fitAspect(0), [])
   const idle = useIdle()
 
   return (
@@ -242,7 +251,7 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
               pageSize={pageSize}
               zoom={r.zoom}
               scaleFor={scaleFor}
-              animate={settings.pageTurnStyle !== 'instant' && !reducedMotion()}
+              animate={settings.pageTurnStyle !== 'instant'}
               renderOverlay={renderOverlay}
             />
           )}
