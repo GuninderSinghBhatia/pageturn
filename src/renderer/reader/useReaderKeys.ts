@@ -6,6 +6,7 @@ type Handlers = {
   onFind(): void
   onFocusPageBox(): void
   onEscape(): void
+  onHighlight(): boolean // highlight the current text selection; false if there is none
 }
 
 const ZOOM_STEP = 1.25
@@ -21,7 +22,7 @@ function toggleFullscreen(): void {
 }
 
 /** Reader keyboard shortcuts (spec §4.8 subset). */
-export function useReaderKeys({ onFind, onFocusPageBox, onEscape }: Handlers): void {
+export function useReaderKeys({ onFind, onFocusPageBox, onEscape, onHighlight }: Handlers): void {
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       const s = useReaderStore.getState()
@@ -68,6 +69,10 @@ export function useReaderKeys({ onFind, onFocusPageBox, onEscape }: Handlers): v
         case 'End':
           s.goTo(s.doc.numPages)
           break
+        case 'h':
+        case 'H':
+          if (!onHighlight()) return
+          break
         default:
           return
       }
@@ -75,5 +80,5 @@ export function useReaderKeys({ onFind, onFocusPageBox, onEscape }: Handlers): v
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onFind, onFocusPageBox, onEscape])
+  }, [onFind, onFocusPageBox, onEscape, onHighlight])
 }

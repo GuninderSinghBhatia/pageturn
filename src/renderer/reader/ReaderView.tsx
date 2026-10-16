@@ -6,6 +6,8 @@ import { useAnnotationStore } from '../stores/annotationStore'
 import { useReaderStore } from '../stores/readerStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { PageOverlay } from './annotations/PageOverlay'
+import { highlightSelection } from './annotations/selection'
+import { SelectionToolbarHost } from './annotations/SelectionToolbar'
 import { BookStage } from './BookStage/BookStage'
 import { SlideStage } from './BookStage/SlideStage'
 import { FindBar } from './FindBar'
@@ -86,7 +88,15 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
     onEscape: useCallback(() => {
       setFindOpen(false)
       setTocOpen(false)
-    }, [])
+    }, []),
+    onHighlight: useCallback(
+      () =>
+        highlightSelection(
+          viewportRef.current,
+          useSettingsStore.getState().settings.highlightColor
+        ),
+      []
+    )
   })
 
   // Ctrl+wheel zooms (non-passive so the default page zoom is suppressed).
@@ -207,6 +217,7 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
           )}
         </div>
       </div>
+      {r.doc && <SelectionToolbarHost rootRef={viewportRef} />}
       {findOpen && r.doc && (
         <FindBar
           doc={r.doc}

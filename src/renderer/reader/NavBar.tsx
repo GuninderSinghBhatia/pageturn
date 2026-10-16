@@ -77,11 +77,21 @@ export const NavBar = forwardRef<HTMLInputElement, Props>(function NavBar(p, pag
       <button className={styles.navBtn} onClick={p.onToggleLayout} title="Toggle layout">
         {p.layout === 'spread' ? 'Single page' : 'Two pages'}
       </button>
-      <button className={styles.navBtn} onClick={() => p.onZoom(p.zoom / 1.25)} title="Zoom out">
+      <button
+        className={styles.navBtn}
+        onClick={() => p.onZoom(p.zoom / 1.25)}
+        title="Zoom out"
+        aria-label="Zoom out"
+      >
         −
       </button>
       <span className={styles.zoomLabel}>{Math.round(p.zoom * 100)}%</span>
-      <button className={styles.navBtn} onClick={() => p.onZoom(p.zoom * 1.25)} title="Zoom in">
+      <button
+        className={styles.navBtn}
+        onClick={() => p.onZoom(p.zoom * 1.25)}
+        title="Zoom in"
+        aria-label="Zoom in"
+      >
         +
       </button>
       <button className={styles.navBtn} onClick={p.onToggleFind} title="Find (Ctrl+F)">

@@ -1,7 +1,15 @@
 import { test, expect } from '@playwright/test'
 import { join } from 'node:path'
-import { bodyLine, dragSelect, FIXTURES, openAtSpread2, spans } from './annotationHelpers'
-import { launchApp } from './helpers'
+import {
+  bodyLine,
+  dragSelect,
+  FIXTURES,
+  highlightPoint,
+  openAtSpread2,
+  spans,
+  stored
+} from './annotationHelpers'
+import { launchApp, makeUserDataDir } from './helpers'
 
 for (const style of ['curl', 'slide'] as const) {
   test(`text on a settled page is selectable without turning (${style})`, async () => {
@@ -47,6 +55,134 @@ test('a scanned PDF opens with no text layer and no errors', async () => {
     await page.waitForTimeout(500)
     await expect(page.locator('[data-page-overlay="1"] .textLayer span')).toHaveCount(0)
     expect(errors).toEqual([])
+  } finally {
+    await app.close()
+  }
+})
+
+test('highlight + note persist across a restart (spec e2e)', async () => {
+  const userData = makeUserDataDir()
+  let { app, page } = await launchApp(userData)
+  try {
+    await openAtSpread2(page)
+    const line = await bodyLine(page, 2)
+    await dragSelect(page, line, line)
+    await page
+      .getByRole('toolbar', { name: 'Highlight selection' })
+      .getByRole('button', { name: 'yellow' })
+      .click()
+    await expect.poll(async () => (await stored(page)).highlights.length).toBe(1)
+    const [hl] = (await stored(page)).highlights
+    expect(hl).toMatchObject({ page: 2, color: 'yellow' })
+    expect(hl.text).toContain('Lorem ipsum')
+
+    const pt = await highlightPoint(page, hl)
+    await page.mouse.click(pt.x, pt.y)
+    const popover = page.getByRole('dialog', { name: 'Highlight' })
+    await popover.getByRole('button', { name: 'Add note' }).click()
+    await popover.getByRole('textbox', { name: 'Note' }).fill('check this')
+    await expect
+      .poll(async () => (await stored(page)).notes.map((n) => n.body))
+      .toEqual(['check this'])
+  } finally {
+    await app.close()
+  }
+
+  ;({ app, page } = await launchApp(userData))
+  try {
+    await openAtSpread2(page)
+    const [hl] = (await stored(page)).highlights
+    const pt = await highlightPoint(page, hl)
+    // The overlay canvas is painted under the highlight.
+    const alpha = await page.evaluate(({ x, y }) => {
+      const c = document.querySelector('[data-page-overlay="2"] canvas') as HTMLCanvasElement
+      const b = c.getBoundingClientRect()
+      const px = c
+        .getContext('2d')!
+        .getImageData(
+          Math.round(((x - b.left) / b.width) * c.width),
+          Math.round(((y - b.top) / b.height) * c.height),
+          1,
+          1
+        ).data
+      return px[3]
+    }, pt)
+    expect(alpha).toBeGreaterThan(0)
+    await page.mouse.click(pt.x, pt.y)
+    await expect(
+      page.getByRole('dialog', { name: 'Highlight' }).getByRole('textbox', { name: 'Note' })
+    ).toHaveValue('check this')
+  } finally {
+    await app.close()
+  }
+})
+
+test('a selection across both pages makes one highlight per page (Review Focus 2)', async () => {
+  const { app, page } = await launchApp()
+  try {
+    await openAtSpread2(page)
+    const last = (await spans(page, 2)).at(-1)!
+    const first = await bodyLine(page, 3)
+    await dragSelect(page, last, first)
+    await page.keyboard.press('h')
+    await expect.poll(async () => (await stored(page)).highlights.length).toBe(2)
+    const hs = (await stored(page)).highlights.sort((a, b) => a.page - b.page)
+    expect(hs.map((h) => h.page)).toEqual([2, 3])
+    expect(hs[0].text).toContain('pariatur')
+    expect(hs[0].text).not.toContain('Page 3')
+    expect(hs[1].text).toContain('Page 3')
+    expect(hs[1].text).not.toContain('pariatur')
+    for (const h of hs) {
+      for (const r of h.rects) {
+        expect(r.x).toBeGreaterThanOrEqual(0)
+        expect(r.y).toBeGreaterThanOrEqual(0)
+        expect(r.x + r.w).toBeLessThanOrEqual(1)
+        expect(r.y + r.h).toBeLessThanOrEqual(1)
+      }
+    }
+  } finally {
+    await app.close()
+  }
+})
+
+test('highlights stay clickable after layout and zoom changes (Review Focus 5); delete removes them', async () => {
+  const { app, page } = await launchApp()
+  try {
+    await openAtSpread2(page)
+    const line = await bodyLine(page, 2)
+    await dragSelect(page, line, line)
+    await page.keyboard.press('h')
+    await expect.poll(async () => (await stored(page)).highlights.length).toBe(1)
+    const [hl] = (await stored(page)).highlights
+    const popover = page.getByRole('dialog', { name: 'Highlight' })
+    const stage = page.getByTestId('book-stage')
+
+    const clickHighlight = async (): Promise<void> => {
+      await expect(stage).toHaveAttribute('data-settled', 'true')
+      await page.waitForFunction(() => document.getAnimations().length === 0)
+      const pt = await highlightPoint(page, hl)
+      await page.mouse.click(pt.x, pt.y)
+      await expect(popover).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(popover).toHaveCount(0)
+    }
+
+    await clickHighlight()
+    await page.getByRole('button', { name: 'Single page' }).click()
+    await clickHighlight()
+    await page.getByRole('button', { name: 'Two pages' }).click()
+    await page.getByRole('button', { name: 'Zoom in' }).click()
+    await clickHighlight()
+    await page.getByRole('button', { name: 'Zoom out' }).click()
+    await clickHighlight()
+
+    const pt = await highlightPoint(page, hl)
+    await page.mouse.click(pt.x, pt.y)
+    await popover.getByRole('button', { name: 'Add note' }).click()
+    await popover.getByRole('textbox', { name: 'Note' }).fill('gone soon')
+    await expect.poll(async () => (await stored(page)).notes.length).toBe(1)
+    await popover.getByRole('button', { name: 'Delete highlight' }).click()
+    await expect.poll(async () => stored(page)).toMatchObject({ highlights: [], notes: [] })
   } finally {
     await app.close()
   }
