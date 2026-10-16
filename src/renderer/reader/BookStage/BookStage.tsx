@@ -9,6 +9,7 @@ import {
   type ResolvedLayout,
   type Spread
 } from '../layout'
+import type { OverlayRenderer } from '../annotations/PageOverlay'
 import type { OpenedDoc } from '../pdf/pdfService'
 import { TurnController, turnPointer, type TurnDir, type TurnState } from './turnController'
 import { useTurnGesture } from './useTurnGesture'
@@ -25,6 +26,7 @@ type Props = {
   scaleFor(page: number): number
   tint: PaperTint
   onFallback(): void // WebGL unavailable or context lost
+  renderOverlay?: OverlayRenderer
 }
 
 /** Page rects (CSS px within the stage), centred on the spine; one shared rect in single mode. */
@@ -57,10 +59,12 @@ export function BookStage({
   pageSize,
   scaleFor,
   tint,
-  onFallback
+  onFallback,
+  renderOverlay
 }: Props): React.JSX.Element {
   const stageRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
   const rendererRef = useRef<CurlRenderer | null>(null)
   const bitmaps = useRef(new Map<number, { scale: number; bmp: ImageBitmap }>())
   const rectsRef = useRef<{ left: Rect | null; right: Rect | null }>({ left: null, right: null })
@@ -146,6 +150,8 @@ export function BookStage({
     el.dataset.ready = String(ready)
     el.dataset.pages = pages.join(',')
     el.dataset.settled = String(idle && ready)
+    // Overlays (text, annotations) only sit on settled pages; the curl shows baked textures.
+    if (overlayRef.current) overlayRef.current.style.visibility = idle ? 'visible' : 'hidden'
     const rr = rects.right ?? rects.left
     if (rr) el.dataset.rightRect = [rr.x, rr.y, rr.width, rr.height].map(Math.round).join(',')
     if (s.turning === idle) useReaderStore.setState({ turning: !idle })
@@ -240,6 +246,16 @@ export function BookStage({
     }
   }, [doc, page, layout, n, scaleFor, requestDraw])
 
+  // Settled spread's page rects, for positioning the overlays.
+  const settledSpread = spreadFor(page, n, layout)
+  const settledRects = computeRects(settledSpread, layout, viewport, pageSize)
+  const overlayPages = spreadPages(settledSpread).map((p) => ({
+    page: p,
+    rect: (layout === 'single' || p === settledSpread.right
+      ? settledRects.right
+      : settledRects.left)!
+  }))
+
   useTurnGesture({
     stageRef,
     controller,
@@ -257,6 +273,19 @@ export function BookStage({
       data-settled="false"
     >
       <canvas ref={canvasRef} className={styles.curlCanvas} />
+      {renderOverlay && (
+        <div ref={overlayRef} className={styles.curlOverlay}>
+          {overlayPages.map(({ page: p, rect }) => (
+            <div
+              key={p}
+              className={styles.curlOverlayPage}
+              style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}
+            >
+              {renderOverlay(p, { width: rect.width, height: rect.height })}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

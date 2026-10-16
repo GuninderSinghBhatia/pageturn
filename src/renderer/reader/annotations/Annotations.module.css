@@ -1,0 +1,13 @@
+/* Overlay for one page: passes pointer events through except on its interactive children. */
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.annotationCanvas {
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: multiply;
+}

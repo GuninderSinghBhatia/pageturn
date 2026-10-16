@@ -130,6 +130,7 @@
 }
 
 .page {
+  position: relative;
   background: var(--paper);
 }
 
@@ -368,6 +369,16 @@
   position: absolute;
   inset: 0;
   touch-action: none;
+}
+
+.curlOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.curlOverlayPage {
+  position: absolute;
 }
 
 .curlCanvas {
