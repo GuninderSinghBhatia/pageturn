@@ -1,6 +1,5 @@
 import { ipcMain, screen, type BrowserWindow } from 'electron'
-import { Channels, TitleBarSchema, WindowAspectSchema } from '@shared/ipc'
-import { TITLE_BAR_HEIGHT } from '@shared/types'
+import { Channels, WindowAspectSchema, WindowControlSchema, type WindowState } from '@shared/ipc'
 import { parse } from './validate'
 
 const FRAME_ALLOWANCE = 40 // px of the work area kept free for the window frame
@@ -29,13 +28,20 @@ export function registerWindowIpc(win: BrowserWindow): void {
     win.setContentSize(w, h)
   }
 
-  ipcMain.handle(Channels.windowSetTitleBar, (_e, c: unknown) => {
-    const colors = parse(TitleBarSchema, c)
-    try {
-      win.setTitleBarOverlay({ ...colors, height: TITLE_BAR_HEIGHT })
-    } catch {
-      // Platforms without a controls overlay: nothing to recolour.
-    }
+  const state = (): WindowState => ({
+    maximized: win.isMaximized(),
+    fullscreen: win.isFullScreen()
+  })
+  const sendState = (): void => win.webContents.send(Channels.windowState, state())
+
+  ipcMain.handle(Channels.windowGetState, state)
+  ipcMain.handle(Channels.windowControl, (_e, a: unknown) => {
+    const action = parse(WindowControlSchema, a)
+    if (action === 'minimize') win.minimize()
+    else if (action === 'close') win.close()
+    else if (win.isFullScreen()) win.setFullScreen(false)
+    else if (win.isMaximized()) win.unmaximize()
+    else win.maximize()
   })
 
   ipcMain.handle(Channels.windowFitAspect, (_e, a: unknown) => {
@@ -43,8 +49,16 @@ export function registerWindowIpc(win: BrowserWindow): void {
     fit()
   })
   // Back from maximized / fullscreen: take the book's shape again.
-  win.on('unmaximize', fit)
-  win.on('leave-full-screen', fit)
-  win.on('maximize', () => win.setAspectRatio(0))
-  win.on('enter-full-screen', () => win.setAspectRatio(0))
+  const restored = (): void => {
+    fit()
+    sendState()
+  }
+  const enlarged = (): void => {
+    win.setAspectRatio(0)
+    sendState()
+  }
+  win.on('unmaximize', restored)
+  win.on('leave-full-screen', restored)
+  win.on('maximize', enlarged)
+  win.on('enter-full-screen', enlarged)
 }

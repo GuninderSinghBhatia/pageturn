@@ -17,9 +17,6 @@ export type PageTurnStyle = 'curl' | 'slide' | 'instant'
 export type PaperTint = 'white' | 'cream' | 'sepia' | 'dark'
 export type Theme = 'system' | 'light' | 'dark'
 
-/** Height of the window-controls area (minimise / maximise / close) at the top-right. */
-export const TITLE_BAR_HEIGHT = 36
-
 // ---- Annotations (all coordinates normalized 0..1 of the page) ----
 
 export const HIGHLIGHT_COLORS = ['yellow', 'green', 'blue', 'pink', 'purple'] as const

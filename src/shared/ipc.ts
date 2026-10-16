@@ -40,7 +40,9 @@ export const Channels = {
   annotationsRenameBookmark: 'annotations:renameBookmark',
   annotationsListAllNotes: 'annotations:listAllNotes',
   windowFitAspect: 'window:fitAspect',
-  windowSetTitleBar: 'window:setTitleBar'
+  windowControl: 'window:control',
+  windowGetState: 'window:getState',
+  windowState: 'window:state'
 } as const
 
 export type Channel = (typeof Channels)[keyof typeof Channels]
@@ -141,9 +143,8 @@ export const InkIdsSchema = z.array(IdSchema).min(1).max(500)
 /** Book width / height for the window to match; 0 releases the lock. */
 export const WindowAspectSchema = z.union([z.literal(0), z.number().min(0.3).max(4)])
 
-const Hex = z.string().regex(/^#[0-9a-fA-F]{6}$/)
-/** Colours of the window-controls overlay, matched to what is behind it. */
-export const TitleBarSchema = z.object({ color: Hex, symbolColor: Hex }).strict()
+/** The app's own minimise / maximise / close buttons (the OS title bar is hidden). */
+export const WindowControlSchema = z.enum(['minimize', 'toggleMaximize', 'close'])
 
 export const BookmarkLabelSchema = z.string().max(200).nullable().optional()
 
@@ -151,6 +152,8 @@ export const BookmarkLabelSchema = z.string().max(200).nullable().optional()
 
 export type BookMeta = z.infer<typeof BookMetaSchema>
 export type SettingsPartial = Partial<Settings>
+export type WindowControl = z.infer<typeof WindowControlSchema>
+export type WindowState = { maximized: boolean; fullscreen: boolean }
 export type NotesGroup = { book: Book; notes: { note: Note; quote: string | null }[] }
 
 export interface Api {
@@ -199,7 +202,12 @@ export interface Api {
   window: {
     /** Keeps a normal window in the book's shape (width / height); 0 releases it. */
     fitAspect(aspect: number): Promise<void>
-    /** Recolours the minimise / maximise / close buttons to sit on the current screen. */
-    setTitleBar(colors: { color: string; symbolColor: string }): Promise<void>
+    /** Minimise, maximise / restore (leaves fullscreen first) or close the window. */
+    control(action: WindowControl): Promise<void>
+    getState(): Promise<WindowState>
+    /** Maximized / fullscreen changes; returns an unsubscribe function. */
+    onState(cb: (s: WindowState) => void): () => void
+    /** The OS, e.g. 'win32' (macOS keeps its own traffic-light buttons). */
+    platform: string
   }
 }
