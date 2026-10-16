@@ -1,4 +1,8 @@
-# PageTurn Plan 1 — Progress
+# PageTurn — Progress
+
+**Immersive reader redesign complete (2026-10-16, branch `reader-redesign` on top of `plan2-annotations`):** spec `docs/superpowers/specs/2026-10-16-immersive-reader-design.md`. Chrome-less book on slate; hover/T toolbar (`reader/chrome/`), right-click selection menu with notes + margin dots, Ask AI / Look up 'coming soon' cards, bookmark tabs, Light/Sepia/Dark, idle cursor, 15% click zones. 158 unit + 29 e2e green. Next: Look up + Ask AI project (replaces Plan 3's panel). E2E: reveal the toolbar with `showToolbar`/`goToPage`/`displayAction` helpers; Chromium replays synthetic pointer moves at the last position (test pointer starts at 0,0 = reveal zone).
+
+## Plan 1
 
 **Plan 2 complete (2026-10-16, branch `plan2-annotations`):** highlights, notes, bookmarks, ink with eraser/undo, annotations baked into the curl. Plan: `docs/superpowers/plans/2026-10-16-pageturn-plan2-annotations-ink.md`. 143 unit + 24 e2e green. Notes: settings overlay/ink/annotation UI state live in small zustand stores (`annotations/uiStore.ts`, `ink/inkStore.ts`); e2e helpers in `tests/e2e/annotationHelpers.ts` (import helpers from there, never from a spec); text layers expose `data-rendered`. Chromium sends synthetic button-less pointermoves — every drag handler must ignore `buttons === 0`.
 
