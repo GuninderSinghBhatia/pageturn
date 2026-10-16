@@ -7,7 +7,8 @@ import { useToastStore } from '../stores/toastStore'
 import { PageMenu } from './annotations/PageMenu'
 import { PageOverlay } from './annotations/PageOverlay'
 import { highlightSelection } from './annotations/selection'
-import { SelectionToolbarHost } from './annotations/SelectionToolbar'
+import { PhraseCard, SelectionMenu } from './annotations/SelectionMenu'
+import { makeNote, showCard } from './annotations/selectionActions'
 import { useOverlayUi } from './annotations/uiStore'
 import { BookStage } from './BookStage/BookStage'
 import { SlideStage } from './BookStage/SlideStage'
@@ -69,6 +70,15 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
     if (r.status === 'cancelled') goLibrary()
   }, [r.status, goLibrary])
 
+  // Cards and menus close when the page turns.
+  useEffect(
+    () =>
+      useReaderStore.subscribe((s, prev) => {
+        if (s.page !== prev.page) useOverlayUi.getState().closeAll()
+      }),
+    []
+  )
+
   // Resolve spread/single from the user's mode and the window shape.
   const { setLayout } = r
   useEffect(() => {
@@ -101,10 +111,8 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
     onFocusPageBox: useCallback(() => useChromeStore.getState().openPageBox(), []),
     onToggleToolbar: useCallback(() => useChromeStore.getState().toggleToolbar(), []),
     onEscape: useCallback(() => {
-      const ui = useOverlayUi.getState()
-      const hadCard = !!(ui.menu || ui.openNote)
-      ui.closeAll()
-      return useChromeStore.getState().escape() || hadCard
+      if (useOverlayUi.getState().closeAll()) return true
+      return useChromeStore.getState().escape()
     }, []),
     onEraser: useCallback(() => {
       useChromeStore.getState().setTextTool(null)
@@ -121,6 +129,8 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
       })
     }, []),
     onBookmark: bookmarkFirstVisible,
+    onNote: useCallback(() => makeNote(viewportRef.current), []),
+    onAsk: useCallback(() => showCard(viewportRef.current, 'ai'), []),
     onHighlight: useCallback(
       () =>
         highlightSelection(
@@ -246,7 +256,8 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
           )}
         </div>
       </div>
-      {r.doc && <SelectionToolbarHost rootRef={viewportRef} />}
+      {r.doc && <SelectionMenu rootRef={viewportRef} />}
+      <PhraseCard />
       {r.doc && <PageMenu rootRef={viewportRef} />}
       {r.passwordRequest && (
         <PasswordPrompt retry={r.passwordRequest.retry} onSubmit={r.submitPassword} />

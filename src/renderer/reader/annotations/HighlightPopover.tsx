@@ -8,14 +8,20 @@ import styles from './Annotations.module.css'
 type Props = {
   highlight: Highlight
   at: { x: number; y: number } // CSS px within the page overlay
+  startEditing?: boolean // open straight into the note editor
   onClose(): void
 }
 
 /** Actions for a clicked highlight: colour, note, copy, delete. Esc / outside click closes. */
-export function HighlightPopover({ highlight, at, onClose }: Props): React.JSX.Element {
+export function HighlightPopover({
+  highlight,
+  at,
+  startEditing,
+  onClose
+}: Props): React.JSX.Element {
   const ref = useRef<HTMLDivElement>(null)
   const note = useAnnotationStore((s) => (highlight.noteId ? s.notes[highlight.noteId] : undefined))
-  const [editing, setEditing] = useState(!!note)
+  const [editing, setEditing] = useState(!!note || !!startEditing)
   const store = useAnnotationStore.getState
 
   useEffect(() => {

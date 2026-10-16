@@ -9,6 +9,8 @@ type Handlers = {
   onToggleToolbar(): void
   onHighlight(): boolean // highlight the current text selection; false if there is none
   onBookmark(): void
+  onNote(): boolean // note on the selection; false if none
+  onAsk(): boolean // Ask AI on the selection; false if none
   onTogglePen(): void
   onEraser(): void
   onUndo(): boolean // false when there was nothing to undo
@@ -35,6 +37,8 @@ export function useReaderKeys({
   onToggleToolbar,
   onHighlight,
   onBookmark,
+  onNote,
+  onAsk,
   onTogglePen,
   onEraser,
   onUndo,
@@ -112,6 +116,14 @@ export function useReaderKeys({
         case 'B':
           onBookmark()
           break
+        case 'n':
+        case 'N':
+          if (!onNote()) return
+          break
+        case 'a':
+        case 'A':
+          if (!onAsk()) return
+          break
         default:
           return
       }
@@ -126,6 +138,8 @@ export function useReaderKeys({
     onToggleToolbar,
     onHighlight,
     onBookmark,
+    onNote,
+    onAsk,
     onTogglePen,
     onEraser,
     onUndo,

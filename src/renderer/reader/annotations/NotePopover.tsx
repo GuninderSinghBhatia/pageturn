@@ -49,7 +49,8 @@ export function NotePopover({ note, onSave, onDelete, onClose }: Props): React.J
         }}
         onBlur={flush}
         onKeyDown={(e) => {
-          if (e.key === 'Escape') {
+          if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) {
+            e.preventDefault()
             e.stopPropagation()
             flush()
             onClose()

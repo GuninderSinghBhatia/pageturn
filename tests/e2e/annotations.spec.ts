@@ -68,10 +68,8 @@ test('highlight + note persist across a restart (spec e2e)', async () => {
     await openAtSpread2(page)
     const line = await bodyLine(page, 2)
     await dragSelect(page, line, line)
-    await page
-      .getByRole('toolbar', { name: 'Highlight selection' })
-      .getByRole('button', { name: 'yellow' })
-      .click()
+    await page.mouse.click(line.x + line.width / 2, line.y + line.height / 2, { button: 'right' })
+    await page.getByRole('menuitem', { name: 'Highlight' }).click()
     await expect.poll(async () => (await stored(page)).highlights.length).toBe(1)
     const [hl] = (await stored(page)).highlights
     expect(hl).toMatchObject({ page: 2, color: 'yellow' })

@@ -114,3 +114,50 @@ test('highlighter and wavy underline tools annotate a selection as soon as it is
     await app.close()
   }
 })
+
+test('right-click a selection: Make a note adds a dotted note with a margin dot; Ask AI shows a card', async () => {
+  const { app, page } = await launchApp()
+  try {
+    await openAtSpread2(page)
+    const line = await bodyLine(page, 2)
+    await dragSelect(page, line, line)
+    await page.mouse.click(line.x + line.width / 2, line.y + line.height / 2, { button: 'right' })
+    const menu = page.getByRole('menu', { name: 'Selection' })
+    for (const name of ['Make a note', 'Ask AI', 'Look up', 'Highlight', 'Copy']) {
+      await expect(menu.getByRole('menuitem', { name })).toBeVisible()
+    }
+    await menu.getByRole('menuitem', { name: 'Make a note' }).click()
+    const note = page.getByRole('textbox', { name: 'Note' })
+    await expect(note).toBeFocused()
+    await note.fill('why does this hold?')
+    await page.keyboard.press('Control+Enter')
+    await expect(note).toHaveCount(0)
+    await expect
+      .poll(async () => {
+        const a = await stored(page)
+        return [a.highlights.map((h) => h.style), a.notes.map((n) => n.body)]
+      })
+      .toEqual([['note'], ['why does this hold?']])
+
+    const dot = page.getByRole('button', { name: /^Margin note/ })
+    await expect(dot).toBeVisible()
+    await dot.click()
+    await expect(page.getByRole('textbox', { name: 'Note' })).toHaveValue('why does this hold?')
+    await page.keyboard.press('Escape')
+
+    const line3 = await bodyLine(page, 3)
+    await dragSelect(page, line3, line3)
+    await page.keyboard.press('a')
+    const card = page.getByRole('dialog', { name: 'Ask AI' })
+    await expect(card).toContainText('Coming soon')
+    await page.keyboard.press('Escape')
+    await expect(card).toHaveCount(0)
+
+    // No selection: the page menu (free note) still works.
+    const box = (await page.locator('[data-page-overlay="3"]').boundingBox())!
+    await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.92, { button: 'right' })
+    await expect(page.getByRole('menuitem', { name: 'Add note here' })).toBeVisible()
+  } finally {
+    await app.close()
+  }
+})
