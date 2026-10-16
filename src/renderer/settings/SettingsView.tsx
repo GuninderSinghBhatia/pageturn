@@ -19,7 +19,7 @@ const THEMES: Option<ThemeChoice>[] = [
   { value: 'dark', label: 'Dark' }
 ]
 const TURN_STYLES: Option<PageTurnStyle>[] = [
-  { value: 'curl', label: 'Page curl' },
+  { value: 'curl', label: 'Page flip' },
   { value: 'slide', label: 'Slide' },
   { value: 'instant', label: 'Instant' }
 ]
@@ -92,7 +92,7 @@ export function SettingsView({ onBack }: { onBack(): void }): React.JSX.Element 
         <Choice
           name="pageTurnStyle"
           legend="Page turn"
-          hint="Page curl falls back to Slide when WebGL is unavailable."
+          hint="Page flip falls back to Slide when WebGL is unavailable."
           options={TURN_STYLES}
         />
         <Choice

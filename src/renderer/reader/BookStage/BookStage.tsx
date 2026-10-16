@@ -13,7 +13,9 @@ import {
 import type { OverlayRenderer } from '../annotations/PageOverlay'
 import type { OpenedDoc } from '../pdf/pdfService'
 import { BakeCache } from './bake'
-import { computeRects } from './pageRects'
+import { stageTextures } from './stageTextures'
+import { computeRects, viewRects } from './pageRects'
+import { usePanZoom } from './usePanZoom'
 import { TurnController, turnPointer, type TurnDir, type TurnState } from './turnController'
 import { useTurnGesture } from './useTurnGesture'
 import type { Vec2 } from './webgl/curlMath'
@@ -26,7 +28,9 @@ type Props = {
   layout: ResolvedLayout
   viewport: Size
   pageSize(page: number): Size // fitted CSS px
-  scaleFor(page: number): number
+  scaleFor(page: number): number // render scale for pages on screen (follows zoom)
+  fitScaleFor(page: number): number // render scale for neighbours (turning happens at fit)
+  zoom: number
   tint: PaperTint
   onFallback(): void // WebGL unavailable or context lost
   renderOverlay?: OverlayRenderer
@@ -38,6 +42,8 @@ export function BookStage({
   viewport,
   pageSize,
   scaleFor,
+  fitScaleFor,
+  zoom,
   tint,
   onFallback,
   renderOverlay
@@ -53,6 +59,20 @@ export function BookStage({
   const [committing] = useState(() => ({ current: false }))
   const drawRef = useRef<() => void>(() => undefined)
   const [bakes] = useState(() => new BakeCache())
+  const requestDraw = useCallback(() => {
+    if (!frame.current) frame.current = requestAnimationFrame(() => drawRef.current())
+  }, [])
+  const fitRects = useCallback(
+    () =>
+      computeRects(
+        spreadFor(useReaderStore.getState().page, doc.numPages, layout),
+        layout,
+        viewport,
+        pageSize
+      ),
+    [doc, layout, viewport, pageSize]
+  )
+  const { pan, panRef } = usePanZoom({ stageRef, zoom, viewport, fitRects, onChange: requestDraw })
   const page = useReaderStore((s) => s.page)
   const n = doc.numPages
 
@@ -88,33 +108,10 @@ export function BookStage({
   // Settled pages use raw bitmaps (the DOM overlay draws annotations on top); turning pages
   // use baked ones so annotations move with the paper.
   const texturesFor = useCallback(
-    (state: TurnState, cur: Spread): PageTextures => {
-      const b = (p: number | null | undefined): ImageBitmap | undefined =>
-        p == null ? undefined : state.phase === 'idle' ? bitmaps.current.get(p)?.bmp : baked(p)
-      const single = layout === 'single'
-      if (state.phase === 'idle') return { staticLeft: b(cur.left), staticRight: b(cur.right) }
-      const start = cur.left ?? cur.right!
-      if (state.dir === 1) {
-        const to = spreadFor(nextSpreadStart(start, n, layout) ?? start, n, layout)
-        return single
-          ? { front: b(cur.right), rightUnder: b(to.right) }
-          : {
-              staticLeft: b(cur.left),
-              front: b(cur.right),
-              rightUnder: b(to.right),
-              back: b(to.left)
-            }
-      }
-      const to = spreadFor(prevSpreadStart(start, n, layout) ?? start, n, layout)
-      return single
-        ? { front: b(cur.right), leftUnder: b(to.right) }
-        : {
-            staticRight: b(cur.right),
-            front: b(cur.left),
-            leftUnder: b(to.left),
-            back: b(to.right)
-          }
-    },
+    (state: TurnState, cur: Spread): PageTextures =>
+      stageTextures(state, cur, layout, n, (p) =>
+        state.phase === 'idle' ? bitmaps.current.get(p)?.bmp : baked(p)
+      ),
     [layout, n, baked]
   )
 
@@ -126,7 +123,12 @@ export function BookStage({
     const state = controller.tick(performance.now())
     const s = useReaderStore.getState()
     const spread = spreadFor(s.page, n, layout)
-    const rects = computeRects(spread, layout, viewport, pageSize)
+    const rects = viewRects(
+      computeRects(spread, layout, viewport, pageSize),
+      viewport,
+      zoom,
+      panRef.current
+    )
     rectsRef.current = rects
     r.setLayout(rects)
     r.setPages(texturesFor(state, spread))
@@ -158,14 +160,11 @@ export function BookStage({
       r.preload([...[...bitmaps.current.values()].map((v) => v.bmp), ...bakedNow])
     }
     el.dataset.baked = bakes.bakedPages().join(',')
-  }, [controller, layout, n, viewport, pageSize, texturesFor, bakes, baked])
+  }, [controller, layout, n, viewport, pageSize, zoom, panRef, texturesFor, bakes, baked])
 
   useEffect(() => {
     drawRef.current = draw
   }, [draw])
-  const requestDraw = useCallback(() => {
-    if (!frame.current) frame.current = requestAnimationFrame(() => drawRef.current())
-  }, [])
 
   // Renderer lifetime; key/nav turns are routed here while mounted.
   useEffect(() => {
@@ -236,8 +235,9 @@ export function BookStage({
       if (s !== null) spreadPages(spreadFor(s, n, layout)).forEach((p) => needed.add(p))
     }
     for (const p of [...bitmaps.current.keys()]) if (!needed.has(p)) bitmaps.current.delete(p)
+    const onScreen = new Set(spreadPages(start))
     for (const p of needed) {
-      const scale = scaleFor(p)
+      const scale = onScreen.has(p) ? scaleFor(p) : fitScaleFor(p)
       if (bitmaps.current.get(p)?.scale === scale) continue
       doc
         .renderPage(p, scale)
@@ -252,11 +252,16 @@ export function BookStage({
     return () => {
       cancelled = true
     }
-  }, [doc, page, layout, n, scaleFor, requestDraw])
+  }, [doc, page, layout, n, scaleFor, fitScaleFor, requestDraw])
 
   // Settled spread's page rects, for positioning the overlays.
   const settledSpread = spreadFor(page, n, layout)
-  const settledRects = computeRects(settledSpread, layout, viewport, pageSize)
+  const settledRects = viewRects(
+    computeRects(settledSpread, layout, viewport, pageSize),
+    viewport,
+    zoom,
+    pan
+  )
   const overlayPages = spreadPages(settledSpread).map((p) => ({
     page: p,
     rect: (layout === 'single' || p === settledSpread.right

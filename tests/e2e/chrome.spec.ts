@@ -249,3 +249,41 @@ test('windowed: the window takes the book’s shape (no empty space); curl anima
     await app.close()
   }
 })
+
+test('zoom stays in the book view: out shrinks it centred, in enlarges it and drags to pan', async () => {
+  const { app, page } = await launchApp()
+  try {
+    await openAtSpread2(page)
+    const stage = page.getByTestId('book-stage')
+    const box = async (): Promise<{ x: number; y: number; width: number; height: number }> =>
+      (await page.locator('[data-page-overlay="2"]').boundingBox())!
+    const fit = await box()
+
+    await page.keyboard.press('Control+-')
+    await page.keyboard.press('Control+-')
+    await expect.poll(async () => Math.round(((await box()).width / fit.width) * 100)).toBe(64)
+    await expect(stage).toHaveAttribute('data-stage', 'curl')
+    const vw = await page.evaluate(() => innerWidth)
+    const out = await box()
+    expect(Math.abs(out.x + out.width - vw / 2)).toBeLessThan(3) // page 2 ends at the centre (spine)
+
+    await page.keyboard.press('Control+0')
+    await page.keyboard.press('Control+=')
+    await page.keyboard.press('Control+=')
+    await expect.poll(async () => Math.round(((await box()).width / fit.width) * 100)).toBe(156)
+    await expect(stage).toHaveAttribute('data-stage', 'curl')
+
+    const before = await box()
+    await page.mouse.move(vw / 2 + 200, 300)
+    await page.mouse.down()
+    await page.mouse.move(vw / 2 + 300, 260, { steps: 5 })
+    await page.mouse.up()
+    const after = await box()
+    expect(after.x - before.x).toBeCloseTo(100, -1)
+    await page.keyboard.press('ArrowRight') // turning pauses while zoomed in
+    await page.waitForTimeout(700)
+    await expect(stage).toHaveAttribute('data-pages', '2,3')
+  } finally {
+    await app.close()
+  }
+})

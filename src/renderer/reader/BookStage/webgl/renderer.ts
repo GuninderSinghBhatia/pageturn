@@ -1,5 +1,6 @@
 import type { PaperTint } from '@shared/types'
-import { foldFromDrag, type Corner, type Fold, type Vec2 } from './curlMath'
+import { progressFromPointer, type Corner, type Vec2 } from './curlMath'
+import { BEND, flipShadows } from './flipMath'
 import { FRAGMENT_SHADER, MODE, VERTEX_SHADER } from './shaders'
 import { TextureStore } from './textures'
 
@@ -20,6 +21,7 @@ export type PageTextures = {
   staticRight?: ImageBitmap
 }
 
+const EYE_DISTANCE = 6 // page widths: perspective of the lifted leaf
 const MESH_COLS = 40
 const MESH_ROWS = 60
 const SHADOW_PAD = 40 // book drop shadow ≈ 0 20px 40px rgba(0,0,0,0.25)
@@ -56,15 +58,16 @@ export class CurlRenderer {
       'u_rect',
       'u_aspect',
       'u_mode',
-      'u_origin',
-      'u_normal',
-      'u_radius',
+      'u_progress',
+      'u_bend',
+      'u_side',
+      'u_eye',
       'u_front',
       'u_back',
       'u_dark',
       'u_tint',
-      'u_curlShadow',
-      'u_strength',
+      'u_shadow',
+      'u_shadowSpine',
       'u_gutter',
       'u_stripes',
       'u_inner'
@@ -197,15 +200,16 @@ export class CurlRenderer {
     if (left && !single) this.drawEdge(left, 'left', this.progress)
     if (right) this.drawEdge(right, 'right', 1 - this.progress)
 
-    const fold = state && this.foldFor(state, dir === 1 ? right : left)
-    if (left && leftTex) this.drawFlat(left, leftTex, single ? 0 : 1, dir === -1 ? fold : null)
-    if (right && rightTex) this.drawFlat(right, rightTex, single ? 0 : -1, dir === 1 ? fold : null)
-    if (state && fold) this.drawCurl((dir === 1 ? right : left)!, fold)
-  }
-
-  private foldFor(state: { corner: Corner; pointer: Vec2 }, rect: Rect | null): Fold | null {
-    if (!rect) return null
-    return foldFromDrag(state.corner, state.pointer, rect.height / rect.width)
+    // The leaf turns by how far the pointer has travelled towards the far side.
+    const progress = state ? progressFromPointer(state.corner, state.pointer) : 0
+    const sh = flipShadows(progress)
+    // Page being uncovered (under the leaf) and page it lands on, with their spine side.
+    const shadeLeft = dir === -1 ? sh.under : dir === 1 && !single ? sh.landing : 0
+    const shadeRight = dir === 1 ? sh.under : dir === -1 && !single ? sh.landing : 0
+    if (left && leftTex) this.drawFlat(left, leftTex, single ? 0 : 1, shadeLeft, single ? 0 : 1)
+    if (right && rightTex) this.drawFlat(right, rightTex, single ? 0 : -1, shadeRight, 0)
+    const turning = dir === 1 ? right : left
+    if (state && turning) this.drawFlip(turning, progress, single ? 1 : dir)
   }
 
   private setRect(r: Rect): void {
@@ -245,29 +249,33 @@ export class CurlRenderer {
     this.drawQuad(MODE.edge)
   }
 
-  private drawFlat(r: Rect, bmp: ImageBitmap, gutter: number, fold: Fold | null): void {
+  private drawFlat(
+    r: Rect,
+    bmp: ImageBitmap,
+    gutter: number,
+    shadow: number,
+    shadowSpine: 0 | 1
+  ): void {
     const gl = this.gl
     this.setRect(r)
     this.bindTex(0, bmp)
     gl.uniform1f(this.u.u_gutter, gutter)
-    gl.uniform1i(this.u.u_curlShadow, fold ? 1 : 0)
-    if (fold) {
-      gl.uniform2f(this.u.u_origin, fold.origin.x, fold.origin.y)
-      gl.uniform2f(this.u.u_normal, fold.normal.x, fold.normal.y)
-      gl.uniform1f(this.u.u_strength, 0.45)
-    }
+    gl.uniform1f(this.u.u_shadow, shadow)
+    gl.uniform1f(this.u.u_shadowSpine, shadowSpine)
     this.drawQuad(MODE.flat)
   }
 
-  private drawCurl(r: Rect, fold: Fold): void {
+  /** The leaf swinging around the spine; side +1 = it starts right of the spine. */
+  private drawFlip(r: Rect, progress: number, side: number): void {
     const gl = this.gl
     this.setRect(r)
     this.bindTex(0, this.pages.front)
     this.bindTex(1, this.pages.back)
-    gl.uniform2f(this.u.u_origin, fold.origin.x, fold.origin.y)
-    gl.uniform2f(this.u.u_normal, fold.normal.x, fold.normal.y)
-    gl.uniform1f(this.u.u_radius, Math.max(fold.radius, 1e-4))
-    gl.uniform1i(this.u.u_mode, MODE.curl)
+    gl.uniform1f(this.u.u_progress, progress)
+    gl.uniform1f(this.u.u_bend, BEND)
+    gl.uniform1f(this.u.u_side, side)
+    gl.uniform1f(this.u.u_eye, EYE_DISTANCE)
+    gl.uniform1i(this.u.u_mode, MODE.flip)
     gl.enable(gl.DEPTH_TEST)
     gl.depthFunc(gl.LEQUAL)
     gl.bindVertexArray(this.mesh.vao)

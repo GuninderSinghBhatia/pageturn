@@ -25,3 +25,35 @@ export function computeRects(
     right: spread.right === null ? null : rect(spread.right, () => cx)
   }
 }
+
+type Rects = { left: Rect | null; right: Rect | null }
+type Pan = { x: number; y: number }
+
+/** Fit-size page rects zoomed about the viewport centre, then panned. */
+export function viewRects(fit: Rects, vp: Size, zoom: number, pan: Pan): Rects {
+  if (zoom === 1 && pan.x === 0 && pan.y === 0) return fit
+  const cx = vp.width / 2
+  const cy = vp.height / 2
+  const t = (r: Rect | null): Rect | null =>
+    r && {
+      x: cx + (r.x - cx) * zoom + pan.x,
+      y: cy + (r.y - cy) * zoom + pan.y,
+      width: r.width * zoom,
+      height: r.height * zoom
+    }
+  const left = t(fit.left)
+  return { left, right: fit.right === fit.left ? left : t(fit.right) }
+}
+
+/** Limits panning so a zoomed-in book can't be dragged away from the window edges. */
+export function clampPan(fit: Rects, vp: Size, zoom: number, pan: Pan): Pan {
+  if (zoom <= 1) return { x: 0, y: 0 }
+  const rs = [fit.left, fit.right].filter((r): r is Rect => r !== null)
+  if (rs.length === 0) return { x: 0, y: 0 }
+  const w = (Math.max(...rs.map((r) => r.x + r.width)) - Math.min(...rs.map((r) => r.x))) * zoom
+  const h = Math.max(...rs.map((r) => r.height)) * zoom
+  const mx = Math.max(0, (w - vp.width) / 2)
+  const my = Math.max(0, (h - vp.height) / 2)
+  const clamp = (v: number, m: number): number => (Math.abs(v) <= m ? v : Math.sign(v) * m)
+  return { x: clamp(pan.x, mx), y: clamp(pan.y, my) }
+}

@@ -26,7 +26,7 @@ test('rapid key presses never desync the page (Review Focus 5)', async () => {
   }
 })
 
-test('mid-drag curl matches the approved look', async () => {
+test('mid-drag page flip matches the approved look', async () => {
   const { app, page } = await launchApp()
   try {
     await openBook(page)
@@ -42,7 +42,7 @@ test('mid-drag curl matches the approved look', async () => {
     const target = { x: box.x + x + w * 0.35, y: box.y + y + h * 0.6 }
     await page.mouse.move(target.x, target.y, { steps: 12 })
     await page.waitForTimeout(150)
-    await expect(stage).toHaveScreenshot('curl-mid.png', { maxDiffPixelRatio: 0.02 })
+    await expect(stage).toHaveScreenshot('flip-mid.png', { maxDiffPixelRatio: 0.02 })
     await page.mouse.up()
     await expect(stage).toHaveAttribute('data-settled', 'true')
   } finally {
