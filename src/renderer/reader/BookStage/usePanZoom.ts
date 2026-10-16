@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type MutableRefObject, type RefObject } from 'react'
 import type { Rect } from './webgl/renderer'
-import { clampPan } from './pageRects'
+import { clampPan, focalPan } from './pageRects'
 
 type Rects = { left: Rect | null; right: Rect | null }
 type Pan = { x: number; y: number }
@@ -37,8 +37,22 @@ export function usePanZoom(opts: {
     applyRef.current = apply
   })
 
-  // Re-clamp when the zoom or window changes (resets to centre at or below 100%).
-  useEffect(() => applyRef.current(panRef.current), [opts.zoom, opts.viewport])
+  // Where the pointer is over the book (stage px), so zooming grows the page around that word.
+  const pointer = useRef<Pan | null>(null)
+  const prevZoom = useRef(opts.zoom)
+
+  // On a zoom change keep the point under the pointer still (the centre if the pointer is
+  // elsewhere, e.g. on the toolbar); then clamp. Resets to centre at 100%.
+  useEffect(() => {
+    const from = prevZoom.current
+    prevZoom.current = opts.zoom
+    const centre = { x: opts.viewport.width / 2, y: opts.viewport.height / 2 }
+    const next =
+      from !== opts.zoom
+        ? focalPan(panRef.current, pointer.current ?? centre, centre, from, opts.zoom)
+        : panRef.current
+    applyRef.current(next)
+  }, [opts.zoom, opts.viewport])
 
   useEffect(() => {
     const el = opts.stageRef.current
@@ -51,7 +65,15 @@ export function usePanZoom(opts: {
       drag = { id: e.pointerId, x: e.clientX, y: e.clientY, start: panRef.current }
       el.setPointerCapture(e.pointerId)
     }
+    const track = (e: PointerEvent): void => {
+      const b = el.getBoundingClientRect()
+      pointer.current = { x: e.clientX - b.left, y: e.clientY - b.top }
+    }
+    const leave = (): void => {
+      pointer.current = null
+    }
     const move = (e: PointerEvent): void => {
+      track(e)
       if (!drag || e.pointerId !== drag.id || (e.buttons & 1) === 0) return
       applyRef.current({
         x: drag.start.x + e.clientX - drag.x,
@@ -70,12 +92,14 @@ export function usePanZoom(opts: {
     el.addEventListener('pointerup', up)
     el.addEventListener('pointercancel', up)
     el.addEventListener('wheel', wheel, { passive: true })
+    el.addEventListener('pointerleave', leave)
     return () => {
       el.removeEventListener('pointerdown', down)
       el.removeEventListener('pointermove', move)
       el.removeEventListener('pointerup', up)
       el.removeEventListener('pointercancel', up)
       el.removeEventListener('wheel', wheel)
+      el.removeEventListener('pointerleave', leave)
     }
   }, [opts.stageRef])
 

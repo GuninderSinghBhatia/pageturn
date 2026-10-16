@@ -8,7 +8,7 @@ import {
 } from '../reader/layout'
 import { openPdf, PasswordCancelledError, type OpenedDoc } from '../reader/pdf/pdfService'
 
-export const MIN_ZOOM = 0.5
+export const MIN_ZOOM = 1 // the fitted book is the smallest it gets
 export const MAX_ZOOM = 4
 const SAVE_DEBOUNCE_MS = 500
 
