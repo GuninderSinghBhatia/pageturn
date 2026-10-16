@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
   INK_COLORS,
   INK_WIDTHS,
@@ -6,6 +6,15 @@ import {
   type PageTurnStyle,
   type Settings
 } from '@shared/types'
+import {
+  customUrlProblem,
+  LOOKUP_LANGUAGES,
+  LOOKUP_SITES,
+  lookupUrl,
+  SITE_INFO,
+  type LookupOpenIn,
+  type LookupSite
+} from '@shared/lookup'
 import { THEME_SETTINGS, themeChoice, type ThemeChoice } from '../app/theme'
 import { WIDTH_LABELS } from '../reader/ink/inkInput'
 import { useSettingsStore } from '../stores/settingsStore'
@@ -22,6 +31,14 @@ const TURN_STYLES: Option<PageTurnStyle>[] = [
   { value: 'curl', label: 'Page flip' },
   { value: 'slide', label: 'Slide' },
   { value: 'instant', label: 'Instant' }
+]
+const LOOKUP_SITE_OPTIONS: Option<LookupSite>[] = LOOKUP_SITES.map((s) => ({
+  value: s,
+  label: s === 'custom' ? 'Custom site' : SITE_INFO[s].label
+}))
+const OPEN_IN: Option<LookupOpenIn>[] = [
+  { value: 'app', label: 'In-app window' },
+  { value: 'browser', label: 'Default browser' }
 ]
 const LAYOUTS: Option<LayoutMode>[] = [
   { value: 'auto', label: 'Automatic' },
@@ -136,10 +153,84 @@ export function SettingsView({
             Show bookmark tabs
           </label>
         </fieldset>
+        <h2 className={styles.section}>Look up</h2>
+        <LookupSettings />
         <h2 className={styles.section}>Pen</h2>
         <PenSettings />
       </main>
     </div>
+  )
+}
+
+/** Which site "Look up" asks, in which language, and where other sites open. */
+function LookupSettings(): React.JSX.Element {
+  const settings = useSettingsStore((s) => s.settings)
+  const set = useSettingsStore((s) => s.set)
+  const { lookupSite, lookupLanguage, lookupCustomUrl } = settings
+  // Typed text is kept locally (saving is async) so the caret never jumps.
+  const [draft, setDraft] = useState(lookupCustomUrl)
+  const problem = lookupSite === 'custom' ? customUrlProblem(draft) : null
+  const usesLanguage = lookupSite === 'wikipedia' || lookupSite === 'wiktionary' || !!problem
+  return (
+    <>
+      <Choice
+        name="lookupSite"
+        legend="Look up on"
+        hint={
+          lookupSite === 'wikipedia'
+            ? 'Select text, right-click and choose Look up: a Wikipedia summary appears beside the page.'
+            : 'Look up opens this site with the selected text.'
+        }
+        options={LOOKUP_SITE_OPTIONS}
+      />
+      {lookupSite === 'custom' && (
+        <fieldset className={styles.group}>
+          <legend className={styles.legend}>Custom site address</legend>
+          <input
+            className={styles.input}
+            type="url"
+            aria-label="Custom site address"
+            placeholder="https://www.bing.com/search?q={query}"
+            spellCheck={false}
+            maxLength={500}
+            value={draft}
+            aria-invalid={!!problem}
+            onChange={(e) => {
+              setDraft(e.target.value)
+              void set({ lookupCustomUrl: e.target.value })
+            }}
+          />
+          <p className={problem ? styles.error : styles.hint}>
+            {problem
+              ? `${problem} Until then, Look up uses Wikipedia.`
+              : `Looking up “ocean” opens ${lookupUrl({ ...settings, lookupCustomUrl: draft }, 'ocean')}`}
+          </p>
+        </fieldset>
+      )}
+      {usesLanguage && (
+        <fieldset className={styles.group}>
+          <legend className={styles.legend}>Wikipedia language</legend>
+          <select
+            className={styles.input}
+            aria-label="Wikipedia language"
+            value={lookupLanguage}
+            onChange={(e) => void set({ lookupLanguage: e.target.value })}
+          >
+            {LOOKUP_LANGUAGES.map(([code, name]) => (
+              <option key={code} value={code}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </fieldset>
+      )}
+      <Choice
+        name="lookupOpenIn"
+        legend="Open pages in"
+        hint="Where full articles and other sites open. Wikipedia summaries always appear in the book."
+        options={OPEN_IN}
+      />
+    </>
   )
 }
 

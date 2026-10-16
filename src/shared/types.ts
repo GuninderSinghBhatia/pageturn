@@ -1,3 +1,5 @@
+import type { LookupOpenIn, LookupSite } from './lookup'
+
 export type Book = {
   id: string
   path: string
@@ -100,6 +102,10 @@ export type Settings = {
   penColor: string // one of INK_COLORS
   penWidth: number // one of INK_WIDTHS
   showBookmarkTabs: boolean
+  lookupSite: LookupSite
+  lookupLanguage: string // Wikipedia / Wiktionary language code
+  lookupCustomUrl: string // http(s) address with {query}
+  lookupOpenIn: LookupOpenIn
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -112,5 +118,9 @@ export const DEFAULT_SETTINGS: Settings = {
   drawWithMouse: false,
   penColor: '#1f1f1f',
   penWidth: 0.005,
-  showBookmarkTabs: true
+  showBookmarkTabs: true,
+  lookupSite: 'wikipedia',
+  lookupLanguage: 'en',
+  lookupCustomUrl: '',
+  lookupOpenIn: 'app'
 }

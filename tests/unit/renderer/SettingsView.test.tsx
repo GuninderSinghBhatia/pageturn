@@ -91,4 +91,33 @@ describe('themeChoice', () => {
     expect(themeChoice({ theme: 'dark', paperTint: 'cream' })).toBe('dark')
     expect(themeChoice({ theme: 'light', paperTint: 'dark' })).toBe('dark')
   })
+
+  it('Look up: choose a site, a custom address is checked as you type, pick where pages open', async () => {
+    render(<SettingsView onBack={() => {}} />)
+    expect((screen.getByRole('radio', { name: 'Wikipedia' }) as HTMLInputElement).checked).toBe(
+      true
+    )
+    expect(screen.getByRole('combobox', { name: 'Wikipedia language' })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Google' }))
+    expect(setSpy).toHaveBeenCalledWith({ lookupSite: 'google' })
+    await waitFor(() =>
+      expect(screen.queryByRole('combobox', { name: 'Wikipedia language' })).toBeNull()
+    )
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Custom site' }))
+    const address = await screen.findByRole('textbox', { name: 'Custom site address' })
+    fireEvent.change(address, { target: { value: 'https://www.bing.com/search' } })
+    expect(screen.getByText(/Put {query} where/)).toBeTruthy()
+    fireEvent.change(address, { target: { value: 'https://www.bing.com/search?q={query}' } })
+    expect(
+      screen.getByText('Looking up “ocean” opens https://www.bing.com/search?q=ocean')
+    ).toBeTruthy()
+    expect(setSpy).toHaveBeenLastCalledWith({
+      lookupCustomUrl: 'https://www.bing.com/search?q={query}'
+    })
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Default browser' }))
+    expect(setSpy).toHaveBeenCalledWith({ lookupOpenIn: 'browser' })
+  })
 })

@@ -6,6 +6,7 @@ import { InkRepo } from '../db/repositories/ink'
 import { SettingsRepo } from '../db/repositories/settings'
 import { registerAnnotationsIpc } from './annotations'
 import { registerLibraryIpc } from './library'
+import { registerLookupIpc } from './lookup'
 import { registerReaderIpc } from './reader'
 import { registerSettingsIpc } from './settings'
 import { registerWindowIpc } from './window'
@@ -17,4 +18,5 @@ export function registerIpc(db: Database.Database, win: BrowserWindow): void {
   registerSettingsIpc(new SettingsRepo(db))
   registerAnnotationsIpc(new AnnotationsRepo(db), new InkRepo(db), books)
   registerWindowIpc(win)
+  registerLookupIpc(win)
 }

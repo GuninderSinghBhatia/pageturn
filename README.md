@@ -28,6 +28,7 @@ It hides again 800 ms after the pointer leaves. It stays pinned while a tool is 
 ### Annotations
 - **Highlights** in four colours, underlines (straight or wavy), with selections spanning both pages split per page.
 - **Right-click a selection** for: Make a note · Ask AI · Look up · Highlight · Copy.
+- **Look up** a selection on Wikipedia: a summary card with the article image appears beside the page. In Settings you can switch to Wiktionary, Merriam-Webster, Britannica, Google, DuckDuckGo or any site (`https://…{query}`), pick the Wikipedia language, and open full pages in a small in-app window or your browser.
 - **Notes** on text show a dotted underline and a margin dot. Free sticky notes can go anywhere ("Add note here"). Notes autosave.
 - **Pen and marker ink** with real stylus pressure (via `perfect-freehand`), 6 colours, 3 widths, an eraser, and undo/redo.
 - **Bookmark tabs:** pastel, numbered ribbons sticking out of the right page edge. Click to jump; right-click to rename or delete.
@@ -136,7 +137,8 @@ docs/superpowers/ design specs and implementation plans
 - [x] Library, reader, WebGL page flip
 - [x] Highlights, notes, bookmarks, pen ink with undo
 - [x] Immersive reader (hidden toolbar, selection menu, bookmark tabs, themes)
-- [ ] **Look up** (dictionary / Wikipedia) and **Ask AI** (streamed explanations with your own API key)
+- [x] **Look up** on Wikipedia or a site of your choice
+- [ ] **Ask AI** (streamed explanations with your own API key)
 - [ ] Notebook panel and Markdown export, automatic backups
 - [ ] Installer, file association, auto-update, code signing
 

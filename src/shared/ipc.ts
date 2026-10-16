@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { LANGUAGE_RE, LOOKUP_SITES } from './lookup'
 import {
   HIGHLIGHT_COLORS,
   HIGHLIGHT_STYLES,
@@ -42,7 +43,9 @@ export const Channels = {
   windowFitAspect: 'window:fitAspect',
   windowControl: 'window:control',
   windowGetState: 'window:getState',
-  windowState: 'window:state'
+  windowState: 'window:state',
+  lookupWikipedia: 'lookup:wikipedia',
+  lookupOpen: 'lookup:open'
 } as const
 
 export type Channel = (typeof Channels)[keyof typeof Channels]
@@ -64,7 +67,11 @@ export const SettingsPartialSchema = z
     drawWithMouse: z.boolean(),
     penColor: z.enum(INK_COLORS),
     penWidth: z.union(INK_WIDTHS.map((w) => z.literal(w))),
-    showBookmarkTabs: z.boolean()
+    showBookmarkTabs: z.boolean(),
+    lookupSite: z.enum(LOOKUP_SITES),
+    lookupLanguage: z.string().regex(LANGUAGE_RE),
+    lookupCustomUrl: z.string().max(500),
+    lookupOpenIn: z.enum(['app', 'browser'])
   })
   .partial()
   .strict()
@@ -143,6 +150,17 @@ export const InkIdsSchema = z.array(IdSchema).min(1).max(500)
 /** Book width / height for the window to match; 0 releases the lock. */
 export const WindowAspectSchema = z.union([z.literal(0), z.number().min(0.3).max(4)])
 
+/** Phrase to look up and the Wikipedia language to look it up in. */
+export const LookupQuerySchema = z.string().trim().min(1).max(300)
+export const LookupLanguageSchema = z.string().regex(LANGUAGE_RE)
+/** Only web addresses may be opened from a look-up. */
+export const LookupUrlSchema = z
+  .string()
+  .max(2000)
+  .url()
+  .refine((u) => /^https?:\/\//i.test(u), 'http(s) only')
+export const LookupOpenInSchema = z.enum(['app', 'browser'])
+
 /** The app's own minimise / maximise / close buttons (the OS title bar is hidden). */
 export const WindowControlSchema = z.enum(['minimize', 'toggleMaximize', 'close'])
 
@@ -154,6 +172,14 @@ export type BookMeta = z.infer<typeof BookMetaSchema>
 export type SettingsPartial = Partial<Settings>
 export type WindowControl = z.infer<typeof WindowControlSchema>
 export type WindowState = { maximized: boolean; fullscreen: boolean }
+/** A Wikipedia article summary for the Look up card. */
+export type WikiSummary = {
+  title: string
+  description: string | null
+  extract: string
+  thumbnail: string | null // data: URL (the page CSP allows no remote images)
+  url: string
+}
 export type NotesGroup = { book: Book; notes: { note: Note; quote: string | null }[] }
 
 export interface Api {
@@ -198,6 +224,12 @@ export interface Api {
     renameBookmark(id: string, label: string | null): Promise<void>
     /** Notes across the whole library, grouped by book (newest activity first). */
     listAllNotes(): Promise<NotesGroup[]>
+  }
+  lookup: {
+    /** Summary of the best-matching Wikipedia article, or null when there is none. */
+    wikipedia(query: string, lang: string): Promise<WikiSummary | null>
+    /** Opens a web address in the in-app look-up window or the default browser. */
+    open(url: string, where: 'app' | 'browser'): Promise<void>
   }
   window: {
     /** Keeps a normal window in the book's shape (width / height); 0 releases it. */
