@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useNav } from '../app/nav'
 import { useReaderStore } from '../stores/readerStore'
 
 type Handlers = {
@@ -24,7 +25,7 @@ export function useReaderKeys({ onFind, onFocusPageBox, onEscape }: Handlers): v
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       const s = useReaderStore.getState()
-      if (!s.doc) return
+      if (!s.doc || useNav.getState().settingsOpen) return
       const ctrl = e.ctrlKey || e.metaKey
       if (ctrl) {
         const k = e.key.toLowerCase()

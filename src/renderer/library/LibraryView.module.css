@@ -48,6 +48,21 @@
   color: var(--text);
 }
 
+.iconBtn {
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.iconBtn:hover {
+  background: var(--hover);
+}
+
 .primary {
   padding: 7px 14px;
   border: 0;
