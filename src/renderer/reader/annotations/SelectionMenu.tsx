@@ -1,6 +1,7 @@
 import { useEffect, type RefObject } from 'react'
 import { hasTextSelection } from './selection'
-import { copySelection, highlight, makeNote, showCard } from './selectionActions'
+import { LookupCard } from './LookupCard'
+import { copySelection, highlight, lookUp, makeNote, showCard } from './selectionActions'
 import { useOverlayUi } from './uiStore'
 import styles from './Annotations.module.css'
 
@@ -83,7 +84,7 @@ export function SelectionMenu({
         role="menuitem"
         onClick={() => {
           close()
-          showCard(rootRef.current, 'lookup')
+          lookUp(rootRef.current)
         }}
       >
         <span aria-hidden="true">🔎</span> Look up
@@ -111,7 +112,7 @@ export function SelectionMenu({
   )
 }
 
-/** Ask AI / Look up placeholder card, anchored under the selection and kept on screen. */
+/** Ask AI (placeholder) / Look up card, anchored under the selection and kept on screen. */
 export function PhraseCard(): React.JSX.Element | null {
   const card = useOverlayUi((s) => s.card)
   useEffect(() => {
@@ -125,13 +126,13 @@ export function PhraseCard(): React.JSX.Element | null {
     return () => document.removeEventListener('pointerdown', close, true)
   }, [card])
   if (!card) return null
+  if (card.kind === 'lookup') return <LookupCard key={card.text} card={card} />
   const title = card.text.length > 60 ? `${card.text.slice(0, 57)}…` : card.text
-  const ai = card.kind === 'ai'
   return (
     <div
       className={styles.phraseCard}
       role="dialog"
-      aria-label={ai ? 'Ask AI' : 'Look up'}
+      aria-label="Ask AI"
       data-phrase-card
       data-no-turn
       style={{
@@ -141,12 +142,9 @@ export function PhraseCard(): React.JSX.Element | null {
     >
       <div className={styles.phraseHead}>
         <strong className={styles.phraseTitle}>{title}</strong>
-        <span className={styles.phraseLabel}>{ai ? 'AI' : 'W ENG'}</span>
+        <span className={styles.phraseLabel}>AI</span>
       </div>
-      <p className={styles.phraseBody}>
-        Coming soon — {ai ? 'AI explanations' : 'dictionary and Wikipedia look-ups'} will appear
-        here.
-      </p>
+      <p className={styles.phraseBody}>Coming soon — AI explanations will appear here.</p>
     </div>
   )
 }

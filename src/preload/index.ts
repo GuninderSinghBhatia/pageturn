@@ -48,6 +48,10 @@ const api: Api = {
     renameBookmark: (id, label) => invoke(Channels.annotationsRenameBookmark, id, label),
     listAllNotes: () => invoke(Channels.annotationsListAllNotes)
   },
+  lookup: {
+    wikipedia: (query, lang) => invoke(Channels.lookupWikipedia, query, lang),
+    open: (url, where) => invoke(Channels.lookupOpen, url, where)
+  },
   window: {
     fitAspect: (aspect) => invoke(Channels.windowFitAspect, aspect),
     control: (action) => invoke(Channels.windowControl, action),

@@ -4,8 +4,15 @@
   z-index: 50;
   display: flex;
   flex-direction: column;
-  overflow: auto;
+  overflow: hidden; /* only the content scrolls: the scrollbar starts below the header */
   background: var(--bg);
+}
+
+.page .body {
+  flex: 1;
+  max-width: none;
+  overflow-y: auto;
+  padding-inline: max(24px, calc((100% - 592px) / 2));
 }
 
 .toolbar {
@@ -152,4 +159,30 @@
 .embedded {
   display: flex;
   flex-direction: column;
+}
+
+.input {
+  width: 100%;
+  max-width: 420px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.input[aria-invalid='true'] {
+  border-color: #d9534f;
+}
+
+.error {
+  margin: 6px 0 0;
+  color: #d9534f;
+  font-size: 13px;
 }
