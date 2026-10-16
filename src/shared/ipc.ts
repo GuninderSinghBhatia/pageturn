@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { Book, Settings } from './types'
+import { HIGHLIGHT_COLORS, INK_COLORS, INK_WIDTHS, type Book, type Settings } from './types'
 
 /** IPC channel names: one per Api method (plus main → renderer events). */
 export const Channels = {
@@ -32,7 +32,11 @@ export const SettingsPartialSchema = z
     paperTint: z.enum(['white', 'cream', 'sepia', 'dark']),
     pageTurnStyle: z.enum(['curl', 'slide', 'instant']),
     layout: z.enum(['auto', 'spread', 'single']),
-    turnSound: z.boolean()
+    turnSound: z.boolean(),
+    highlightColor: z.enum(HIGHLIGHT_COLORS),
+    drawWithMouse: z.boolean(),
+    penColor: z.enum(INK_COLORS),
+    penWidth: z.union(INK_WIDTHS.map((w) => z.literal(w)))
   })
   .partial()
   .strict()
@@ -44,6 +48,70 @@ export const BookMetaSchema = z.object({
 })
 
 export const PngSchema = z.instanceof(ArrayBuffer)
+
+// ---- Annotations ----
+
+export const IdSchema = z.uuid()
+const TimeSchema = z.number().int().nonnegative()
+const Unit = z.number().min(-0.05).max(1.05) // normalized page coordinate (small overshoot allowed)
+
+export const RectSchema = z.object({
+  x: Unit,
+  y: Unit,
+  w: z.number().min(0).max(1.1),
+  h: z.number().min(0).max(1.1)
+})
+
+export const HighlightSchema = z
+  .object({
+    id: IdSchema,
+    bookId: BookIdSchema,
+    page: PageSchema,
+    rects: z.array(RectSchema).min(1).max(500),
+    text: z.string().max(20_000),
+    color: z.enum(HIGHLIGHT_COLORS),
+    noteId: IdSchema.nullable(),
+    createdAt: TimeSchema,
+    updatedAt: TimeSchema
+  })
+  .strict()
+
+export const NoteSchema = z
+  .object({
+    id: IdSchema,
+    bookId: BookIdSchema,
+    page: PageSchema,
+    anchor: z
+      .object({
+        highlightId: IdSchema.optional(),
+        point: z.object({ x: Unit, y: Unit }).optional()
+      })
+      .strict(),
+    body: z.string().max(100_000),
+    createdAt: TimeSchema,
+    updatedAt: TimeSchema
+  })
+  .strict()
+
+export const InkStrokeSchema = z
+  .object({
+    id: IdSchema,
+    bookId: BookIdSchema,
+    page: PageSchema,
+    points: z
+      .array(z.tuple([Unit, Unit, z.number().min(0).max(1)]))
+      .min(1)
+      .max(20_000),
+    color: z.enum(INK_COLORS),
+    width: z.number().positive().max(0.1),
+    tool: z.enum(['pen', 'highlighter']),
+    createdAt: TimeSchema
+  })
+  .strict()
+
+export const InkStrokesSchema = z.array(InkStrokeSchema).min(1).max(500)
+export const InkIdsSchema = z.array(IdSchema).min(1).max(500)
+export const BookmarkLabelSchema = z.string().max(200).nullable().optional()
 
 // ---- Request/response types ----
 
