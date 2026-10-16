@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { selectPage, useAnnotationStore } from '../../stores/annotationStore'
 import { useReaderStore } from '../../stores/readerStore'
 import { useInkStore } from '../ink/inkStore'
@@ -9,6 +9,7 @@ import { FreeNotes } from './FreeNotes'
 import { HighlightPopover } from './HighlightPopover'
 import { hitHighlight } from './rects'
 import { Ribbon } from './Ribbon'
+import { useOverlayUi } from './uiStore'
 import styles from './Annotations.module.css'
 
 type Props = { doc: OpenedDoc; page: number; width: number; height: number }
@@ -18,8 +19,6 @@ export type OverlayRenderer = (
   page: number,
   size: { width: number; height: number }
 ) => React.ReactNode
-
-type Open = { id: string; at: { x: number; y: number } }
 
 /**
  * Everything drawn over one settled page: the annotation canvas (highlights + ink), the
@@ -31,8 +30,8 @@ export function PageOverlay({ doc, page, width, height }: Props): React.JSX.Elem
   const ann = useAnnotationStore((s) => selectPage(s, page))
   const live = useInkStore((s) => (s.live?.page === page ? s.live.stroke : undefined))
   const penActive = useInkStore((s) => s.mode.active)
-  const [open, setOpen] = useState<Open | null>(null)
-  const close = useCallback(() => setOpen(null), [])
+  const open = useOverlayUi((s) => s.openHighlight)
+  const notes = useAnnotationStore((s) => s.notes)
   // In a spread, even pages sit on the left (page 1 is a cover on the right).
   const side = useReaderStore((s) => (s.layout === 'spread' && page % 2 === 0 ? 'left' : 'right'))
 
@@ -71,12 +70,23 @@ export function PageOverlay({ doc, page, width, height }: Props): React.JSX.Elem
 
   const onClick = (e: React.MouseEvent): void => {
     if (!(window.getSelection()?.isCollapsed ?? true)) return // finishing a text selection
-    const { px, norm } = locate(e)
-    const hit = hitHighlight(highlights, norm)
-    if (hit) setOpen({ id: hit.id, at: px })
+    const hit = hitHighlight(highlights, locate(e).norm)
+    if (hit) useOverlayUi.getState().openHighlightCard({ id: hit.id, editNote: false })
   }
 
   const openHighlight = open && highlights.find((h) => h.id === open.id)
+  // Card sits under the highlight's first line.
+  const cardAt = (r: { x: number; y: number; w: number; h: number }): { x: number; y: number } => ({
+    x: (r.x + r.w / 2) * width,
+    y: (r.y + r.h) * height
+  })
+  const closeCard = (): void => {
+    const s = useAnnotationStore.getState()
+    const h = openHighlight && s.highlights[openHighlight.id]
+    // "Make a note" that was left empty: drop the dotted line too.
+    if (h && h.style === 'note' && !h.noteId) s.deleteHighlight(h.id)
+    useOverlayUi.getState().openHighlightCard(null)
+  }
 
   return (
     <div
@@ -90,12 +100,29 @@ export function PageOverlay({ doc, page, width, height }: Props): React.JSX.Elem
       <TextLayer doc={doc} page={page} width={width} inert={penActive} />
       <FreeNotes page={page} notes={ann.freeNotes} width={width} height={height} />
       <Ribbon page={page} bookmarked={!!ann.bookmark} side={side} />
-      {openHighlight && (
+      {highlights
+        .filter((h) => h.noteId && notes[h.noteId])
+        .map((h) => (
+          <button
+            key={h.id}
+            className={styles.marginDot}
+            data-no-turn
+            aria-label={`Margin note: ${notes[h.noteId!].body.slice(0, 40)}`}
+            title={notes[h.noteId!].body}
+            style={{
+              left: (side === 'left' ? 0.04 : 0.96) * width,
+              top: (h.rects[0].y + h.rects[0].h / 2) * height
+            }}
+            onClick={() => useOverlayUi.getState().openHighlightCard({ id: h.id, editNote: true })}
+          />
+        ))}
+      {openHighlight && open && (
         <HighlightPopover
           key={openHighlight.id}
           highlight={openHighlight}
-          at={open.at}
-          onClose={close}
+          at={cardAt(openHighlight.rects[0])}
+          startEditing={open.editNote}
+          onClose={closeCard}
         />
       )}
     </div>

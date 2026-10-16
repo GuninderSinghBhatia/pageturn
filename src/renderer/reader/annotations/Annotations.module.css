@@ -179,3 +179,82 @@
 .menu button:hover {
   background: var(--hover);
 }
+
+/* ---- Selection menu & phrase card (spec: white card, radius 8, soft shadow, 13px sans) ---- */
+.selectionMenu {
+  min-width: 180px;
+  border: 0;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  font: 13px var(--sans);
+}
+
+.selectionMenu button {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: #2b2b2b;
+}
+
+.selectionMenu button:hover {
+  background: #f2f2f2;
+}
+
+.menuSep {
+  margin: 4px 6px;
+  border: 0;
+  border-top: 1px solid #e6e6e6;
+}
+
+.phraseCard {
+  position: fixed;
+  z-index: 40;
+  width: 280px;
+  padding: 14px 16px;
+  border-radius: 6px;
+  background: #fff;
+  color: #2b2b2b;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+}
+
+.phraseHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.phraseTitle {
+  font: 600 17px var(--serif);
+}
+
+.phraseLabel {
+  flex: none;
+  color: #8a8a8a;
+  font: 11px var(--sans);
+  letter-spacing: 0.05em;
+}
+
+.phraseBody {
+  margin: 8px 0 0;
+  font: 13px/1.5 var(--sans);
+  color: #555;
+}
+
+/* ---- Margin dot for notes on text ---- */
+.marginDot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #6b7c93;
+  pointer-events: auto;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+
+.marginDot:hover {
+  transform: translate(-50%, -50%) scale(1.3);
+}

@@ -74,6 +74,16 @@ const shown = async (page: Page): Promise<boolean> =>
 
 /** Reveals the hidden reader toolbar (T) if it isn't showing. */
 export async function showToolbar(page: Page): Promise<void> {
+  // Park the pointer mid-window: Chromium replays synthetic moves at the last pointer position,
+  // and the test pointer starts at (0,0), inside the top reveal zone.
+  const vw = await page.evaluate(() => ({ w: innerWidth, h: innerHeight }))
+  await page.mouse.move(vw.w / 2, vw.h / 2)
+  const zone = page.locator('[data-visible]').first()
+  // A hover-revealed toolbar is about to hide; let it, then open it for good with T.
+  if (await shown(page))
+    await expect(zone)
+      .toHaveAttribute('data-visible', 'false', { timeout: 3000 })
+      .catch(() => undefined)
   if (!(await shown(page))) await page.keyboard.press('t')
   await expect(page.locator('[data-visible]').first()).toHaveAttribute('data-visible', 'true')
   await expect(toolbar(page)).toBeVisible()
