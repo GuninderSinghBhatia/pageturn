@@ -17,6 +17,7 @@
     opacity 180ms ease-out,
     visibility 0s linear 180ms;
   font-family: var(--sans);
+  -webkit-app-region: no-drag;
 }
 
 .shown {

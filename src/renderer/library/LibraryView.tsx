@@ -72,7 +72,7 @@ export function LibraryView(): React.JSX.Element {
 
   return (
     <div className={styles.page}>
-      <header className={styles.toolbar}>
+      <header className={`${styles.toolbar} app-drag`}>
         <h1 className={styles.brand}>PageTurn</h1>
         <input
           className={styles.search}

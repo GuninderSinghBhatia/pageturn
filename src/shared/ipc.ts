@@ -37,7 +37,8 @@ export const Channels = {
   annotationsDeleteInk: 'annotations:deleteInk',
   annotationsToggleBookmark: 'annotations:toggleBookmark',
   annotationsRenameBookmark: 'annotations:renameBookmark',
-  windowFitAspect: 'window:fitAspect'
+  windowFitAspect: 'window:fitAspect',
+  windowSetTitleBar: 'window:setTitleBar'
 } as const
 
 export type Channel = (typeof Channels)[keyof typeof Channels]
@@ -138,6 +139,10 @@ export const InkIdsSchema = z.array(IdSchema).min(1).max(500)
 /** Book width / height for the window to match; 0 releases the lock. */
 export const WindowAspectSchema = z.union([z.literal(0), z.number().min(0.3).max(4)])
 
+const Hex = z.string().regex(/^#[0-9a-fA-F]{6}$/)
+/** Colours of the window-controls overlay, matched to what is behind it. */
+export const TitleBarSchema = z.object({ color: Hex, symbolColor: Hex }).strict()
+
 export const BookmarkLabelSchema = z.string().max(200).nullable().optional()
 
 // ---- Request/response types ----
@@ -188,5 +193,7 @@ export interface Api {
   window: {
     /** Keeps a normal window in the book's shape (width / height); 0 releases it. */
     fitAspect(aspect: number): Promise<void>
+    /** Recolours the minimise / maximise / close buttons to sit on the current screen. */
+    setTitleBar(colors: { color: string; symbolColor: string }): Promise<void>
   }
 }

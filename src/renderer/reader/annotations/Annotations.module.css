@@ -262,8 +262,8 @@
 /* ---- Bookmark tabs: ribbons sticking out of the right page edge ---- */
 .tabs {
   position: absolute;
-  top: 18px;
-  right: -16px; /* 22px wide, ~6px overlapping the page */
+  top: 46px; /* below the window buttons */
+  right: 0; /* just inside the page edge: the book fills the window, so outside is off-screen */
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -282,7 +282,7 @@
   height: 60px;
   padding: 0 0 6px;
   border: 0;
-  border-radius: 0 4px 4px 0;
+  border-radius: 4px 0 0 4px;
   color: rgb(0 0 0 / 0.55);
   font: 600 10px var(--sans);
   box-shadow: 1px 1px 3px rgb(0 0 0 / 0.18);
@@ -292,7 +292,7 @@
 
 .tab:hover,
 .tabHere {
-  transform: translateX(3px);
+  transform: translateX(-3px);
 }
 
 .gearTab {
@@ -310,7 +310,7 @@
 .tabMenu {
   position: absolute;
   top: 0;
-  left: 28px;
+  right: 28px;
   z-index: 6;
   min-width: 140px;
   padding: 4px;

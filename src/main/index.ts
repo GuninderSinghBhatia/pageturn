@@ -8,6 +8,7 @@ import { openDb } from './db/connection'
 import { BooksRepo } from './db/repositories/books'
 import { registerIpc } from './ipc'
 import { importAsBooks } from './ipc/library'
+import { TITLE_BAR_HEIGHT } from '@shared/types'
 
 // Tests (and power users) can isolate all app data in a custom folder.
 if (process.env.PAGETURN_USER_DATA) app.setPath('userData', process.env.PAGETURN_USER_DATA)
@@ -23,6 +24,10 @@ function createWindow(): BrowserWindow {
     title: 'PageTurn',
     show: false,
     autoHideMenuBar: true,
+    // No grey OS title bar: the app runs to the top edge and the minimise / maximise / close
+    // buttons float top-right, recoloured to match the screen (window:setTitleBar).
+    titleBarStyle: 'hidden',
+    titleBarOverlay: { color: '#fffdf9', symbolColor: '#2a2723', height: TITLE_BAR_HEIGHT },
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

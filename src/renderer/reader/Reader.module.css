@@ -11,6 +11,15 @@
   cursor: none !important;
 }
 
+.dragStrip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 150px; /* the window buttons handle their own area */
+  height: 10px;
+  z-index: 25;
+}
+
 .viewport > * {
   animation: bookIn 250ms ease-out;
 }
