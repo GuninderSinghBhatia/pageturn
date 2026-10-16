@@ -73,7 +73,7 @@ export function SelectedBook(p: Props): React.JSX.Element {
 
   const meta = [
     book.author,
-    total ? `${total} pages` : null,
+    total ? `${total} ${total === 1 ? 'page' : 'pages'}` : null,
     total ? `Page ${page} (${pct}%)` : null
   ]
     .filter(Boolean)

@@ -4,6 +4,7 @@ import { SettingsView } from '../settings/SettingsView'
 import { useLibraryStore } from '../stores/libraryStore'
 import { BooksTab } from './BooksTab'
 import { NotesTab } from './NotesTab'
+import logo from '../../../build/icon.svg'
 import styles from './Home.module.css'
 
 const TABS: { id: HomeTab; label: string }[] = [
@@ -51,9 +52,7 @@ export function HomeView(): React.JSX.Element {
     <div className={styles.home}>
       <header className={`${styles.bar} app-drag`}>
         <div className={styles.logo}>
-          <span className={styles.logoMark} aria-hidden="true">
-            ▮▮
-          </span>
+          <img className={styles.logoMark} src={logo} alt="" />
           PageTurn
         </div>
         <nav className={styles.tabs} role="tablist" aria-label="Sections">
@@ -70,14 +69,14 @@ export function HomeView(): React.JSX.Element {
           ))}
         </nav>
         <div className={styles.barRight}>
-          {tab === 'books' && (
+          {(tab === 'books' || tab === 'notes') && (
             <div className={`${styles.search} ${searching ? styles.searchOpen : ''}`}>
               {searching && (
                 <input
                   ref={searchRef}
                   type="search"
-                  aria-label="Filter books"
-                  placeholder="Title or author"
+                  aria-label={tab === 'notes' ? 'Filter notes' : 'Filter books'}
+                  placeholder={tab === 'notes' ? 'Note, passage or book' : 'Title or author'}
                   value={query}
                   autoFocus
                   onChange={(e) => setQuery(e.target.value)}
@@ -102,7 +101,7 @@ export function HomeView(): React.JSX.Element {
               </button>
             </div>
           )}
-          <button className={styles.primary} onClick={() => void addBooks()}>
+          <button className={styles.secondary} onClick={() => void addBooks()}>
             + Add books
           </button>
         </div>
@@ -114,7 +113,7 @@ export function HomeView(): React.JSX.Element {
         aria-label={TABS.find((t) => t.id === tab)!.label}
       >
         {tab === 'books' && <BooksTab query={query} onAdd={() => void addBooks()} />}
-        {tab === 'notes' && <NotesTab />}
+        {tab === 'notes' && <NotesTab query={query} />}
         {tab === 'online' && (
           <div className={styles.online}>
             <input

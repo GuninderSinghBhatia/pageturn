@@ -23,7 +23,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
-  box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
+  box-shadow: var(--shadow);
   transform: translate(-50%, calc(-100% - 8px));
 }
 
@@ -44,7 +44,7 @@
 .textBtn {
   padding: 3px 8px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--text);
   font-size: 13px;
@@ -69,7 +69,7 @@
   border-radius: 8px;
   background: var(--surface);
   color: var(--text);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.2);
+  box-shadow: var(--shadow);
   pointer-events: auto;
   transform: translate(-50%, 12px);
   font-family: var(--sans);
@@ -93,7 +93,7 @@
   min-height: 80px;
   padding: 6px 8px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   background: var(--bg);
   color: var(--text);
   font: inherit;
@@ -161,7 +161,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
-  box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
+  box-shadow: var(--shadow);
 }
 
 .menu button {
@@ -169,7 +169,7 @@
   width: 100%;
   padding: 6px 10px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--text);
   text-align: left;
@@ -180,12 +180,12 @@
   background: var(--hover);
 }
 
-/* ---- Selection menu & phrase card (spec: white card, radius 8, soft shadow, 13px sans) ---- */
+/* ---- Selection menu & phrase card (themed card, radius 8, 1px border, 13px sans) ---- */
 .selectionMenu {
   min-width: 180px;
-  border: 0;
-  background: #fff;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  border-color: var(--pop-border);
+  background: var(--pop-bg);
+  box-shadow: var(--shadow);
   font: 13px var(--sans);
 }
 
@@ -193,17 +193,17 @@
   display: flex;
   gap: 10px;
   align-items: center;
-  color: #2b2b2b;
+  color: var(--pop-text);
 }
 
 .selectionMenu button:hover {
-  background: #f2f2f2;
+  background: var(--pop-hover);
 }
 
 .menuSep {
   margin: 4px 6px;
   border: 0;
-  border-top: 1px solid #e6e6e6;
+  border-top: 1px solid var(--pop-border);
 }
 
 .phraseCard {
@@ -211,10 +211,11 @@
   z-index: 40;
   width: 280px;
   padding: 14px 16px;
-  border-radius: 6px;
-  background: #fff;
-  color: #2b2b2b;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  border: 1px solid var(--pop-border);
+  border-radius: var(--radius-card);
+  background: var(--pop-bg);
+  color: var(--pop-text);
+  box-shadow: var(--shadow);
 }
 
 .phraseHead {
@@ -230,7 +231,7 @@
 
 .phraseLabel {
   flex: none;
-  color: #8a8a8a;
+  color: var(--pop-muted);
   font: 11px var(--sans);
   letter-spacing: 0.05em;
 }
@@ -238,7 +239,7 @@
 .phraseBody {
   margin: 8px 0 0;
   font: 13px/1.5 var(--sans);
-  color: #555;
+  color: var(--pop-muted);
 }
 
 /* ---- Look up (Wikipedia) card ---- */
@@ -257,7 +258,7 @@
 
 .lookupDesc {
   margin: 2px 0 0;
-  color: #8a8a8a;
+  color: var(--pop-muted);
   font: italic 13px var(--sans);
 }
 
@@ -282,8 +283,13 @@
 
 .lookupSkeleton span {
   height: 10px;
-  border-radius: 5px;
-  background: linear-gradient(90deg, #eee 25%, #f6f6f6 50%, #eee 75%);
+  border-radius: var(--radius-control);
+  background: linear-gradient(
+    90deg,
+    var(--pop-border) 25%,
+    var(--pop-hover) 50%,
+    var(--pop-border) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.1s linear infinite;
 }
@@ -310,21 +316,21 @@
   padding: 6px 12px;
   border: 0;
   border-radius: 6px;
-  background: #2b2b2b;
-  color: #fff;
+  background: var(--accent);
+  color: var(--accent-text);
   font: 600 12px var(--sans);
   cursor: pointer;
 }
 
 .lookupPrimary:hover {
-  background: #444;
+  background: var(--accent-hover);
 }
 
 .lookupLink {
   padding: 0;
   border: 0;
   background: none;
-  color: #6b6b6b;
+  color: var(--pop-muted);
   font: 12px var(--sans);
   text-decoration: underline;
   cursor: pointer;
@@ -342,7 +348,7 @@
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: #6b7c93;
+  background: var(--warning);
   pointer-events: auto;
   cursor: pointer;
   transform: translate(-50%, -50%);
@@ -408,8 +414,8 @@
   min-width: 140px;
   padding: 4px;
   border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  background: var(--pop-bg);
+  box-shadow: var(--shadow);
   font: 13px var(--sans);
 }
 
@@ -418,21 +424,21 @@
   width: 100%;
   padding: 6px 10px;
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--radius-control);
   background: transparent;
-  color: #2b2b2b;
+  color: var(--pop-text);
   text-align: left;
   cursor: pointer;
 }
 
 .tabMenu button:hover {
-  background: #f2f2f2;
+  background: var(--pop-hover);
 }
 
 .tabRename {
   width: 180px;
   padding: 5px 8px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+  border: 1px solid var(--pop-border);
+  border-radius: var(--radius-control);
   font: 13px var(--sans);
 }

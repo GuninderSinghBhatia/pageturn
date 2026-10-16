@@ -1,40 +1,87 @@
-/* Colour tokens. `data-theme` on <html> is set by applyTheme() (app/theme.ts). */
+/*
+ * Colour tokens. `data-theme` on <html> is set by applyTheme() (app/theme.ts).
+ * Dark follows docs/superpowers/specs/2026-10-16-color-scheme-notes-design.md: near-black
+ * surfaces, 1px borders, no heavy shadows, one green accent. Light uses the same accent and
+ * shapes on soft off-white surfaces (no pure white or black).
+ */
 :root,
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg: #f6f3ee;
-  --surface: #fffdf9;
+  --bg: #f4f4f2;
+  --surface: #fbfbfa;
+  --surface-hover: #efefec;
+  --border: #e2e2de;
+  --divider: #d6d6d1;
+  --text: #1c1c1c;
+  --muted: #6b6b6b;
+  --text-faint: #9a9a9a;
+  --accent: #1f7a4d;
+  --accent-hover: #23905a;
+  --accent-text: #f4f4f2;
+  --accent-soft: rgb(31 122 77 / 0.12);
+  --success: #16a34a;
+  --success-soft: rgb(22 163 74 / 0.12);
+  --warning: #c98a10;
+  --danger: #dc2626;
+  --danger-bg: rgb(220 38 38 / 0.1);
+  --info: #7c4ddb;
+  --hover: var(--surface-hover);
   --paper: #fbf7ef;
-  --desk: #e9e4dc;
+  --desk: #e9e9e6;
   --reader-bg: linear-gradient(#7f8d9c, #6e7c8b);
-  --text: #2a2723;
-  --muted: #7a736a;
-  --border: #e3ddd3;
-  --hover: #f0ebe3;
-  --accent: #8a5a2b;
-  --accent-text: #fff;
-  --danger: #a3332b;
-  --danger-bg: #f8e3e0;
+  --shadow: 0 4px 14px rgb(0 0 0 / 0.08);
+  /* Popovers, menus and cards over the book */
+  --pop-bg: #fbfbfa;
+  --pop-text: #1c1c1c;
+  --pop-muted: #6b6b6b;
+  --pop-border: #e2e2de;
+  --pop-hover: #efefec;
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #1c1a18;
-  --surface: #262320;
-  --paper: #2e2a26;
-  --desk: #161412;
-  --reader-bg: #1e1f22;
-  --text: #ece6dc;
-  --muted: #a39a8e;
-  --border: #3b3631;
-  --hover: #332f2a;
-  --accent: #d19a5e;
-  --accent-text: #1c1a18;
-  --danger: #f08a80;
-  --danger-bg: #4a2522;
+  --bg: #0d0d0d;
+  --surface: #171717;
+  --surface-hover: #1e1e1e;
+  --border: #262626;
+  --divider: #2e2e2e;
+  --text: #ededed;
+  --muted: #8b8b8b;
+  --text-faint: #5c5c5c;
+  --accent: #1f7a4d;
+  --accent-hover: #23905a;
+  --accent-text: #ededed;
+  --accent-soft: rgb(31 122 77 / 0.18);
+  --success: #22c55e;
+  --success-soft: rgb(34 197 94 / 0.12);
+  --warning: #f5a524;
+  --danger: #ef4444;
+  --danger-bg: rgb(239 68 68 / 0.12);
+  --info: #8b5cf6;
+  --hover: var(--surface-hover);
+  --paper: #1a1a1a;
+  --desk: #0d0d0d;
+  --reader-bg: #0d0d0d;
+  --shadow: none;
+  --pop-bg: #171717;
+  --pop-text: #ededed;
+  --pop-muted: #8b8b8b;
+  --pop-border: #262626;
+  --pop-hover: #1e1e1e;
 }
 
 :root {
+  /* Floating reader toolbar: the same dark glass in every theme */
+  --chrome-bg: rgb(23 23 23 / 0.92);
+  --chrome-border: #262626;
+  --chrome-text: #c9c9c9;
+  --chrome-strong: #ededed;
+  --chrome-hover: rgb(237 237 237 / 0.08);
+  --chrome-active: rgb(237 237 237 / 0.16);
+
+  --radius-card: 8px;
+  --radius-control: 4px;
   --serif: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
-  --sans: 'Segoe UI', system-ui, sans-serif;
+  --sans: 'Inter Variable', Inter, 'Segoe UI', system-ui, sans-serif;
+  --mono: 'JetBrains Mono Variable', 'JetBrains Mono', Consolas, monospace;
 }
