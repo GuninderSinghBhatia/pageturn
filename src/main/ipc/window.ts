@@ -1,5 +1,6 @@
 import { ipcMain, screen, type BrowserWindow } from 'electron'
-import { Channels, WindowAspectSchema } from '@shared/ipc'
+import { Channels, TitleBarSchema, WindowAspectSchema } from '@shared/ipc'
+import { TITLE_BAR_HEIGHT } from '@shared/types'
 import { parse } from './validate'
 
 const FRAME_ALLOWANCE = 40 // px of the work area kept free for the window frame
@@ -27,6 +28,15 @@ export function registerWindowIpc(win: BrowserWindow): void {
     win.setAspectRatio(aspect)
     win.setContentSize(w, h)
   }
+
+  ipcMain.handle(Channels.windowSetTitleBar, (_e, c: unknown) => {
+    const colors = parse(TitleBarSchema, c)
+    try {
+      win.setTitleBarOverlay({ ...colors, height: TITLE_BAR_HEIGHT })
+    } catch {
+      // Platforms without a controls overlay: nothing to recolour.
+    }
+  })
 
   ipcMain.handle(Channels.windowFitAspect, (_e, a: unknown) => {
     aspect = parse(WindowAspectSchema, a)

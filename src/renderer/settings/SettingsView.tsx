@@ -80,7 +80,7 @@ export function SettingsView({ onBack }: { onBack(): void }): React.JSX.Element 
   }, [onBack])
   return (
     <div className={styles.page} role="dialog" aria-label="Settings" data-testid="settings">
-      <header className={styles.toolbar}>
+      <header className={`${styles.toolbar} app-drag`}>
         <button className={styles.back} onClick={onBack}>
           ← Back
         </button>

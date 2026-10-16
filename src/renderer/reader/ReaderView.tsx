@@ -147,7 +147,8 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
       if (!e.ctrlKey) return
       e.preventDefault()
       const s = useReaderStore.getState()
-      s.setZoom(s.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1))
+      // Proportional to the scroll amount: trackpads zoom continuously, wheels in small steps.
+      s.setZoom(s.zoom * Math.exp(-e.deltaY * 0.0015))
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
@@ -216,6 +217,8 @@ export function ReaderView({ bookId }: { bookId: string }): React.JSX.Element {
 
   return (
     <div className={styles.reader} data-reader data-idle={String(idle && !penActive)}>
+      {/* Thin grab strip along the top edge for moving the window (OS title bar is hidden). */}
+      <div className={`${styles.dragStrip} app-drag`} />
       {r.doc && (
         <ReaderToolbar
           doc={r.doc}

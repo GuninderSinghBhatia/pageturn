@@ -285,16 +285,51 @@ test('zoom never shrinks the book below fit, zooms toward the word under the poi
     expect(Math.abs(now.y - at.y)).toBeLessThan(8)
 
     // Drag the paper to pan; turning pauses while zoomed in.
-    const vw = await page.evaluate(() => innerWidth)
     const before = await box()
-    await page.mouse.move(vw / 2 + 4, 300) // blank margin by the spine (dragging text selects it)
+    // Start on blank paper (dragging text selects it instead of panning).
+    const blank = await page.evaluate(() => {
+      for (let y = 200; y < innerHeight - 100; y += 9) {
+        for (let x = innerWidth / 2 - 200; x < innerWidth / 2 + 200; x += 9) {
+          const e = document.elementFromPoint(x, y)
+          if (e && !e.closest('.textLayer, [data-no-turn]')) return { x, y }
+        }
+      }
+      return null
+    })
+    await page.mouse.move(blank!.x, blank!.y)
     await page.mouse.down()
-    await page.mouse.move(vw / 2 + 104, 300, { steps: 5 })
+    await page.mouse.move(blank!.x + 100, blank!.y, { steps: 5 })
     await page.mouse.up()
     expect(Math.abs((await box()).x - before.x)).toBeGreaterThan(20)
     await page.keyboard.press('ArrowRight')
     await page.waitForTimeout(700)
     await expect(stage).toHaveAttribute('data-pages', '2,3')
+  } finally {
+    await app.close()
+  }
+})
+
+test('zoom glides through in-between sizes instead of jumping', async () => {
+  const { app, page } = await launchApp()
+  try {
+    await openAtSpread2(page)
+    const width = async (): Promise<number> =>
+      (await page.locator('[data-page-overlay="2"]').boundingBox())!.width
+    const fit = await width()
+    const seen = await page.evaluate(async () => {
+      const el = document.querySelector('[data-page-overlay="2"]')!
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '=', ctrlKey: true }))
+      const ws: number[] = []
+      const t0 = performance.now()
+      while (performance.now() - t0 < 400) {
+        await new Promise((r) => requestAnimationFrame(r))
+        ws.push(el.getBoundingClientRect().width)
+      }
+      return ws
+    })
+    const ratios = [...new Set(seen.map((w) => Math.round((w / fit) * 1000) / 1000))]
+    expect(ratios.at(-1)).toBeCloseTo(1.25, 2)
+    expect(ratios.filter((r) => r > 1.01 && r < 1.24).length).toBeGreaterThanOrEqual(3)
   } finally {
     await app.close()
   }

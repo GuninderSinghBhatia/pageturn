@@ -47,7 +47,8 @@ const api: Api = {
     renameBookmark: (id, label) => invoke(Channels.annotationsRenameBookmark, id, label)
   },
   window: {
-    fitAspect: (aspect) => invoke(Channels.windowFitAspect, aspect)
+    fitAspect: (aspect) => invoke(Channels.windowFitAspect, aspect),
+    setTitleBar: (colors) => invoke(Channels.windowSetTitleBar, colors)
   }
 }
 

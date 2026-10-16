@@ -15,6 +15,7 @@ import type { OpenedDoc } from '../pdf/pdfService'
 import { BakeCache } from './bake'
 import { stageTextures } from './stageTextures'
 import { computeRects, viewRects } from './pageRects'
+import { useSmoothValue } from './smooth'
 import { usePanZoom } from './usePanZoom'
 import { TurnController, turnPointer, type TurnDir, type TurnState } from './turnController'
 import { useTurnGesture } from './useTurnGesture'
@@ -59,6 +60,8 @@ export function BookStage({
   const [committing] = useState(() => ({ current: false }))
   const drawRef = useRef<() => void>(() => undefined)
   const [bakes] = useState(() => new BakeCache())
+  // Zoom glides to its new value over a few frames instead of jumping.
+  const viewZoom = useSmoothValue(zoom)
   const requestDraw = useCallback(() => {
     if (!frame.current) frame.current = requestAnimationFrame(() => drawRef.current())
   }, [])
@@ -72,7 +75,13 @@ export function BookStage({
       ),
     [doc, layout, viewport, pageSize]
   )
-  const { pan, panRef } = usePanZoom({ stageRef, zoom, viewport, fitRects, onChange: requestDraw })
+  const { pan, panRef } = usePanZoom({
+    stageRef,
+    zoom: viewZoom,
+    viewport,
+    fitRects,
+    onChange: requestDraw
+  })
   const page = useReaderStore((s) => s.page)
   const n = doc.numPages
 
@@ -126,7 +135,7 @@ export function BookStage({
     const rects = viewRects(
       computeRects(spread, layout, viewport, pageSize),
       viewport,
-      zoom,
+      viewZoom,
       panRef.current
     )
     rectsRef.current = rects
@@ -160,7 +169,7 @@ export function BookStage({
       r.preload([...[...bitmaps.current.values()].map((v) => v.bmp), ...bakedNow])
     }
     el.dataset.baked = bakes.bakedPages().join(',')
-  }, [controller, layout, n, viewport, pageSize, zoom, panRef, texturesFor, bakes, baked])
+  }, [controller, layout, n, viewport, pageSize, viewZoom, panRef, texturesFor, bakes, baked])
 
   useEffect(() => {
     drawRef.current = draw
@@ -259,7 +268,7 @@ export function BookStage({
   const settledRects = viewRects(
     computeRects(settledSpread, layout, viewport, pageSize),
     viewport,
-    zoom,
+    viewZoom,
     pan
   )
   const overlayPages = spreadPages(settledSpread).map((p) => ({

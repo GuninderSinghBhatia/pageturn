@@ -53,3 +53,12 @@ select {
   font-size: 16px;
   cursor: pointer;
 }
+
+/* ---- Window dragging (the OS title bar is hidden; see useTitleBar) ---- */
+.app-drag {
+  -webkit-app-region: drag;
+}
+
+.app-drag :is(button, input, select, label, a) {
+  -webkit-app-region: no-drag;
+}
