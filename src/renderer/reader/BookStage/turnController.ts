@@ -25,6 +25,8 @@ export type TurnState =
 type Options = {
   canTurn: (dir: TurnDir) => boolean
   commit: (dir: TurnDir) => void
+  /** A turn has started that will complete (used for the page-turn sound). */
+  onTurnStart?: (dir: TurnDir) => void
   durationMs?: number
   now?: () => number
 }
@@ -113,6 +115,7 @@ export class TurnController {
     this.startedAt = this.now()
     this.duration = ms
     this.state = { phase: 'animating', dir, corner, from, to, t: 0, scripted }
+    if (to === 'complete') this.opts.onTurnStart?.(dir)
   }
 
   private finish(): void {

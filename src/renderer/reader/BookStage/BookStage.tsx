@@ -21,6 +21,7 @@ import { TurnController, turnPointer, type TurnDir, type TurnState } from './tur
 import { useTurnGesture } from './useTurnGesture'
 import type { Vec2 } from './webgl/curlMath'
 import { CurlRenderer, type PageTextures, type Rect } from './webgl/renderer'
+import { playTurnSound } from '../sound'
 import styles from '../Reader.module.css'
 
 type Size = { width: number; height: number }
@@ -94,6 +95,7 @@ export function BookStage({
           const step = dir === 1 ? nextSpreadStart : prevSpreadStart
           return step(s.page, s.doc?.numPages ?? 0, s.layout) !== null
         },
+        onTurnStart: () => playTurnSound(),
         commit: (dir) => {
           committing.current = true
           if (dir === 1) useReaderStore.getState().next()
