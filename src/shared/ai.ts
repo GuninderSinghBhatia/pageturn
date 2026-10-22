@@ -14,7 +14,7 @@ export const PROVIDER_LABELS: Record<ProviderId, string> = {
 export const DEFAULT_MODELS: Record<ProviderId, string> = {
   anthropic: 'claude-sonnet-5-5',
   openai: 'gpt-5',
-  gemini: 'gemini-2.5-pro'
+  gemini: 'gemini-3.8-flash'
 }
 
 /** Models offered in Settings (first = default). Keys can unlock more, listed live. */
@@ -30,9 +30,11 @@ export const MODEL_OPTIONS: Record<ProviderId, { id: string; label: string }[]> 
     { id: 'gpt-5-nano', label: 'GPT-5 nano — fastest, lowest cost' }
   ],
   gemini: [
-    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro — recommended' },
-    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash — faster, lower cost' },
-    { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite — fastest, lowest cost' }
+    { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash — recommended' },
+    { id: 'gemini-4-argon', label: 'Gemini 4 Argon — newest, most capable' },
+    { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (preview) — deep reasoning' },
+    { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite — fastest, lowest cost' },
+    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro — previous generation' }
   ]
 }
 

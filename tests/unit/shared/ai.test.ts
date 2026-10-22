@@ -28,3 +28,26 @@ describe('model lists', () => {
     ])
   })
 })
+
+describe('Gemini models', () => {
+  it('offers the current generation, newest stable first', () => {
+    const ids = MODEL_OPTIONS.gemini.map((m) => m.id)
+    expect(ids[0]).toBe('gemini-3.8-flash')
+    expect(ids).toEqual(
+      expect.arrayContaining(['gemini-4-argon', 'gemini-3.1-pro-preview', 'gemini-3.5-flash-lite'])
+    )
+  })
+
+  it('the live list from a key keeps chat models only (no Live, TTS or image models)', () => {
+    expect(
+      chatModels('gemini', [
+        'gemini-4-argon',
+        'gemini-3.8-flash',
+        'gemini-3.8-live',
+        'gemini-3.8-flash-tts',
+        'gemini-3.1-flash-image',
+        'gemini-3.5-transcribe'
+      ])
+    ).toEqual(['gemini-3.8-flash', 'gemini-4-argon'])
+  })
+})
