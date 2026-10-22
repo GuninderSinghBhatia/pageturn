@@ -23,8 +23,9 @@ export function registerIpc(db: Database.Database, win: BrowserWindow): void {
     encrypt: (s) => safeStorage.encryptString(s),
     decrypt: (b) => safeStorage.decryptString(b)
   })
-  registerSettingsIpc(new SettingsRepo(db), secrets)
-  registerAiIpc()
+  const settings = new SettingsRepo(db)
+  registerSettingsIpc(settings, secrets)
+  registerAiIpc(win, settings, secrets)
   registerAnnotationsIpc(new AnnotationsRepo(db), new InkRepo(db), books)
   registerWindowIpc(win)
   registerLookupIpc(win)

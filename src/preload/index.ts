@@ -4,6 +4,13 @@ import type { Book } from '@shared/types'
 
 const invoke = ipcRenderer.invoke.bind(ipcRenderer)
 
+/** Listens to a main → renderer event; returns the unsubscribe function. */
+function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
+  const listener = (_e: IpcRendererEvent, payload: T): void => cb(payload)
+  ipcRenderer.on(channel, listener)
+  return () => ipcRenderer.removeListener(channel, listener)
+}
+
 const api: Api = {
   library: {
     list: () => invoke(Channels.libraryList),
@@ -53,7 +60,13 @@ const api: Api = {
     listAllNotes: () => invoke(Channels.annotationsListAllNotes)
   },
   ai: {
-    testKey: (p) => invoke(Channels.aiTestKey, p)
+    testKey: (p) => invoke(Channels.aiTestKey, p),
+    explain: (id, req) => invoke(Channels.aiExplain, id, req),
+    followUp: (id, text) => invoke(Channels.aiFollowUp, id, text),
+    cancel: (id) => invoke(Channels.aiCancel, id),
+    onToken: (cb) => subscribe(Channels.aiToken, cb),
+    onDone: (cb) => subscribe(Channels.aiDone, cb),
+    onError: (cb) => subscribe(Channels.aiError, cb)
   },
   lookup: {
     wikipedia: (query, lang) => invoke(Channels.lookupWikipedia, query, lang),
