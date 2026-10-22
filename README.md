@@ -6,9 +6,13 @@
 
 ## Download
 
-**[⬇ PageTurn-Setup-1.0.0.exe](installer/PageTurn-Setup-1.0.0.exe?raw=true)** — Windows 10/11, 64-bit, about 100 MB.
+**[⬇ Download PageTurn for Windows](https://github.com/GuninderSinghBhatia/pageturn/releases/latest/download/PageTurn-Setup.exe)** — Windows 10/11, 64-bit, about 100 MB. Always the newest version.
 
 Run it and choose where to install. The installer is not code-signed yet, so Windows may show "Windows protected your PC": click **More info → Run anyway**. Afterwards, right-click any PDF and choose **Open with → PageTurn**.
+
+PageTurn updates itself: when a new version is out, it downloads in the background and a message offers **Restart now**.
+
+To publish an update (maintainers): commit your changes, then run `npm run release`.
 
 ---
 
