@@ -115,7 +115,8 @@ export const SettingsPartialSchema = z
     searchIncludeTitle: z.boolean(),
     helpDefaultTab: z.enum(HELP_TABS),
     helpPanelWidth: z.number().int().min(320).max(4000),
-    aiPrivacyAcknowledged: z.boolean()
+    aiPrivacyAcknowledged: z.boolean(),
+    onboardingDone: z.boolean()
   })
   .partial()
   .strict()

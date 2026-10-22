@@ -66,6 +66,78 @@ async function helpPdf(): Promise<Uint8Array> {
   return doc.save()
 }
 
+/** The book new users find in their library (resources/sample, shipped with the app). */
+const WELCOME: [string, string[]][] = [
+  [
+    'Welcome to PageTurn',
+    [
+      'PageTurn is a reader for PDF books that feels like paper.',
+      'This short book shows the main things you can do. Turn the page to begin.'
+    ]
+  ],
+  [
+    'Turning pages',
+    [
+      'Press the Right or Left arrow keys, or click near the edge of a page.',
+      'You can also drag a page corner and let go, just like a real book.',
+      'Ctrl+G jumps to a page number, and Ctrl+F searches the text.'
+    ]
+  ],
+  [
+    'Highlighting',
+    [
+      'Select some words and press H to highlight them, or right-click for more options.',
+      'Choose a colour or an underline from the toolbar at the top of the window.',
+      'Press N to add a note to the passage you selected.'
+    ]
+  ],
+  [
+    'Writing with a pen',
+    [
+      'Press P to draw on the page with a pen or highlighter marker.',
+      'Press E for the eraser. Ctrl+Z undoes a stroke, Ctrl+Y brings it back.',
+      'A stylus works too, with pressure, and the mouse can be enabled in Settings.'
+    ]
+  ],
+  [
+    'Getting help',
+    [
+      'Stuck on a passage? Select it and press Ctrl+E.',
+      'Explain gives a clear answer from the AI service of your choice (add your own key in Settings).',
+      'Web searches the passage without leaving the book.'
+    ]
+  ],
+  [
+    'Your notebook',
+    [
+      'Press Ctrl+B to see every highlight, note and bookmark in this book.',
+      'Search them, filter by colour, jump to any page, or export everything as Markdown.',
+      'Happy reading!'
+    ]
+  ]
+]
+
+async function welcomePdf(): Promise<Uint8Array> {
+  const doc = await PDFDocument.create()
+  doc.setTitle('Welcome to PageTurn')
+  doc.setAuthor('PageTurn')
+  const font = await doc.embedFont(StandardFonts.TimesRoman)
+  const bold = await doc.embedFont(StandardFonts.TimesRomanBold)
+  for (const [heading, paragraphs] of WELCOME) {
+    const page = doc.addPage([432, 648])
+    page.drawText(heading, { x: 48, y: 570, size: 24, font: bold })
+    let y = 520
+    for (const para of paragraphs) {
+      for (const line of wrap(para, 62)) {
+        page.drawText(line, { x: 48, y, size: 13, font })
+        y -= 19
+      }
+      y -= 14
+    }
+  }
+  return doc.save()
+}
+
 async function scannedPdf(): Promise<Uint8Array> {
   const doc = await PDFDocument.create()
   const png = await doc.embedPng(readFileSync(join(__dirname, '..', 'resources', 'icon.png')))
@@ -89,6 +161,12 @@ function passwordPdf(file: string): Promise<void> {
 async function main(): Promise<void> {
   mkdirSync(OUT, { recursive: true })
   // `npm run fixtures -- help` writes just one fixture (keeps the others byte-stable).
+  if (process.argv.includes('welcome')) {
+    const dir = join(__dirname, '..', 'resources', 'sample')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, 'Welcome-to-PageTurn.pdf'), await welcomePdf())
+    return
+  }
   if (process.argv.includes('help')) {
     writeFileSync(join(OUT, 'help.pdf'), await helpPdf())
     return

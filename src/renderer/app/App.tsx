@@ -7,6 +7,7 @@ import { useSettingsStore } from '../stores/settingsStore'
 import { useNav } from './nav'
 import { useThemeSync } from './theme'
 import { useToastStore } from '../stores/toastStore'
+import { Onboarding } from './Onboarding'
 import { Toasts } from './Toasts'
 import { WindowControls } from './WindowControls'
 import './theme.css'
@@ -51,6 +52,7 @@ function App(): React.JSX.Element {
       )}
       {settingsOpen && <SettingsView onBack={closeSettings} />}
       <Toasts />
+      <Onboarding />
       <WindowControls />
     </>
   )

@@ -120,6 +120,8 @@ export type Settings = {
   helpDefaultTab: HelpDefaultTab
   helpPanelWidth: number
   aiPrivacyAcknowledged: boolean
+  onboardingDone: boolean // the first-run tour was finished or skipped
+  sampleImported: boolean // first-run setup ran (set by main only)
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -143,5 +145,7 @@ export const DEFAULT_SETTINGS: Settings = {
   searchIncludeTitle: false,
   helpDefaultTab: 'auto',
   helpPanelWidth: 420,
-  aiPrivacyAcknowledged: false
+  aiPrivacyAcknowledged: false,
+  onboardingDone: false,
+  sampleImported: false
 }
