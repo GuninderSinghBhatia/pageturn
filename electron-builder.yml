@@ -1,43 +1,63 @@
-appId: com.electron.app
-productName: pageturn
+appId: com.pageturn.app
+productName: PageTurn
+copyright: Copyright © 2026 Guninder Singh Bhatia
 directories:
   buildResources: build
+  output: dist
 files:
   - '!**/.vscode/*'
   - '!src/*'
+  - '!docs/*'
+  - '!tests/*'
+  - '!scripts/*'
+  - '!.superpowers/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 asarUnpack:
-  - resources/**
+  - '**/*.node'
+  - resources/icon.png
+# The Welcome book, imported on first run from process.resourcesPath/sample.
+extraResources:
+  - from: resources/sample
+    to: sample
+fileAssociations:
+  # Appears in "Open with"; PageTurn does not take over as the default PDF app.
+  - ext: pdf
+    name: PDF Document
+    description: PDF Document
+    role: Viewer
+afterPack: scripts/fuses.cjs
 win:
-  executableName: pageturn
+  executableName: PageTurn
+  target:
+    - target: nsis
+      arch: x64
+  # Code signing runs only when CSC_LINK / CSC_KEY_PASSWORD are set; unsigned builds work.
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
-  shortcutName: ${productName}
-  uninstallDisplayName: ${productName}
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  artifactName: PageTurn-Setup-${version}.${ext}
+  shortcutName: PageTurn
+  uninstallDisplayName: PageTurn
   createDesktopShortcut: always
 mac:
   entitlementsInherit: build/entitlements.mac.plist
-  extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: PageTurn-${version}.${ext}
 linux:
   target:
     - AppImage
-    - snap
     - deb
-  maintainer: electronjs.org
-  category: Utility
+  maintainer: Guninder Singh Bhatia
+  category: Office
 appImage:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: PageTurn-${version}.${ext}
 npmRebuild: false
 publish:
-  provider: generic
-  url: https://example.com/auto-updates
+  provider: github
+  owner: GuninderSinghBhatia
+  repo: pageturn
