@@ -9,9 +9,11 @@ import { BooksRepo } from './db/repositories/books'
 import { registerIpc } from './ipc'
 import { importAsBooks } from './ipc/library'
 import { scheduleDailyBackup } from './export/backup'
+import { initLogging, registerAppIpc } from './logging'
 
 // Tests (and power users) can isolate all app data in a custom folder.
 if (process.env.PAGETURN_USER_DATA) app.setPath('userData', process.env.PAGETURN_USER_DATA)
+initLogging()
 
 // Forces the slide-transition fallback (tests, troubleshooting GPU problems).
 const disableWebgl = process.env.PAGETURN_DISABLE_WEBGL === '1'
@@ -94,6 +96,7 @@ if (!app.requestSingleInstanceLock()) {
     books = new BooksRepo(db)
     mainWindow = createWindow()
     registerIpc(db, mainWindow)
+    registerAppIpc(mainWindow)
     // Daily JSON backup to userData/backups (keeps the last 7).
     scheduleDailyBackup(db, join(app.getPath('userData'), 'backups'))
     mainWindow.webContents.once('did-finish-load', () => void openFromArgs(process.argv))

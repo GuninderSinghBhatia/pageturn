@@ -62,3 +62,15 @@ select {
 .app-drag :is(button, input, select, label, a) {
   -webkit-app-region: no-drag;
 }
+
+.toast-error {
+  border-color: var(--danger);
+}
+
+.toast .toast-action {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  color: var(--text);
+  font-size: 12px;
+}

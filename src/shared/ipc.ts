@@ -50,6 +50,8 @@ export const Channels = {
   aiToken: 'ai:token',
   aiDone: 'ai:done',
   aiError: 'ai:error',
+  appSetUnsaved: 'app:setUnsaved',
+  appReportError: 'app:reportError',
   exportMarkdown: 'export:markdown',
   exportMarkdownText: 'export:markdownText',
   exportBackup: 'export:backup',
@@ -293,6 +295,12 @@ export interface Api {
     renameBookmark(id: string, label: string | null): Promise<void>
     /** Notes across the whole library, grouped by book (newest activity first). */
     listAllNotes(): Promise<NotesGroup[]>
+  }
+  app: {
+    /** How many changes failed to save; quitting warns while this is above 0. */
+    setUnsaved(count: number): Promise<void>
+    /** Logs a renderer error to userData/logs. */
+    reportError(message: string, stack?: string): Promise<void>
   }
   export: {
     /** Saves the book's notes as Markdown (save dialog; default `{title}-notes.md`). */

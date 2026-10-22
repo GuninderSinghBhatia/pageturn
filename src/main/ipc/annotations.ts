@@ -19,6 +19,7 @@ import { thumbDir } from './library'
 import type { AnnotationsRepo } from '../db/repositories/annotations'
 import type { BooksRepo } from '../db/repositories/books'
 import type { InkRepo } from '../db/repositories/ink'
+import { withRetry } from '../db/retry'
 import { parse } from './validate'
 
 export function registerAnnotationsIpc(
@@ -40,20 +41,22 @@ export function registerAnnotationsIpc(
   ipcMain.handle(Channels.annotationsUpsertHighlight, (_e, h: unknown) => {
     const hl = parse(HighlightSchema, h)
     known(hl.bookId)
-    annotations.upsertHighlight(hl)
+    return withRetry(() => annotations.upsertHighlight(hl))
   })
-  ipcMain.handle(Channels.annotationsDeleteHighlight, (_e, id: unknown) =>
-    annotations.deleteHighlight(parse(IdSchema, id))
-  )
+  ipcMain.handle(Channels.annotationsDeleteHighlight, (_e, id: unknown) => {
+    const hid = parse(IdSchema, id)
+    return withRetry(() => annotations.deleteHighlight(hid))
+  })
 
   ipcMain.handle(Channels.annotationsUpsertNote, (_e, n: unknown) => {
     const note = parse(NoteSchema, n)
     known(note.bookId)
-    annotations.upsertNote(note)
+    return withRetry(() => annotations.upsertNote(note))
   })
-  ipcMain.handle(Channels.annotationsDeleteNote, (_e, id: unknown) =>
-    annotations.deleteNote(parse(IdSchema, id))
-  )
+  ipcMain.handle(Channels.annotationsDeleteNote, (_e, id: unknown) => {
+    const nid = parse(IdSchema, id)
+    return withRetry(() => annotations.deleteNote(nid))
+  })
 
   ipcMain.handle(Channels.annotationsSetNoteTags, (_e, id: unknown, tags: unknown) =>
     annotations.setNoteTags(parse(IdSchema, id), parse(NoteTagsSchema, tags))
@@ -62,11 +65,12 @@ export function registerAnnotationsIpc(
   ipcMain.handle(Channels.annotationsAddInk, (_e, strokes: unknown) => {
     const list = parse(InkStrokesSchema, strokes)
     for (const s of list) known(s.bookId)
-    ink.add(list)
+    return withRetry(() => ink.add(list))
   })
-  ipcMain.handle(Channels.annotationsDeleteInk, (_e, ids: unknown) =>
-    ink.delete(parse(InkIdsSchema, ids))
-  )
+  ipcMain.handle(Channels.annotationsDeleteInk, (_e, ids: unknown) => {
+    const list = parse(InkIdsSchema, ids)
+    return withRetry(() => ink.delete(list))
+  })
 
   ipcMain.handle(
     Channels.annotationsToggleBookmark,

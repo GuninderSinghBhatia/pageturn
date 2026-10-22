@@ -21,6 +21,8 @@ type AnnotationState = {
   notes: Record<string, Note>
   ink: Record<string, InkStroke>
   bookmarks: Record<number, Bookmark>
+  /** Changes whose save failed even after retrying (kept, see retryUnsaved). */
+  unsaved: number
   /** Bumped for a page on every change touching it (drives redraws and texture re-bakes). */
   revision: Record<number, number>
   load(bookId: string): Promise<void>
@@ -38,7 +40,7 @@ type AnnotationState = {
 }
 
 const RETRY_DELAYS_MS = [200, 400, 800]
-const SAVE_FAILED = "Couldn't save your change"
+const SAVE_FAILED = "Couldn't save — retrying"
 
 const api = (): Window['api']['annotations'] => window.api.annotations
 const byId = <T extends { id: string }>(items: T[]): Record<string, T> =>
@@ -49,11 +51,42 @@ const without = <T>(rec: Record<string, T>, ids: string[]): Record<string, T> =>
   return next
 }
 
+/** Changes whose save still failed after retrying: kept in memory (spec §8), saved on Retry. */
+const unsavedOps: (() => Promise<unknown>)[] = []
+
+function reportUnsaved(): void {
+  useAnnotationStore.setState({ unsaved: unsavedOps.length })
+  void window.api.app?.setUnsaved?.(unsavedOps.length)
+}
+
+/** Tries every unsaved change again (once each); what still fails stays unsaved. */
+export async function retryUnsaved(): Promise<void> {
+  const ops = unsavedOps.splice(0)
+  for (const op of ops) {
+    try {
+      await op()
+    } catch (err) {
+      console.error('Annotation save failed again', err)
+      unsavedOps.push(op)
+    }
+  }
+  reportUnsaved()
+  if (unsavedOps.length) notifyUnsaved()
+}
+
+function notifyUnsaved(): void {
+  useToastStore.getState().show(SAVE_FAILED, {
+    kind: 'error',
+    sticky: true,
+    action: { label: 'Retry', run: () => void retryUnsaved() }
+  })
+}
+
 /**
- * Runs an IPC write, retrying 3× with backoff; if it still fails, undoes the optimistic change
- * and tells the user. Every caller has already applied its change locally.
+ * Runs an IPC write, retrying 3× with backoff. If it still fails the change stays on screen
+ * and in memory as unsaved; the user is told and can retry, and quitting warns first.
  */
-async function persist(op: () => Promise<unknown>, rollback: () => void): Promise<void> {
+async function persist(op: () => Promise<unknown>): Promise<void> {
   for (let attempt = 0; ; attempt++) {
     try {
       await op()
@@ -61,8 +94,9 @@ async function persist(op: () => Promise<unknown>, rollback: () => void): Promis
     } catch (err) {
       if (attempt >= RETRY_DELAYS_MS.length) {
         console.error('Annotation save failed', err)
-        rollback()
-        useToastStore.getState().show(SAVE_FAILED)
+        unsavedOps.push(op)
+        reportUnsaved()
+        notifyUnsaved()
         return
       }
       await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt]))
@@ -88,6 +122,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => {
     ink: {},
     bookmarks: {},
     revision: {},
+    unsaved: 0,
 
     load: async (bookId) => {
       const token = ++generation
@@ -127,10 +162,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => {
         (s) => ({ highlights: { ...s.highlights, ...byId(created) } })
       )
       for (const h of created) {
-        void persist(
-          () => api().upsertHighlight(h),
-          () => apply([h.page], (s) => ({ highlights: without(s.highlights, [h.id]) }))
-        )
+        void persist(() => api().upsertHighlight(h))
       }
       return created
     },
@@ -140,10 +172,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => {
       if (!prev || prev.color === color) return
       const next = { ...prev, color, updatedAt: Date.now() }
       apply([prev.page], (s) => ({ highlights: { ...s.highlights, [id]: next } }))
-      void persist(
-        () => api().upsertHighlight(next),
-        () => apply([prev.page], (s) => ({ highlights: { ...s.highlights, [id]: prev } }))
-      )
+      void persist(() => api().upsertHighlight(next))
     },
 
     deleteHighlight: (id) => {
@@ -154,14 +183,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => {
         highlights: without(s.highlights, [id]),
         notes: note ? without(s.notes, [note.id]) : s.notes
       }))
-      void persist(
-        () => api().deleteHighlight(id),
-        () =>
-          apply([h.page], (s) => ({
-            highlights: { ...s.highlights, [id]: h },
-            notes: note ? { ...s.notes, [note.id]: note } : s.notes
-          }))
-      )
+      void persist(() => api().deleteHighlight(id))
     },
 
     saveNote: (input) => {
@@ -189,14 +211,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => {
         highlights: linkHighlight(s, hlPrev && { ...hlPrev, noteId: note.id })
       }))
       if (s0.bookId) {
-        void persist(
-          () => api().upsertNote(note),
-          () =>
-            apply([note.page], (s) => ({
-              notes: prev ? { ...s.notes, [note.id]: prev } : without(s.notes, [note.id]),
-              highlights: linkHighlight(s, hlPrev)
-            }))
-        )
+        void persist(() => api().upsertNote(note))
       }
       return note
     },
@@ -215,14 +230,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => {
         notes: without(s.notes, [id]),
         highlights: setHighlight(s, hl && { ...hl, noteId: null })
       }))
-      void persist(
-        () => api().deleteNote(id),
-        () =>
-          apply([note.page], (s) => ({
-            notes: { ...s.notes, [id]: note },
-            highlights: setHighlight(s, hl)
-          }))
-      )
+      void persist(() => api().deleteNote(id))
     },
 
     addInk: (strokes) => {
@@ -242,12 +250,8 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => {
     restoreInk: (strokes) => {
       if (strokes.length === 0) return
       const pages = strokes.map((st) => st.page)
-      const ids = strokes.map((st) => st.id)
       apply(pages, (s) => ({ ink: { ...s.ink, ...byId(strokes) } }))
-      void persist(
-        () => api().addInk(strokes),
-        () => apply(pages, (s) => ({ ink: without(s.ink, ids) }))
-      )
+      void persist(() => api().addInk(strokes))
     },
 
     removeInk: (ids) => {
@@ -255,10 +259,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => {
       if (removed.length === 0) return
       const pages = removed.map((st) => st.page)
       apply(pages, (s) => ({ ink: without(s.ink, ids) }))
-      void persist(
-        () => api().deleteInk(removed.map((st) => st.id)),
-        () => apply(pages, (s) => ({ ink: { ...s.ink, ...byId(removed) } }))
-      )
+      void persist(() => api().deleteInk(removed.map((st) => st.id)))
     },
 
     toggleBookmark: (page) => {
@@ -277,10 +278,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => {
           return { bookmarks }
         }
       apply([page], put(next))
-      void persist(
-        () => api().toggleBookmark(bookId, page, null, next?.id),
-        () => apply([page], put(prev))
-      )
+      void persist(() => api().toggleBookmark(bookId, page, null, next?.id))
     },
 
     renameBookmark: (page, label) => {
@@ -290,10 +288,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => {
         bookmarks: { ...s.bookmarks, [page]: b }
       })
       apply([page], set1({ ...prev, label }))
-      void persist(
-        () => api().renameBookmark(prev.id, label),
-        () => apply([page], set1(prev))
-      )
+      void persist(() => api().renameBookmark(prev.id, label))
     }
   }
 })
