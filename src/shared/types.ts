@@ -1,3 +1,4 @@
+import type { HelpDefaultTab, ProviderId, SearchEngine } from './ai'
 import type { LookupOpenIn, LookupSite } from './lookup'
 
 export type Book = {
@@ -112,6 +113,13 @@ export type Settings = {
   lookupLanguage: string // Wikipedia / Wiktionary language code
   lookupCustomUrl: string // http(s) address with {query}
   lookupOpenIn: LookupOpenIn
+  aiProvider: ProviderId
+  aiModel: string | null // null: the provider's default model
+  searchEngine: SearchEngine
+  searchIncludeTitle: boolean
+  helpDefaultTab: HelpDefaultTab
+  helpPanelWidth: number
+  aiPrivacyAcknowledged: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -128,5 +136,12 @@ export const DEFAULT_SETTINGS: Settings = {
   lookupSite: 'wikipedia',
   lookupLanguage: 'en',
   lookupCustomUrl: '',
-  lookupOpenIn: 'app'
+  lookupOpenIn: 'app',
+  aiProvider: 'anthropic',
+  aiModel: null,
+  searchEngine: 'duckduckgo',
+  searchIncludeTitle: false,
+  helpDefaultTab: 'auto',
+  helpPanelWidth: 420,
+  aiPrivacyAcknowledged: false
 }
