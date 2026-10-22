@@ -119,7 +119,7 @@ test('highlighter and wavy underline tools annotate a selection as soon as it is
   }
 })
 
-test('right-click a selection: Make a note adds a dotted note with a margin dot; Ask AI shows a card', async () => {
+test('right-click a selection: Make a note adds a dotted note with a margin dot; A opens the Help panel', async () => {
   const { app, page } = await launchApp()
   try {
     await openAtSpread2(page)
@@ -152,10 +152,11 @@ test('right-click a selection: Make a note adds a dotted note with a margin dot;
     const line3 = await bodyLine(page, 3)
     await dragSelect(page, line3, line3)
     await page.keyboard.press('a')
-    const card = page.getByRole('dialog', { name: 'Ask AI' })
-    await expect(card).toContainText('Coming soon')
+    // A (like Ctrl+E) opens the Help panel; with no API key it starts on the Web tab.
+    const help = page.getByRole('complementary', { name: 'Help' })
+    await expect(help.getByRole('tab', { name: 'Web' })).toHaveAttribute('aria-selected', 'true')
     await page.keyboard.press('Escape')
-    await expect(card).toHaveCount(0)
+    await expect(help).toHaveCount(0)
 
     // No selection: the page menu (free note) still works.
     const box = (await page.locator('[data-page-overlay="3"]').boundingBox())!

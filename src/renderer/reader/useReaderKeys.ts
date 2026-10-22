@@ -10,7 +10,7 @@ type Handlers = {
   onHighlight(): boolean // highlight the current text selection; false if there is none
   onBookmark(): void
   onNote(): boolean // note on the selection; false if none
-  onAsk(): boolean // Ask AI on the selection; false if none
+  onAsk(): boolean // Help panel (Explain / Web) for the selection; false if none
   onTogglePen(): void
   onEraser(): void
   onUndo(): boolean // false when there was nothing to undo
@@ -54,6 +54,8 @@ export function useReaderKeys({
         const k = e.key.toLowerCase()
         if (k === 'f') onFind()
         else if (k === 'g') onFocusPageBox()
+        else if (k === 'e')
+          onAsk() // Help panel for the selection
         // Everything else is left to text fields (Ctrl+Z is text undo there, etc.).
         else if (typing) return
         else if (k === 'd') onBookmark()
