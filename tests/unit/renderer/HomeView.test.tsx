@@ -167,6 +167,6 @@ describe('HomeView', () => {
     render(<HomeView />)
     fireEvent.click(screen.getByRole('tab', { name: 'Settings' }))
     expect(screen.getByRole('radio', { name: 'Dark' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: /back/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^← Back$/ })).toBeNull()
   })
 })

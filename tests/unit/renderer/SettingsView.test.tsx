@@ -68,7 +68,7 @@ describe('SettingsView', () => {
   it('Back calls onBack', () => {
     const onBack = vi.fn()
     render(<SettingsView onBack={onBack} />)
-    fireEvent.click(screen.getByRole('button', { name: /back/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^← Back$/ }))
     expect(onBack).toHaveBeenCalledOnce()
   })
 })
