@@ -48,6 +48,9 @@ export function toAiError(e: unknown): AiError {
   const err = (e ?? {}) as { status?: number; code?: string; name?: string; message?: string }
   const status = err.status
   if (status === 401 || status === 403) return aiError('invalid_key')
+  if (/API_KEY_INVALID|API key not valid|invalid[ _]api[ _]key/i.test(String(err.message ?? ''))) {
+    return aiError('invalid_key') // e.g. Gemini answers a bad key with 400 INVALID_ARGUMENT
+  }
   if (status === 429) return aiError('rate_limit')
   if (err.name === 'AbortError' || err.name === 'TimeoutError') return aiError('timeout')
   const msg = String(err.message ?? '')
