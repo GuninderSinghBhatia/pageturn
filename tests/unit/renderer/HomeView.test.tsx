@@ -65,7 +65,11 @@ beforeEach(() => {
       setLiked
     },
     annotations: { listAllNotes },
-    settings: { get: vi.fn(async () => DEFAULT_SETTINGS), set: vi.fn(async () => DEFAULT_SETTINGS) }
+    settings: {
+      get: vi.fn(async () => DEFAULT_SETTINGS),
+      set: vi.fn(async () => DEFAULT_SETTINGS),
+      hasApiKey: vi.fn(async () => false)
+    }
   } as unknown as typeof window.api
 })
 afterEach(cleanup)
