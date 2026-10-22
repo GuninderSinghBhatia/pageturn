@@ -52,6 +52,9 @@ export const Channels = {
   aiError: 'ai:error',
   exportMarkdown: 'export:markdown',
   exportMarkdownText: 'export:markdownText',
+  exportBackup: 'export:backup',
+  exportImportBackup: 'export:importBackup',
+  exportOpenDataFolder: 'export:openDataFolder',
   webShow: 'web:show',
   webReveal: 'web:reveal',
   webSetBounds: 'web:setBounds',
@@ -296,6 +299,11 @@ export interface Api {
     markdown(bookId: string): Promise<{ saved: boolean; path?: string }>
     /** The same Markdown as text ("Copy all"). */
     markdownText(bookId: string): Promise<string>
+    /** Saves a JSON backup of the whole library (never includes API keys). */
+    backup(): Promise<{ saved: boolean; path?: string }>
+    /** Merges a backup file into the library (newer copies win). */
+    importBackup(): Promise<{ added: number; updated: number; skipped: number } | { error: string }>
+    openDataFolder(): Promise<void>
   }
   web: {
     /** Searches `query` (engine and title option from settings) in the in-app web view. */
