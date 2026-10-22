@@ -69,3 +69,15 @@ describe('headingForPage', () => {
     expect(headingForPage([], 3)).toBeNull()
   })
 })
+
+describe('buildExplainRequest with a huge selection', () => {
+  it('cuts a whole-chapter selection to a size main accepts, marked with …', async () => {
+    const r = await buildExplainRequest(
+      doc as never,
+      { text: 'word '.repeat(40_000), pages: [4] },
+      null
+    )
+    expect(r.selection.length).toBeLessThanOrEqual(20_001)
+    expect(r.selection.endsWith('…')).toBe(true)
+  })
+})

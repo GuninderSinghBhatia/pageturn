@@ -2,6 +2,10 @@ import type { ExplainRequest } from '@shared/ai'
 import type { OpenedDoc, OutlineItem } from '../reader/pdf/pdfService'
 
 export const NEIGHBOR_CHARS = 800
+/** Longest selection sent to main (which trims further to fit its context budget). */
+export const MAX_SELECTION = 20_000
+
+const clip = (s: string): string => (s.length > MAX_SELECTION ? `${s.slice(0, MAX_SELECTION)}…` : s)
 
 type TextSource = Pick<OpenedDoc, 'numPages' | 'outline' | 'getText'>
 
@@ -50,7 +54,7 @@ export async function buildExplainRequest(
   return {
     bookTitle,
     heading: headingForPage(doc.outline, first),
-    selection: selection.text.replace(/\s+/g, ' ').trim(),
+    selection: clip(selection.text.replace(/\s+/g, ' ').trim()),
     pages,
     pageText: texts.join('\n\n'),
     prevTail: prev.slice(-NEIGHBOR_CHARS),

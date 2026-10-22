@@ -90,6 +90,16 @@ export const useHelpStore = create<HelpState>((set, get) => {
       return { messages }
     })
 
+  /** Main refused the request outright (e.g. invalid input): show it like any AI error. */
+  const refused = (requestId: string): void =>
+    get().receiveError({
+      requestId,
+      error: {
+        kind: 'provider',
+        message: 'This request could not be sent. Try a shorter selection.'
+      }
+    })
+
   const cancelCurrent = (): void => {
     const id = get().requestId
     if (id) void window.api.ai.cancel(id)
@@ -107,7 +117,7 @@ export const useHelpStore = create<HelpState>((set, get) => {
     })
     const req = await buildRequest()
     if (get().requestId !== id) return // superseded while building the context
-    void window.api.ai.explain(id, req)
+    window.api.ai.explain(id, req).catch(() => refused(id))
   }
 
   const startIfReady = (): void => {
@@ -166,7 +176,8 @@ export const useHelpStore = create<HelpState>((set, get) => {
           { role: 'assistant', content: '', streaming: true }
         ]
       })
-      void window.api.ai.followUp(s.requestId, q)
+      const id = s.requestId
+      window.api.ai.followUp(id, q).catch(() => refused(id))
     },
 
     quick: (kind, lang = 'English') =>

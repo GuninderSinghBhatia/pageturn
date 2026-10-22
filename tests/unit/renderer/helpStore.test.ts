@@ -130,4 +130,13 @@ describe('helpStore', () => {
     // remembered app-wide, so the next selection does not ask again
     expect(useSettingsStore.getState().settings.aiPrivacyAcknowledged).toBe(true)
   })
+
+  it('a request main refuses shows as an error instead of thinking forever', async () => {
+    api.ai.explain.mockRejectedValueOnce(new Error('Invalid payload'))
+    useHelpStore.getState().openFor(sel, opts())
+    await flush()
+    await flush()
+    expect(useHelpStore.getState().error?.kind).toBe('provider')
+    expect(useHelpStore.getState().messages.some((m) => m.streaming)).toBe(false)
+  })
 })
