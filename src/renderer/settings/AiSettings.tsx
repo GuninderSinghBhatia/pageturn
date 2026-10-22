@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   DEFAULT_MODELS,
+  MODEL_OPTIONS,
   PRIVACY_LINE,
   PROVIDER_LABELS,
   PROVIDERS,
@@ -31,7 +32,7 @@ export function AiSettings(): React.JSX.Element {
   const provider = settings.aiProvider
   const [hasKey, setHasKey] = useState<boolean | null>(null)
   const [draft, setDraft] = useState('')
-  const [model, setModel] = useState(settings.aiModel ?? '')
+  const [liveModels, setLiveModels] = useState<{ provider: ProviderId; ids: string[] } | null>(null)
   const [status, setStatus] = useState<Status>(null)
 
   useEffect(() => {
@@ -41,6 +42,22 @@ export function AiSettings(): React.JSX.Element {
       live = false
     }
   }, [provider])
+
+  // With a saved key, also offer the models that key can use (newer ones appear here).
+  useEffect(() => {
+    if (!hasKey) return
+    let live = true
+    void window.api.ai.listModels(provider).then((ids) => live && setLiveModels({ provider, ids }))
+    return () => {
+      live = false
+    }
+  }, [provider, hasKey])
+
+  const current = settings.aiModel ?? DEFAULT_MODELS[provider]
+  const known = MODEL_OPTIONS[provider]
+  const extra = [...(liveModels?.provider === provider ? liveModels.ids : []), current].filter(
+    (id, i, all) => all.indexOf(id) === i && !known.some((m) => m.id === id)
+  )
 
   const save = async (): Promise<void> => {
     try {
@@ -77,7 +94,7 @@ export function AiSettings(): React.JSX.Element {
           value={provider}
           onChange={(e) => {
             setStatus(null)
-            void set({ aiProvider: e.target.value as ProviderId })
+            void set({ aiProvider: e.target.value as ProviderId, aiModel: null })
           }}
         >
           {PROVIDERS.map((p) => (
@@ -131,16 +148,36 @@ export function AiSettings(): React.JSX.Element {
 
       <fieldset className={styles.group}>
         <legend className={styles.legend}>Model</legend>
-        <input
+        <select
           className={styles.input}
           aria-label="Model"
-          spellCheck={false}
-          placeholder={DEFAULT_MODELS[provider]}
-          value={model}
-          onChange={(e) => setModel(e.target.value)}
-          onBlur={() => void set({ aiModel: model.trim() || null })}
-        />
-        <p className={styles.hint}>Leave empty to use {DEFAULT_MODELS[provider]}.</p>
+          value={current}
+          onChange={(e) =>
+            void set({
+              aiModel: e.target.value === DEFAULT_MODELS[provider] ? null : e.target.value
+            })
+          }
+        >
+          {known.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label}
+            </option>
+          ))}
+          {extra.length > 0 && (
+            <optgroup label="Also available with your key">
+              {extra.map((id) => (
+                <option key={id} value={id}>
+                  {id}
+                </option>
+              ))}
+            </optgroup>
+          )}
+        </select>
+        <p className={styles.hint}>
+          {hasKey
+            ? 'Your key decides which models you can use.'
+            : 'Save a key to see every model it can use.'}
+        </p>
       </fieldset>
 
       <fieldset className={styles.group}>

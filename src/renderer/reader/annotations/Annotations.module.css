@@ -369,6 +369,22 @@
   pointer-events: auto;
 }
 
+/* Zoomed in: tabs fade out and stop taking clicks (visibility flips after the fade). */
+.tabs {
+  transition:
+    opacity 150ms ease-out,
+    visibility 0s linear 0s;
+}
+
+.tabsAway {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 150ms ease-out,
+    visibility 0s linear 150ms;
+}
+
 .tabSlot {
   position: relative;
 }

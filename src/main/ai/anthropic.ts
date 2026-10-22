@@ -35,6 +35,12 @@ export class AnthropicProvider implements Provider {
     }
   }
 
+  async listModels(key: string): Promise<string[]> {
+    const ids: string[] = []
+    for await (const m of client(key).models.list({ limit: 100 })) ids.push(m.id)
+    return ids
+  }
+
   async test(key: string, model: string): Promise<void> {
     await client(key).messages.create({
       model,

@@ -17,6 +17,8 @@ export interface Provider {
   id: ProviderId | 'mock'
   /** Streams the reply token by token; rejects with the provider's error (see toAiError). */
   stream(args: StreamArgs, onToken: (t: string) => void): Promise<void>
+  /** Model ids this key can use (unfiltered). */
+  listModels(key: string): Promise<string[]>
   /** Cheapest call that proves the key works. */
   test(key: string, model: string): Promise<void>
 }

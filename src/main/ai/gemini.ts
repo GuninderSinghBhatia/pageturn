@@ -20,6 +20,17 @@ export class GeminiProvider implements Provider {
     }
   }
 
+  async listModels(key: string): Promise<string[]> {
+    const ids: string[] = []
+    const pager = await new GoogleGenAI({ apiKey: key }).models.list()
+    for await (const m of pager) {
+      if (m.name && (m.supportedActions ?? ['generateContent']).includes('generateContent')) {
+        ids.push(m.name.replace(/^models\//, ''))
+      }
+    }
+    return ids
+  }
+
   async test(key: string, model: string): Promise<void> {
     await new GoogleGenAI({ apiKey: key }).models.get({ model })
   }
