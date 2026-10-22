@@ -150,5 +150,13 @@ describe('toAiError', () => {
     expect(toAiError(new TypeError('fetch failed')).kind).toBe('offline')
     expect(toAiError(Object.assign(new Error('x'), { code: 'ENOTFOUND' })).kind).toBe('offline')
     expect(toAiError(new Error('boom')).kind).toBe('provider')
+    // Gemini reports a bad key as 400 INVALID_ARGUMENT / API_KEY_INVALID
+    expect(
+      toAiError({
+        status: 400,
+        message:
+          '{"error":{"code":400,"message":"API key not valid.","details":[{"reason":"API_KEY_INVALID"}]}}'
+      }).kind
+    ).toBe('invalid_key')
   })
 })

@@ -4,17 +4,12 @@ copyright: Copyright © 2026 Guninder Singh Bhatia
 directories:
   buildResources: build
   output: dist
+# Ship only the compiled app. Libraries are bundled into out/ by electron-vite; the few
+# runtime packages in "dependencies" (native SQLite, logging, updater) are added automatically.
 files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!docs/*'
-  - '!tests/*'
-  - '!scripts/*'
-  - '!.superpowers/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - out/**
+  - package.json
+  - resources/icon.png
 asarUnpack:
   - '**/*.node'
   - resources/icon.png
@@ -28,7 +23,11 @@ fileAssociations:
     name: PDF Document
     description: PDF Document
     role: Viewer
-afterPack: scripts/fuses.cjs
+afterPack: scripts/after-pack.cjs
+# The UI is English-only: drop Chromium's other locale packs (~48 MB).
+electronLanguages:
+  - en-US
+compression: maximum
 win:
   executableName: PageTurn
   icon: build/icon.ico
