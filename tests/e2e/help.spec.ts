@@ -105,3 +105,49 @@ test('help: Save as note highlights the passage and keeps the explanation as its
     await app.close()
   }
 })
+
+test('help: leaving the book mid-answer cancels it; the API key never leaves secrets.bin', async () => {
+  test.setTimeout(60_000)
+  const userData = makeUserDataDir()
+  const { app, page } = await launchApp(userData, { PAGETURN_AI_MOCK: '1' })
+  try {
+    await page.evaluate(async () => {
+      await window.api.settings.setApiKey('anthropic', 'sk-test')
+      await window.api.settings.set({ aiPrivacyAcknowledged: true })
+    })
+    await page.reload()
+    await openAtSpread2(page, HELP)
+    await selectLine(page, 2)
+    await page.keyboard.press('Control+e')
+    const panel = page.getByRole('complementary', { name: 'Help' })
+    await expect(panel.getByText(/Mock/)).toBeVisible() // streaming has started
+    await showToolbarAndBack(page)
+    // Open another book straight away.
+    await page.evaluate((p) => window.api.library.import([p]), join(FIXTURES, 'odd-3.pdf'))
+    const cover = page.getByRole('button', { name: /^Open Text 3/ })
+    await cover.click() // a side cover comes to the middle first
+    await cover.click()
+    await expect(page.getByTestId('book-stage')).toBeVisible()
+    await page.waitForTimeout(1500) // the mock would have finished by now
+    await expect(panel).toHaveCount(0)
+    await expect(page.getByText(/Mock explanation/)).toHaveCount(0)
+
+    // The key is only in secrets.bin, encrypted.
+    const dump = await page.evaluate(() => JSON.stringify({ ...localStorage }))
+    expect(dump).not.toContain('sk-test')
+  } finally {
+    await app.close()
+  }
+  const { readFileSync, readdirSync } = await import('node:fs')
+  for (const f of readdirSync(userData).filter((n) => /\.(db|db-wal|bin)$/.test(n))) {
+    expect(readFileSync(join(userData, f)).includes('sk-test'), f).toBe(false)
+  }
+  expect(readdirSync(userData)).toContain('secrets.bin')
+})
+
+async function showToolbarAndBack(page: Page): Promise<void> {
+  await page.mouse.move(400, 300)
+  await page.mouse.move(400, 4)
+  await page.getByRole('button', { name: 'Back to library' }).click()
+  await expect(page.getByTestId('book-card').first()).toBeVisible()
+}

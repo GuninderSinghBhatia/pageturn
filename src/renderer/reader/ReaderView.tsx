@@ -235,6 +235,9 @@ export function ReaderView({
     else if (bookAspect > 0) void window.api.window.fitAspect(Math.round(bookAspect * 1000) / 1000)
   }, [bookAspect, helpOpen])
   useEffect(() => () => void window.api.window.fitAspect(0), [])
+  // Leaving the book (library or another book) ends its Help session: the request is
+  // cancelled in main and the web view hidden, so nothing lands in the next book.
+  useEffect(() => () => useHelpStore.getState().close(), [])
   const idle = useIdle()
 
   return (
