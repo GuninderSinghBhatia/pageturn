@@ -26,7 +26,8 @@ export function openHelp(root: HTMLElement | null): boolean {
       .filter(Boolean)
       .join(' '),
     pages: pieces.map((p) => p.page),
-    rects: Object.fromEntries(pieces.map((p) => [p.page, p.rects]))
+    rects: Object.fromEntries(pieces.map((p) => [p.page, p.rects])),
+    pieces
   }
   const book = useLibraryStore.getState().books.find((b) => b.id === bookId)
   const title = book ? displayTitle(book) : null

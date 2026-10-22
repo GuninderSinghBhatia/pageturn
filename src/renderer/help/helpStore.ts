@@ -1,10 +1,18 @@
 import { create } from 'zustand'
 import type { AiError, ExplainRequest, HelpDefaultTab } from '@shared/ai'
-import type { Rect } from '@shared/types'
+import type { Highlight, Rect } from '@shared/types'
+import { useAnnotationStore } from '../stores/annotationStore'
 import { useSettingsStore } from '../stores/settingsStore'
+import { useToastStore } from '../stores/toastStore'
 
 export type HelpTab = 'explain' | 'web'
-export type HelpSelection = { text: string; pages: number[]; rects?: Record<number, Rect[]> }
+export type HelpSelection = {
+  text: string
+  pages: number[]
+  rects?: Record<number, Rect[]>
+  /** Per-page text and rects, so the passage can be highlighted later (Save as note). */
+  pieces?: { page: number; text: string; rects: Rect[] }[]
+}
 export type HelpMessage = { role: 'user' | 'assistant'; content: string; streaming?: boolean }
 export type QuickKind = 'simpler' | 'detail' | 'example' | 'translate'
 
@@ -41,6 +49,8 @@ type HelpState = {
   quick(kind: QuickKind, lang?: string): void
   retry(): void
   acknowledgePrivacy(): void
+  /** Highlights the passage (reusing an identical highlight) and keeps the last answer as its note. */
+  saveAsNote(): Promise<void>
   receiveToken(e: { requestId: string; token: string }): void
   receiveDone(e: { requestId: string; text: string }): void
   receiveError(e: { requestId: string; error: AiError }): void
@@ -185,6 +195,42 @@ export const useHelpStore = create<HelpState>((set, get) => {
         settings: { ...st.settings, aiPrivacyAcknowledged: true }
       }))
       startIfReady()
+    },
+
+    saveAsNote: async () => {
+      const { selection, messages } = get()
+      const answer = [...messages].reverse().find((m) => m.role === 'assistant' && m.content)
+      const pieces = selection?.pieces ?? []
+      if (!answer || pieces.length === 0) return
+      const annotations = useAnnotationStore.getState()
+      const existing = Object.values(annotations.highlights)
+      const same = (p: (typeof pieces)[number]): Highlight | undefined =>
+        existing.find((h) => h.page === p.page && h.text.trim() === p.text.trim())
+      const missing = pieces.filter((p) => !same(p))
+      const created = missing.length
+        ? annotations.addHighlights(missing.map((p) => ({ ...p, color: 'yellow' as const })))
+        : []
+      const first = same(pieces[0]) ?? created[0]
+      if (!first) return
+      const body = `**Explanation (AI):**
+
+${answer.content}`
+      const current = first.noteId ? useAnnotationStore.getState().notes[first.noteId] : undefined
+      if (current?.body.includes(answer.content)) {
+        useToastStore.getState().show('Already saved to notes')
+        return
+      }
+      useAnnotationStore.getState().saveNote({
+        id: current?.id,
+        page: first.page,
+        anchor: { highlightId: first.id },
+        body: current?.body
+          ? `${current.body}
+
+${body}`
+          : body
+      })
+      useToastStore.getState().show('Saved to notes')
     },
 
     receiveToken: ({ requestId, token }) => {
