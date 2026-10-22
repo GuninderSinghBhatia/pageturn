@@ -31,12 +31,16 @@ fileAssociations:
 afterPack: scripts/fuses.cjs
 win:
   executableName: PageTurn
+  icon: build/icon.ico
   target:
     - target: nsis
       arch: x64
   # Code signing runs only when CSC_LINK / CSC_KEY_PASSWORD are set; unsigned builds work.
 nsis:
   oneClick: false
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
   perMachine: false
   allowToChangeInstallationDirectory: true
   artifactName: PageTurn-Setup-${version}.${ext}
