@@ -8,6 +8,7 @@ import { SettingsRepo } from '../db/repositories/settings'
 import { SecretStore } from '../secrets'
 import { registerAiIpc } from './ai'
 import { registerAnnotationsIpc } from './annotations'
+import { registerExportIpc } from './export'
 import { registerLibraryIpc } from './library'
 import { registerLookupIpc } from './lookup'
 import { registerReaderIpc } from './reader'
@@ -28,7 +29,10 @@ export function registerIpc(db: Database.Database, win: BrowserWindow): void {
   registerSettingsIpc(settings, secrets)
   registerAiIpc(win, settings, secrets)
   registerWebIpc(win, settings)
-  registerAnnotationsIpc(new AnnotationsRepo(db), new InkRepo(db), books)
+  const annotations = new AnnotationsRepo(db)
+  const ink = new InkRepo(db)
+  registerAnnotationsIpc(annotations, ink, books)
+  registerExportIpc(win, books, annotations, ink)
   registerWindowIpc(win)
   registerLookupIpc(win)
 }

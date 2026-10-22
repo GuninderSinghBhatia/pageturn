@@ -68,6 +68,10 @@ const api: Api = {
     onDone: (cb) => subscribe(Channels.aiDone, cb),
     onError: (cb) => subscribe(Channels.aiError, cb)
   },
+  export: {
+    markdown: (bookId) => invoke(Channels.exportMarkdown, bookId),
+    markdownText: (bookId) => invoke(Channels.exportMarkdownText, bookId)
+  },
   web: {
     show: (query, bounds, title) => invoke(Channels.webShow, query, bounds, title),
     reveal: (bounds) => invoke(Channels.webReveal, bounds),

@@ -50,6 +50,8 @@ export const Channels = {
   aiToken: 'ai:token',
   aiDone: 'ai:done',
   aiError: 'ai:error',
+  exportMarkdown: 'export:markdown',
+  exportMarkdownText: 'export:markdownText',
   webShow: 'web:show',
   webReveal: 'web:reveal',
   webSetBounds: 'web:setBounds',
@@ -288,6 +290,12 @@ export interface Api {
     renameBookmark(id: string, label: string | null): Promise<void>
     /** Notes across the whole library, grouped by book (newest activity first). */
     listAllNotes(): Promise<NotesGroup[]>
+  }
+  export: {
+    /** Saves the book's notes as Markdown (save dialog; default `{title}-notes.md`). */
+    markdown(bookId: string): Promise<{ saved: boolean; path?: string }>
+    /** The same Markdown as text ("Copy all"). */
+    markdownText(bookId: string): Promise<string>
   }
   web: {
     /** Searches `query` (engine and title option from settings) in the in-app web view. */
