@@ -15,7 +15,8 @@ function trim(appOutDir, platform, arch) {
   const resources = platform === 'darwin' ? null : join(appOutDir, 'resources')
   if (resources) {
     const sqlite = join(resources, 'app.asar.unpacked', 'node_modules', 'better-sqlite3')
-    for (const dir of ['deps', 'src', 'build']) rmSync(join(sqlite, dir), { recursive: true, force: true })
+    for (const dir of ['deps', 'src', 'build'])
+      rmSync(join(sqlite, dir), { recursive: true, force: true })
     const prebuilds = join(sqlite, 'prebuilds')
     if (existsSync(prebuilds)) {
       for (const f of readdirSync(prebuilds)) {

@@ -42,7 +42,8 @@ nsis:
   installerHeaderIcon: build/icon.ico
   perMachine: false
   allowToChangeInstallationDirectory: true
-  artifactName: PageTurn-Setup-${version}.${ext}
+  # One fixed name, so the README can always link to the newest installer.
+  artifactName: PageTurn-Setup.${ext}
   shortcutName: PageTurn
   uninstallDisplayName: PageTurn
   createDesktopShortcut: always
@@ -64,3 +65,5 @@ publish:
   provider: github
   owner: GuninderSinghBhatia
   repo: pageturn
+  # Published, not draft: installed apps only see published releases.
+  releaseType: release

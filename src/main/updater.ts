@@ -37,7 +37,8 @@ export function initUpdater(win: BrowserWindow): void {
       return { status: 'error' as const }
     }
   })
-  ipcMain.handle(Channels.appInstallUpdate, () => autoUpdater.quitAndInstall())
+  // Silent install, then PageTurn starts again on the new version.
+  ipcMain.handle(Channels.appInstallUpdate, () => autoUpdater.quitAndInstall(true, true))
   ipcMain.handle(Channels.appOpenLogs, async () => {
     await shell.openPath(logsFolder())
   })
