@@ -1,5 +1,12 @@
 import { z } from 'zod'
-import { HELP_TABS, PROVIDERS, SEARCH_ENGINES, type AiError, type ProviderId } from './ai'
+import {
+  HELP_TABS,
+  PROVIDERS,
+  SEARCH_ENGINES,
+  type AiError,
+  type ExplainRequest,
+  type ProviderId
+} from './ai'
 import { LANGUAGE_RE, LOOKUP_SITES } from './lookup'
 import {
   HIGHLIGHT_COLORS,
@@ -37,6 +44,12 @@ export const Channels = {
   settingsHasApiKey: 'settings:hasApiKey',
   settingsClearApiKey: 'settings:clearApiKey',
   aiTestKey: 'ai:testKey',
+  aiExplain: 'ai:explain',
+  aiFollowUp: 'ai:followUp',
+  aiCancel: 'ai:cancel',
+  aiToken: 'ai:token',
+  aiDone: 'ai:done',
+  aiError: 'ai:error',
   annotationsList: 'annotations:list',
   annotationsUpsertHighlight: 'annotations:upsertHighlight',
   annotationsDeleteHighlight: 'annotations:deleteHighlight',
@@ -231,6 +244,13 @@ export interface Api {
   }
   ai: {
     testKey(p: ProviderId): Promise<{ ok: true } | { ok: false; error: AiError }>
+    /** Starts streaming an explanation; results arrive through onToken / onDone / onError. */
+    explain(requestId: string, req: ExplainRequest): Promise<void>
+    followUp(requestId: string, text: string): Promise<void>
+    cancel(requestId: string): Promise<void>
+    onToken(cb: (e: { requestId: string; token: string }) => void): () => void
+    onDone(cb: (e: { requestId: string; text: string }) => void): () => void
+    onError(cb: (e: { requestId: string; error: AiError }) => void): () => void
   }
   annotations: {
     listForBook(bookId: string): Promise<BookAnnotations>
