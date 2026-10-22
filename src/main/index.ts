@@ -6,6 +6,8 @@ import { Channels } from '@shared/ipc'
 import icon from '../../resources/icon.png?asset'
 import { openDb } from './db/connection'
 import { BooksRepo } from './db/repositories/books'
+import { SettingsRepo } from './db/repositories/settings'
+import { setUpFirstRun } from './firstRun'
 import { registerIpc } from './ipc'
 import { importAsBooks } from './ipc/library'
 import { scheduleDailyBackup } from './export/backup'
@@ -85,7 +87,7 @@ if (!app.requestSingleInstanceLock()) {
     void openFromArgs(argv)
   })
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     electronApp.setAppUserModelId('com.pageturn.app')
     // No app menu: its hidden accelerators (Ctrl+±/0 zoom) would fight the reader's own keys.
     Menu.setApplicationMenu(null)
@@ -94,6 +96,7 @@ if (!app.requestSingleInstanceLock()) {
 
     const db = openDb(join(app.getPath('userData'), 'pageturn.db'))
     books = new BooksRepo(db)
+    await setUpFirstRun(books, new SettingsRepo(db))
     mainWindow = createWindow()
     registerIpc(db, mainWindow)
     registerAppIpc(mainWindow)

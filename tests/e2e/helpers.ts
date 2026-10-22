@@ -18,6 +18,7 @@ export async function launchApp(
   const env: Record<string, string | undefined> = {
     ...process.env,
     PAGETURN_USER_DATA: userData,
+    PAGETURN_SKIP_ONBOARDING: '1', // tests start with an empty library unless they opt in
     ...extraEnv
   }
   delete env.ELECTRON_RUN_AS_NODE
