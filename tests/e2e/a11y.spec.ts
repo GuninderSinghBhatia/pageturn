@@ -29,6 +29,7 @@ test('accessibility: no serious or critical problems in the library or the reade
     await expect(page.getByTestId('book-card')).toHaveCount(1)
     for (const theme of ['light', 'dark'] as const) {
       await page.evaluate((t) => (document.documentElement.dataset.theme = t), theme)
+      await page.waitForTimeout(400) // let colour transitions finish before measuring contrast
       expect(await seriousViolations(page), `library (${theme})`).toEqual([])
     }
     await openAtSpread2(page, TEXT500)

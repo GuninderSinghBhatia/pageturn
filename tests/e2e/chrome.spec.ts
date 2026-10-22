@@ -158,7 +158,10 @@ test('right-click a selection: Make a note adds a dotted note with a margin dot;
     await page.keyboard.press('Escape')
     await expect(help).toHaveCount(0)
 
-    // No selection: the page menu (free note) still works.
+    // No selection: the page menu (free note) still works. The book grows back once the
+    // Help panel closes, so wait for page 3 to settle first.
+    await expect(page.locator('[data-page-overlay="3"]')).toBeVisible()
+    await expect(page.getByTestId('book-stage')).toHaveAttribute('data-settled', 'true')
     const box = (await page.locator('[data-page-overlay="3"]').boundingBox())!
     await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.92, { button: 'right' })
     await expect(page.getByRole('menuitem', { name: 'Add note here' })).toBeVisible()

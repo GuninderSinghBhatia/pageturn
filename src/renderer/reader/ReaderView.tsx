@@ -90,17 +90,19 @@ export function ReaderView({
     []
   )
 
-  // Resolve spread/single from the user's mode and the window shape. While the Help panel
-  // is open the layout stays as it was: the panel narrows the book area, and re-resolving
-  // would flip a spread to one page and then (via the window fit) keep it that way.
+  // Resolve spread/single from the user's mode and the window's shape. The window, not the
+  // book area: side panels (Help, Notebook) narrow the book area but must not flip a spread
+  // to one page (and then, via the window fit, keep it that way).
   const helpOpen = useHelpStore((s) => s.open)
   const notebookOpen = useNotebookStore((s) => s.open)
   const sidePanel = helpOpen || notebookOpen
   const { setLayout } = r
   useEffect(() => {
-    if (viewport.width > 0 && !sidePanel)
-      setLayout(resolveLayout(r.layoutMode, viewport.width / viewport.height, viewport.width))
-  }, [viewport, r.layoutMode, setLayout, sidePanel])
+    if (viewport.width > 0)
+      setLayout(
+        resolveLayout(r.layoutMode, window.innerWidth / window.innerHeight, window.innerWidth)
+      )
+  }, [viewport, r.layoutMode, setLayout])
 
   const spread = r.doc ? spreadFor(r.page, r.doc.numPages, r.layout) : { left: null, right: null }
   const pages = spreadPages(spread)
