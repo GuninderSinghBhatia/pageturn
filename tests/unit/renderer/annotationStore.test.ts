@@ -45,17 +45,23 @@ describe('annotationStore', () => {
     )
   })
 
-  it('rolls back and toasts after 3 failed retries (Review Focus 3)', async () => {
+  it('after 3 failed retries the change is kept as unsaved and the user is told (spec §8)', async () => {
     api.upsertHighlight.mockRejectedValue(new Error('disk full'))
-    addOne()
-    const rev = s().revision[3]
+    const id = addOne()
     await vi.advanceTimersByTimeAsync(1400)
     expect(api.upsertHighlight).toHaveBeenCalledTimes(4)
-    expect(selectPage(s(), 3).highlights).toEqual([])
-    expect(s().revision[3]).toBe(rev + 1)
-    expect(useToastStore.getState().toasts.map((t) => t.text)).toEqual([
-      "Couldn't save your change"
-    ])
+    expect(selectPage(s(), 3).highlights.map((h) => h.id)).toEqual([id])
+    expect(s().unsaved).toBe(1)
+    const toast = useToastStore.getState().toasts[0]
+    expect(toast.text).toBe("Couldn't save — retrying")
+    expect(toast.action?.label).toBe('Retry')
+
+    // The disk recovers: Retry saves it and clears the unsaved count.
+    api.upsertHighlight.mockResolvedValue(undefined)
+    toast.action!.run()
+    await vi.advanceTimersByTimeAsync(10)
+    expect(api.upsertHighlight).toHaveBeenCalledTimes(5)
+    expect(s().unsaved).toBe(0)
   })
 
   it('keeps the change when a retry succeeds', async () => {

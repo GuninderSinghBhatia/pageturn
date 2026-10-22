@@ -68,6 +68,10 @@ const api: Api = {
     onDone: (cb) => subscribe(Channels.aiDone, cb),
     onError: (cb) => subscribe(Channels.aiError, cb)
   },
+  app: {
+    setUnsaved: (count) => invoke(Channels.appSetUnsaved, count),
+    reportError: (message, stack) => invoke(Channels.appReportError, message, stack)
+  },
   export: {
     markdown: (bookId) => invoke(Channels.exportMarkdown, bookId),
     markdownText: (bookId) => invoke(Channels.exportMarkdownText, bookId),
