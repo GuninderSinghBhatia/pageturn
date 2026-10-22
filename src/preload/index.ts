@@ -68,6 +68,17 @@ const api: Api = {
     onDone: (cb) => subscribe(Channels.aiDone, cb),
     onError: (cb) => subscribe(Channels.aiError, cb)
   },
+  web: {
+    show: (query, bounds, title) => invoke(Channels.webShow, query, bounds, title),
+    reveal: (bounds) => invoke(Channels.webReveal, bounds),
+    setBounds: (bounds) => invoke(Channels.webSetBounds, bounds),
+    hide: () => invoke(Channels.webHide),
+    back: () => invoke(Channels.webBack),
+    forward: () => invoke(Channels.webForward),
+    reload: () => invoke(Channels.webReload),
+    openExternal: () => invoke(Channels.webOpenExternal),
+    onState: (cb) => subscribe(Channels.webState, cb)
+  },
   lookup: {
     wikipedia: (query, lang) => invoke(Channels.lookupWikipedia, query, lang),
     open: (url, where) => invoke(Channels.lookupOpen, url, where)
