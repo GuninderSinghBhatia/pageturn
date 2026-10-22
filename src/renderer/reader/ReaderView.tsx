@@ -298,7 +298,13 @@ export function ReaderView({
             </div>
           )}
         </div>
-        {r.doc && <HelpPanel bookTitle={bookTitle} />}
+        {r.doc && (
+          <HelpPanel
+            bookTitle={bookTitle}
+            canSaveNote
+            onSaveNote={() => void useHelpStore.getState().saveAsNote()}
+          />
+        )}
       </div>
       {r.doc && <SelectionMenu rootRef={viewportRef} />}
       <PhraseCard />

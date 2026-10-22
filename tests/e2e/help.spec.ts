@@ -70,3 +70,38 @@ test('help: Ctrl+E with no selection asks for one', async () => {
     await app.close()
   }
 })
+
+test('help: Save as note highlights the passage and keeps the explanation as its note', async () => {
+  test.setTimeout(60_000)
+  const { app, page } = await launchApp(makeUserDataDir(), { PAGETURN_AI_MOCK: '1' })
+  try {
+    await page.evaluate(async () => {
+      await window.api.settings.setApiKey('anthropic', 'sk-test')
+      await window.api.settings.set({ aiPrivacyAcknowledged: true })
+    })
+    await page.reload() // settings are read at startup
+    await openAtSpread2(page, HELP)
+    await selectLine(page, 2)
+    await page.keyboard.press('Control+e')
+    const panel = page.getByRole('complementary', { name: 'Help' })
+    await expect(panel.getByText(/Mock explanation of:/)).toBeVisible()
+    await expect(panel.locator('[aria-busy="true"]')).toHaveCount(0)
+
+    const save = panel.getByRole('button', { name: 'Save as note' })
+    await save.click()
+    await expect(page.getByText('Saved to notes')).toBeVisible()
+    await save.click() // twice: no second highlight
+    const stored = async (): Promise<{ highlights: number; notes: string[] }> =>
+      page.evaluate(async () => {
+        const [book] = await window.api.library.list()
+        const a = await window.api.annotations.listForBook(book.id)
+        return { highlights: a.highlights.length, notes: a.notes.map((n) => n.body) }
+      })
+    await expect.poll(async () => (await stored()).highlights).toBe(1)
+    const s = await stored()
+    expect(s.notes).toHaveLength(1)
+    expect(s.notes[0]).toMatch(/^\*\*Explanation \(AI\):\*\*\n\nMock explanation of:/)
+  } finally {
+    await app.close()
+  }
+})
