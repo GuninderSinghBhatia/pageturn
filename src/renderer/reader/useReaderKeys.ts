@@ -11,6 +11,7 @@ type Handlers = {
   onBookmark(): void
   onNote(): boolean // note on the selection; false if none
   onAsk(): boolean // Help panel (Explain / Web) for the selection; false if none
+  onNotebook(): void
   onTogglePen(): void
   onEraser(): void
   onUndo(): boolean // false when there was nothing to undo
@@ -39,6 +40,7 @@ export function useReaderKeys({
   onBookmark,
   onNote,
   onAsk,
+  onNotebook,
   onTogglePen,
   onEraser,
   onUndo,
@@ -59,6 +61,7 @@ export function useReaderKeys({
         // Everything else is left to text fields (Ctrl+Z is text undo there, etc.).
         else if (typing) return
         else if (k === 'd') onBookmark()
+        else if (k === 'b') onNotebook()
         else if (k === 'z' && !e.shiftKey) onUndo()
         else if (k === 'y' || (k === 'z' && e.shiftKey)) onRedo()
         else if (k === '=' || k === '+') s.setZoom(s.zoom * ZOOM_STEP)
@@ -142,6 +145,7 @@ export function useReaderKeys({
     onBookmark,
     onNote,
     onAsk,
+    onNotebook,
     onTogglePen,
     onEraser,
     onUndo,

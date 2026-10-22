@@ -14,6 +14,7 @@ const handlers = {
   onBookmark: vi.fn(),
   onNote: vi.fn(() => true),
   onAsk: vi.fn(() => true),
+  onNotebook: vi.fn(),
   onTogglePen: vi.fn(),
   onEraser: vi.fn(),
   onUndo: vi.fn(() => true),

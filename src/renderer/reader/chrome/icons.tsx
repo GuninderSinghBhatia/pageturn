@@ -57,6 +57,12 @@ export const Icons = {
       <path d="M3 6h.01M3 12h.01M3 18h.01" />
     </>
   ),
+  notebook: svg(
+    <>
+      <path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z" />
+      <path d="M6 3v18M3 7h3M3 12h3M3 17h3M10 8h6M10 12h6" />
+    </>
+  ),
   search: svg(
     <>
       <circle cx="11" cy="11" r="7" />
