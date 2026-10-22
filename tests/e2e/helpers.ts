@@ -22,10 +22,16 @@ export async function launchApp(
     ...extraEnv
   }
   delete env.ELECTRON_RUN_AS_NODE
-  const app = await electron.launch({
-    args: [join(__dirname, '..', '..', 'out', 'main', 'index.js')],
-    env: env as Record<string, string>
-  })
+  // PAGETURN_APP_PATH runs the suite against a packaged build (e.g. dist/win-unpacked/PageTurn.exe).
+  const packaged = process.env.PAGETURN_APP_PATH
+  const app = await electron.launch(
+    packaged
+      ? { executablePath: packaged, args: [], env: env as Record<string, string> }
+      : {
+          args: [join(__dirname, '..', '..', 'out', 'main', 'index.js')],
+          env: env as Record<string, string>
+        }
+  )
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
   return { app, page }

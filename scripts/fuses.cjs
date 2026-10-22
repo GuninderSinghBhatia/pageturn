@@ -7,6 +7,8 @@ const { join } = require('node:path')
 const { flipFuses, FuseVersion, FuseV1Options } = require('@electron/fuses')
 
 exports.default = async function fuses(context) {
+  // Test builds only: automation (Playwright) needs the inspector the fuses switch off.
+  if (process.env.PAGETURN_NO_FUSES === '1') return
   const { appOutDir, electronPlatformName, packager } = context
   const name = packager.appInfo.productFilename
   const exe =
