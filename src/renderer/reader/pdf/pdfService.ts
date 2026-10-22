@@ -6,7 +6,7 @@ import { PageCache } from './pageCache'
 GlobalWorkerOptions.workerSrc = workerUrl
 
 export type OutlineItem = { title: string; page: number | null; children: OutlineItem[] }
-export type TextItem = { str: string; transform: number[] }
+export type TextItem = { str: string; transform: number[]; hasEOL?: boolean }
 
 export interface OpenedDoc {
   numPages: number
@@ -173,7 +173,7 @@ class Doc implements OpenedDoc {
     const content = await (await this.page(n)).getTextContent()
     return content.items
       .filter((it): it is typeof it & TextItem => 'str' in it)
-      .map((it) => ({ str: it.str, transform: it.transform as number[] }))
+      .map((it) => ({ str: it.str, transform: it.transform as number[], hasEOL: it.hasEOL }))
   }
 
   async hasText(n: number): Promise<boolean> {
