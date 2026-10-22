@@ -9,7 +9,7 @@ Checked on 2026-10-22, branch `reader-redesign`. Spec: `docs/superpowers/specs/2
 | `npm test` (Vitest) | 48 files, 280 tests passed |
 | `npm run test:e2e` (Playwright, Electron) | 42 passed |
 | `npm run lint` | clean |
-| `npm run dist` | `dist/PageTurn-Setup-1.0.0.exe` built (x64, unsigned) |
+| `npm run dist` | `dist/PageTurn-Setup-1.0.0.exe` built (x64, unsigned; compacted from 152 MB to 100 MB) |
 | Fuses (`npx @electron/fuses read --app dist/win-unpacked/PageTurn.exe`) | RunAsNode Disabled, CookieEncryption Enabled, NODE_OPTIONS Disabled, CLI inspect Disabled, asar integrity Enabled, OnlyLoadAppFromAsar Enabled |
 | Perf spec on the packaged app (`PAGETURN_APP_PATH`) | p95 7.1 ms, max 7.7 ms over 1,753 turn frames (target ≤ 20 ms) |
 
@@ -28,5 +28,6 @@ The packaged build with fuses blocks Playwright, by design: automation needs the
 
 ## Before publishing
 
-- Auto-update reads GitHub Releases from `GuninderSinghBhatia/pageturn`, which is private. Installed apps can only see updates once the releases are public, or once a token is configured.
+- Auto-update reads GitHub Releases from the public repo `GuninderSinghBhatia/pageturn`. Installed apps see an update once a newer release is published.
+- The installer is also committed at `installer/PageTurn-Setup-1.0.0.exe` (about 95 MiB, under GitHub's 100 MiB limit).
 - Release by pushing a `v*` tag. The `Release` workflow tests, builds and publishes the installer.
