@@ -45,6 +45,27 @@ async function textPdf(numPages: number): Promise<Uint8Array> {
   return doc.save()
 }
 
+/** Help panel e2e: like text-N, but page 4 starts with a line that makes the mock AI fail. */
+async function helpPdf(): Promise<Uint8Array> {
+  const doc = await PDFDocument.create()
+  doc.setTitle('Help Fixture')
+  const font = await doc.embedFont(StandardFonts.TimesRoman)
+  for (let n = 1; n <= 6; n++) {
+    const page = doc.addPage([432, 648])
+    page.drawText(`Page ${n}`, { x: 48, y: 590, size: 20, font })
+    let y = 556
+    if (n === 4) {
+      page.drawText('__FAIL_RATE__ this line makes the mock AI fail.', { x: 48, y, size: 11, font })
+      y -= 27
+    }
+    for (const line of wrap(LOREM, 70)) {
+      page.drawText(line, { x: 48, y, size: 11, font })
+      y -= 15
+    }
+  }
+  return doc.save()
+}
+
 async function scannedPdf(): Promise<Uint8Array> {
   const doc = await PDFDocument.create()
   const png = await doc.embedPng(readFileSync(join(__dirname, '..', 'resources', 'icon.png')))
@@ -67,6 +88,12 @@ function passwordPdf(file: string): Promise<void> {
 
 async function main(): Promise<void> {
   mkdirSync(OUT, { recursive: true })
+  // `npm run fixtures -- help` writes just one fixture (keeps the others byte-stable).
+  if (process.argv.includes('help')) {
+    writeFileSync(join(OUT, 'help.pdf'), await helpPdf())
+    return
+  }
+  writeFileSync(join(OUT, 'help.pdf'), await helpPdf())
   writeFileSync(join(OUT, 'text-500.pdf'), await textPdf(500))
   writeFileSync(join(OUT, 'text-1000.pdf'), await textPdf(1000))
   writeFileSync(join(OUT, 'one-page.pdf'), await textPdf(1))

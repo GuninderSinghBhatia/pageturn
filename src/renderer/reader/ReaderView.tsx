@@ -8,7 +8,12 @@ import { PageMenu } from './annotations/PageMenu'
 import { PageOverlay } from './annotations/PageOverlay'
 import { highlightSelection } from './annotations/selection'
 import { PhraseCard, SelectionMenu } from './annotations/SelectionMenu'
-import { makeNote, showCard } from './annotations/selectionActions'
+import { makeNote } from './annotations/selectionActions'
+import { HelpPanel } from '../help/HelpPanel'
+import { useHelpStore } from '../help/helpStore'
+import { openHelp } from '../help/openHelp'
+import { displayTitle } from '../library/displayTitle'
+import { useLibraryStore } from '../stores/libraryStore'
 import { useOverlayUi } from './annotations/uiStore'
 import { BookStage } from './BookStage/BookStage'
 import { SlideStage } from './BookStage/SlideStage'
@@ -83,12 +88,15 @@ export function ReaderView({
     []
   )
 
-  // Resolve spread/single from the user's mode and the window shape.
+  // Resolve spread/single from the user's mode and the window shape. While the Help panel
+  // is open the layout stays as it was: the panel narrows the book area, and re-resolving
+  // would flip a spread to one page and then (via the window fit) keep it that way.
+  const helpOpen = useHelpStore((s) => s.open)
   const { setLayout } = r
   useEffect(() => {
-    if (viewport.width > 0)
+    if (viewport.width > 0 && !helpOpen)
       setLayout(resolveLayout(r.layoutMode, viewport.width / viewport.height, viewport.width))
-  }, [viewport, r.layoutMode, setLayout])
+  }, [viewport, r.layoutMode, setLayout, helpOpen])
 
   const spread = r.doc ? spreadFor(r.page, r.doc.numPages, r.layout) : { left: null, right: null }
   const pages = spreadPages(spread)
@@ -116,6 +124,10 @@ export function ReaderView({
     onToggleToolbar: useCallback(() => useChromeStore.getState().toggleToolbar(), []),
     onEscape: useCallback(() => {
       if (useOverlayUi.getState().closeAll()) return true
+      if (useHelpStore.getState().open) {
+        useHelpStore.getState().close()
+        return true
+      }
       return useChromeStore.getState().escape()
     }, []),
     onEraser: useCallback(() => {
@@ -134,7 +146,7 @@ export function ReaderView({
     }, []),
     onBookmark: bookmarkFirstVisible,
     onNote: useCallback(() => makeNote(viewportRef.current), []),
-    onAsk: useCallback(() => showCard(viewportRef.current, 'ai'), []),
+    onAsk: useCallback(() => openHelp(viewportRef.current), []),
     onHighlight: useCallback(
       () =>
         highlightSelection(
@@ -211,13 +223,17 @@ export function ReaderView({
   // A normal window takes the book's shape (no empty space around the pages). A spread is
   // always two pages wide (the cover sits on the right half).
   const firstPage = pages[0]
+  const book = useLibraryStore((s) => s.books.find((b) => b.id === bookId))
+  const bookTitle = book ? displayTitle(book) : null
   const bookAspect = doc
     ? ((r.layout === 'spread' ? 2 : 1) * doc.pageSize(firstPage ?? 1).width) /
       doc.pageSize(firstPage ?? 1).height
     : 0
   useEffect(() => {
-    if (bookAspect > 0) void window.api.window.fitAspect(Math.round(bookAspect * 1000) / 1000)
-  }, [bookAspect])
+    // With the Help panel open the window keeps its size; the book fits the space left.
+    if (helpOpen) void window.api.window.fitAspect(0)
+    else if (bookAspect > 0) void window.api.window.fitAspect(Math.round(bookAspect * 1000) / 1000)
+  }, [bookAspect, helpOpen])
   useEffect(() => () => void window.api.window.fitAspect(0), [])
   const idle = useIdle()
 
@@ -282,6 +298,7 @@ export function ReaderView({
             </div>
           )}
         </div>
+        {r.doc && <HelpPanel bookTitle={bookTitle} />}
       </div>
       {r.doc && <SelectionMenu rootRef={viewportRef} />}
       <PhraseCard />

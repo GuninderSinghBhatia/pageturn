@@ -1,7 +1,8 @@
 import { useEffect, type RefObject } from 'react'
 import { hasTextSelection } from './selection'
+import { openHelp } from '../../help/openHelp'
 import { LookupCard } from './LookupCard'
-import { copySelection, highlight, lookUp, makeNote, showCard } from './selectionActions'
+import { copySelection, highlight, lookUp, makeNote } from './selectionActions'
 import { useOverlayUi } from './uiStore'
 import styles from './Annotations.module.css'
 
@@ -75,7 +76,7 @@ export function SelectionMenu({
         role="menuitem"
         onClick={() => {
           close()
-          showCard(rootRef.current, 'ai')
+          openHelp(rootRef.current)
         }}
       >
         <span aria-hidden="true">✨</span> Ask AI

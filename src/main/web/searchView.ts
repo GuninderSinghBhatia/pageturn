@@ -47,6 +47,7 @@ export class SearchViewManager {
   private view: WebContentsView | null = null
   private shown = false
   private error: string | null = null
+  private pendingUrl = '' // requested but not yet committed (getURL() is '' until then)
   private listeners: ((s: WebState) => void)[] = []
   private createView: () => WebContentsView
   private openExternal: (url: string) => void
@@ -106,7 +107,7 @@ export class SearchViewManager {
     if (!this.view) return null
     const wc = this.view.webContents
     return {
-      url: wc.getURL(),
+      url: wc.getURL() || this.pendingUrl,
       canGoBack: wc.navigationHistory.canGoBack(),
       canGoForward: wc.navigationHistory.canGoForward(),
       loading: wc.isLoading(),
@@ -123,6 +124,7 @@ export class SearchViewManager {
     }
     view.setBounds(bounds)
     this.error = null
+    this.pendingUrl = url
     void view.webContents.loadURL(url).catch(() => undefined) // failures arrive as did-fail-load
     this.emit()
   }
