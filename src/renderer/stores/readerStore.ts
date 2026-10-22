@@ -7,6 +7,7 @@ import {
   type ResolvedLayout
 } from '../reader/layout'
 import { openPdf, PasswordCancelledError, type OpenedDoc } from '../reader/pdf/pdfService'
+import { playTurnSound } from '../reader/sound'
 
 export const MIN_ZOOM = 1 // the fitted book is the smallest it gets
 export const MAX_ZOOM = 4
@@ -129,8 +130,14 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   requestTurn: (dir) => {
     const { turnHandler } = get()
     if (turnHandler) turnHandler(dir)
-    else if (dir === 1) get().next()
-    else get().prev()
+    else {
+      // Slide view: the turn happens now (the flip view's controller plays its own sound).
+      const { page, doc, layout } = get()
+      const step = dir === 1 ? nextSpreadStart : prevSpreadStart
+      if (doc && step(page, doc.numPages, layout) !== null) playTurnSound()
+      if (dir === 1) get().next()
+      else get().prev()
+    }
   },
 
   next: () => {

@@ -89,3 +89,18 @@ describe('TurnController', () => {
     expect(c.tick(t)).toMatchObject({ phase: 'dragging', dir: -1 })
   })
 })
+
+describe('TurnController onTurnStart', () => {
+  it('fires as a completing turn starts (for the page sound), not for a snap-back', () => {
+    const onTurnStart = vi.fn()
+    const c = new TurnController({ canTurn: () => true, commit, now, onTurnStart })
+    c.turn(1)
+    expect(onTurnStart).toHaveBeenCalledWith(1)
+    t = 700
+    c.tick(t)
+    c.pointerDown('br', { x: 1, y: 1.4 })
+    c.pointerMove({ x: 0.4, y: 1.4 }, -0.2)
+    c.pointerUp() // slow and short: snaps back
+    expect(onTurnStart).toHaveBeenCalledTimes(1)
+  })
+})
