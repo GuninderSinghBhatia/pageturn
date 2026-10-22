@@ -2,7 +2,8 @@
  * Publishes an update: npm run release
  *   1. bumps the version (1.0.1 → 1.0.2…), commits and tags it
  *   2. pushes the commit and the tag
- *   3. builds the installer and uploads it, with latest.yml, to a GitHub Release
+ *   3. builds the installer, then creates the GitHub Release with the installer, its
+ *      blockmap (for small differential downloads) and latest.yml, in one step
  * Installed copies of PageTurn find it within a few hours (or at their next start) and
  * offer "Restart now". Uses GH_TOKEN, or the GitHub CLI login on this computer.
  */
@@ -29,5 +30,12 @@ const branch = out('git rev-parse --abbrev-ref HEAD')
 run(`git push origin ${branch}`)
 run(`git push origin refs/tags/v${version}`)
 run('npx electron-vite build')
-run('npx electron-builder --win --publish always', { GH_TOKEN: token })
+// Build only, then publish with the GitHub CLI: electron-builder's own uploader can race and
+// create the release twice.
+run('npx electron-builder --win --publish never')
+run(
+  `gh release create v${version} dist/PageTurn-Setup.exe dist/PageTurn-Setup.exe.blockmap dist/latest.yml ` +
+    `--title "PageTurn ${version}" --notes "PageTurn ${version}" --latest`,
+  { GH_TOKEN: token }
+)
 console.log(`\nPageTurn ${version} is published. Installed apps will offer it shortly.`)
