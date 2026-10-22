@@ -107,7 +107,7 @@ describe('AiSessionManager', () => {
   })
 
   it('cancel mid-stream aborts the provider; no more tokens and no done', async () => {
-    const { provider, calls } = fakeProvider(['a', 'b', 'c', 'd'])
+    const { provider, calls } = fakeProvider(Array.from({ length: 60 }, (_, i) => `t${i}`))
     const { m, sent } = manager(provider)
     const run = m.explain('req-00000001', req)
     await vi.waitFor(() => expect(sent.length).toBeGreaterThan(0))
