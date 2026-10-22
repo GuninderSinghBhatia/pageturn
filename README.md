@@ -4,7 +4,11 @@
 
 ![A page flipping over mid-turn](tests/e2e/curl.spec.ts-snapshots/flip-mid-win32.png)
 
-> Status: active development. Core reading, annotations, ink and the immersive reader are done. AI explanations and dictionary look-up are next.
+## Download
+
+**[⬇ PageTurn-Setup-1.0.0.exe](installer/PageTurn-Setup-1.0.0.exe?raw=true)** — Windows 10/11, 64-bit, about 100 MB.
+
+Run it and choose where to install. The installer is not code-signed yet, so Windows may show "Windows protected your PC": click **More info → Run anyway**. Afterwards, right-click any PDF and choose **Open with → PageTurn**.
 
 ---
 
@@ -34,6 +38,12 @@ It hides again 800 ms after the pointer leaves. It stays pinned while a tool is 
 - **Bookmark tabs:** pastel, numbered ribbons sticking out of the right page edge. Click to jump; right-click to rename or delete.
 - Annotations are **baked into the page texture**, so they curl with the paper.
 - Everything is saved locally and survives restarts and moving the PDF: books are identified by a content hash, not a path.
+
+### Help, notebook and your data
+- **Help panel (Ctrl+E):** select a passage and get a streamed explanation from your own Anthropic, OpenAI or Gemini key (stored encrypted on your computer), with follow-ups, quick actions and Save as note. The **Web** tab searches the passage in-app.
+- **Notebook (Ctrl+B):** every highlight, note, bookmark and handwritten page in a book, searchable and filterable, with Markdown export.
+- **Backups:** a JSON backup every day (last 7 kept), plus manual export and import in Settings. Backups never include API keys.
+- First-run tour with a Welcome book, an optional page-turn sound, auto-update, and logs in your user data folder. No usage data is collected.
 
 ### Keyboard
 
@@ -128,19 +138,10 @@ docs/superpowers/ design specs and implementation plans
 ---
 
 ## Testing
-- **170 unit and component tests**: page-flip geometry, zoom/pan maths, layout, turn controller, repositories against in-memory SQLite, IPC validation, stores, drawing, ink history, toolbar reveal logic.
-- **31 end-to-end tests** drive the built app: import, reading, curl gestures, highlights across pages, notes, bookmarks, ink, restarts, password PDFs, the WebGL fallback, plus a screenshot test of the page flip and a frame-time test on a 1000-page PDF.
+- **282 unit and component tests**: page-flip geometry, zoom/pan maths, layout, turn controller, repositories against in-memory SQLite, IPC validation, stores, drawing, ink history, toolbar reveal logic.
+- **42 end-to-end tests** drive the built app: import, reading, curl gestures, highlights across pages, notes, bookmarks, ink, restarts, password PDFs, the WebGL fallback, plus a screenshot test of the page flip and a frame-time test on a 1000-page PDF.
 
 ---
-
-## Roadmap
-- [x] Library, reader, WebGL page flip
-- [x] Highlights, notes, bookmarks, pen ink with undo
-- [x] Immersive reader (hidden toolbar, selection menu, bookmark tabs, themes)
-- [x] **Look up** on Wikipedia or a site of your choice
-- [ ] **Ask AI** (streamed explanations with your own API key)
-- [ ] Notebook panel and Markdown export, automatic backups
-- [ ] Installer, file association, auto-update, code signing
 
 Design docs: [`docs/superpowers/specs/`](docs/superpowers/specs/) · implementation plans: [`docs/superpowers/plans/`](docs/superpowers/plans/) · progress log: [`docs/PROGRESS.md`](docs/PROGRESS.md)
 
@@ -148,6 +149,3 @@ Design docs: [`docs/superpowers/specs/`](docs/superpowers/specs/) · implementat
 - `main`: library, reader and page curl (Plan 1).
 - `plan2-annotations`: adds highlights, notes, bookmarks and ink.
 - `reader-redesign`: the immersive reader, built on `plan2-annotations`. **This is the latest work**, pending merge into `main`.
-
-## License
-No license has been chosen yet; all rights reserved by the author.
