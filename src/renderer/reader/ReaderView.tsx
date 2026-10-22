@@ -12,6 +12,8 @@ import { makeNote } from './annotations/selectionActions'
 import { HelpPanel } from '../help/HelpPanel'
 import { useHelpStore } from '../help/helpStore'
 import { openHelp } from '../help/openHelp'
+import { NotebookPanel } from '../notebook/NotebookPanel'
+import { useNotebookStore } from '../notebook/notebookStore'
 import { displayTitle } from '../library/displayTitle'
 import { useLibraryStore } from '../stores/libraryStore'
 import { useOverlayUi } from './annotations/uiStore'
@@ -92,11 +94,13 @@ export function ReaderView({
   // is open the layout stays as it was: the panel narrows the book area, and re-resolving
   // would flip a spread to one page and then (via the window fit) keep it that way.
   const helpOpen = useHelpStore((s) => s.open)
+  const notebookOpen = useNotebookStore((s) => s.open)
+  const sidePanel = helpOpen || notebookOpen
   const { setLayout } = r
   useEffect(() => {
-    if (viewport.width > 0 && !helpOpen)
+    if (viewport.width > 0 && !sidePanel)
       setLayout(resolveLayout(r.layoutMode, viewport.width / viewport.height, viewport.width))
-  }, [viewport, r.layoutMode, setLayout, helpOpen])
+  }, [viewport, r.layoutMode, setLayout, sidePanel])
 
   const spread = r.doc ? spreadFor(r.page, r.doc.numPages, r.layout) : { left: null, right: null }
   const pages = spreadPages(spread)
@@ -128,6 +132,10 @@ export function ReaderView({
         useHelpStore.getState().close()
         return true
       }
+      if (useNotebookStore.getState().open) {
+        useNotebookStore.getState().close()
+        return true
+      }
       return useChromeStore.getState().escape()
     }, []),
     onEraser: useCallback(() => {
@@ -147,6 +155,7 @@ export function ReaderView({
     onBookmark: bookmarkFirstVisible,
     onNote: useCallback(() => makeNote(viewportRef.current), []),
     onAsk: useCallback(() => openHelp(viewportRef.current), []),
+    onNotebook: useCallback(() => useNotebookStore.getState().toggle(), []),
     onHighlight: useCallback(
       () =>
         highlightSelection(
@@ -231,13 +240,19 @@ export function ReaderView({
     : 0
   useEffect(() => {
     // With the Help panel open the window keeps its size; the book fits the space left.
-    if (helpOpen) void window.api.window.fitAspect(0)
+    if (sidePanel) void window.api.window.fitAspect(0)
     else if (bookAspect > 0) void window.api.window.fitAspect(Math.round(bookAspect * 1000) / 1000)
-  }, [bookAspect, helpOpen])
+  }, [bookAspect, sidePanel])
   useEffect(() => () => void window.api.window.fitAspect(0), [])
   // Leaving the book (library or another book) ends its Help session: the request is
   // cancelled in main and the web view hidden, so nothing lands in the next book.
-  useEffect(() => () => useHelpStore.getState().close(), [])
+  useEffect(
+    () => () => {
+      useHelpStore.getState().close()
+      useNotebookStore.getState().close()
+    },
+    []
+  )
   const idle = useIdle()
 
   return (
@@ -259,6 +274,7 @@ export function ReaderView({
         />
       )}
       <div className={styles.body}>
+        {r.doc && <NotebookPanel bookId={bookId} />}
         {r.doc && <InkHost viewportRef={viewportRef} />}
         <div
           ref={viewportRef}

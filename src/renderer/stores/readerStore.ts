@@ -25,6 +25,9 @@ type ReaderState = {
   status: Status
   error: string | null
   passwordRequest: { retry: boolean } | null
+  /** A highlight briefly glowing after a jump from the notebook. */
+  pulsing: { id: string; at: number } | null
+  pulse(highlightId: string): void
   /** Opens a book at `startPage`, or where the reader left off. */
   open(bookId: string, startPage?: number): Promise<void>
   goTo(page: number): void
@@ -66,13 +69,21 @@ const initial = {
   turning: false,
   status: 'idle' as Status,
   error: null,
-  passwordRequest: null
+  passwordRequest: null,
+  pulsing: null
 }
 
 export const useReaderStore = create<ReaderState>((set, get) => ({
   ...initial,
   layout: 'spread',
   layoutMode: 'auto',
+  pulse: (id) => {
+    const at = Date.now()
+    set({ pulsing: { id, at } })
+    setTimeout(() => {
+      if (get().pulsing?.at === at) set({ pulsing: null })
+    }, 1200)
+  },
 
   open: async (bookId, startPage) => {
     get().close()

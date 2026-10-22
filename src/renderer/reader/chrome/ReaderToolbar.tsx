@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { HIGHLIGHT_COLORS } from '@shared/types'
 import { WindowControls } from '../../app/WindowControls'
+import { useNotebookStore } from '../../notebook/notebookStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { HIGHLIGHT_HEX } from '../annotations/draw'
 import { FindBar } from '../FindBar'
@@ -64,6 +65,8 @@ export function ReaderToolbar(p: Props): React.JSX.Element {
   }, [visible])
 
   const toggle = (next: Panel): void => setPanel(panel === next ? null : next)
+  const notebookOpen = useNotebookStore((s) => s.open)
+  const toggleNotebook = useNotebookStore((s) => s.toggle)
   const btn = (
     label: string,
     icon: React.ReactNode,
@@ -131,6 +134,7 @@ export function ReaderToolbar(p: Props): React.JSX.Element {
           <span className={styles.sep} />
           {btn('Bookmark page', Icons.bookmark, p.onBookmark)}
           {btn('Contents', Icons.contents, () => toggle('contents'), panel === 'contents')}
+          {btn('Notebook', Icons.notebook, toggleNotebook, notebookOpen)}
           {btn('Search', Icons.search, () => toggle('search'), panel === 'search')}
           {panel === 'search' && (
             <FindBar

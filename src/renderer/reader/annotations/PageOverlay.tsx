@@ -58,6 +58,7 @@ export function PageOverlay({ doc, page, width, height }: Props): React.JSX.Elem
   // A press on highlighted text belongs to the highlight: keep it from turning the page.
   // Native listener, so it runs before the stage's own (ancestor) listener.
   const highlights = ann.highlights
+  const pulsing = useReaderStore((s) => s.pulsing)
   useEffect(() => {
     const el = rootRef.current
     if (!el) return
@@ -116,6 +117,23 @@ export function PageOverlay({ doc, page, width, height }: Props): React.JSX.Elem
             onClick={() => useOverlayUi.getState().openHighlightCard({ id: h.id, editNote: true })}
           />
         ))}
+      {pulsing &&
+        highlights
+          .filter((h) => h.id === pulsing.id)
+          .flatMap((h) => h.rects)
+          .map((r, i) => (
+            <span
+              key={`${pulsing.at}-${i}`}
+              className={styles.pulse}
+              aria-hidden="true"
+              style={{
+                left: r.x * width,
+                top: r.y * height,
+                width: r.w * width,
+                height: r.h * height
+              }}
+            />
+          ))}
       {openHighlight && open && (
         <HighlightPopover
           key={openHighlight.id}

@@ -442,3 +442,24 @@
   border-radius: var(--radius-control);
   font: 13px var(--sans);
 }
+
+/* ---- Notebook jump: the target highlight glows for 1.2 s ---- */
+.pulse {
+  position: absolute;
+  border-radius: 3px;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 2px var(--success),
+    0 0 18px 4px rgb(34 197 94 / 0.55);
+  animation: pulse 1.2s ease-out forwards;
+}
+
+@keyframes pulse {
+  0%,
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
