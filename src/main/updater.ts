@@ -4,6 +4,8 @@ import { autoUpdater } from 'electron-updater'
 import { Channels } from '@shared/ipc'
 import { logsFolder } from './logging'
 
+const CHECK_EVERY_MS = 4 * 3600_000
+
 /**
  * Auto-update from GitHub Releases (packaged builds only). Downloads in the background and
  * tells the page, which offers "Restart to update".
@@ -40,5 +42,10 @@ export function initUpdater(win: BrowserWindow): void {
     await shell.openPath(logsFolder())
   })
 
-  if (app.isPackaged) void autoUpdater.checkForUpdatesAndNotify().catch(() => undefined)
+  // Check at start-up and every 4 hours; the page shows the message (no OS notification).
+  if (app.isPackaged) {
+    const check = (): void => void autoUpdater.checkForUpdates().catch(() => undefined)
+    check()
+    setInterval(check, CHECK_EVERY_MS).unref?.()
+  }
 }

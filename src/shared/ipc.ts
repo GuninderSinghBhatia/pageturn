@@ -316,6 +316,7 @@ export interface Api {
     /** Restarts into a downloaded update. */
     installUpdate(): Promise<void>
     openLogs(): Promise<void>
+    onUpdateAvailable(cb: (e: { version: string }) => void): () => void
     onUpdateDownloaded(cb: (e: { version: string }) => void): () => void
   }
   export: {

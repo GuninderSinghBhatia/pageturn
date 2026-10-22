@@ -9,6 +9,7 @@ import { useThemeSync } from './theme'
 import { useToastStore } from '../stores/toastStore'
 import { Onboarding } from './Onboarding'
 import { Toasts } from './Toasts'
+import { UpdateNotices } from './UpdateNotices'
 import { WindowControls } from './WindowControls'
 import './theme.css'
 import './base.css'
@@ -53,6 +54,7 @@ function App(): React.JSX.Element {
       {settingsOpen && <SettingsView onBack={closeSettings} />}
       <Toasts />
       <Onboarding />
+      <UpdateNotices />
       <WindowControls />
     </>
   )
