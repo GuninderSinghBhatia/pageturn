@@ -13,7 +13,7 @@ beforeEach(() => {
   stored = { ...DEFAULT_SETTINGS }
   setSpy = vi.fn(async (partial: Partial<Settings>) => (stored = { ...stored, ...partial }))
   window.api = {
-    settings: { get: vi.fn(async () => stored), set: setSpy }
+    settings: { get: vi.fn(async () => stored), set: setSpy, hasApiKey: vi.fn(async () => false) }
   } as unknown as typeof window.api
   window.matchMedia = vi.fn(() => ({
     matches: false,
