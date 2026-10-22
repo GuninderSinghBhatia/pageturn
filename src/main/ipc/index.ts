@@ -12,6 +12,7 @@ import { registerLibraryIpc } from './library'
 import { registerLookupIpc } from './lookup'
 import { registerReaderIpc } from './reader'
 import { registerSettingsIpc } from './settings'
+import { registerWebIpc } from './web'
 import { registerWindowIpc } from './window'
 
 export function registerIpc(db: Database.Database, win: BrowserWindow): void {
@@ -26,6 +27,7 @@ export function registerIpc(db: Database.Database, win: BrowserWindow): void {
   const settings = new SettingsRepo(db)
   registerSettingsIpc(settings, secrets)
   registerAiIpc(win, settings, secrets)
+  registerWebIpc(win, settings)
   registerAnnotationsIpc(new AnnotationsRepo(db), new InkRepo(db), books)
   registerWindowIpc(win)
   registerLookupIpc(win)

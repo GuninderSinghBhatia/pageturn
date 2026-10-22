@@ -50,6 +50,15 @@ export const Channels = {
   aiToken: 'ai:token',
   aiDone: 'ai:done',
   aiError: 'ai:error',
+  webShow: 'web:show',
+  webReveal: 'web:reveal',
+  webSetBounds: 'web:setBounds',
+  webHide: 'web:hide',
+  webBack: 'web:back',
+  webForward: 'web:forward',
+  webReload: 'web:reload',
+  webOpenExternal: 'web:openExternal',
+  webState: 'web:state',
   annotationsList: 'annotations:list',
   annotationsUpsertHighlight: 'annotations:upsertHighlight',
   annotationsDeleteHighlight: 'annotations:deleteHighlight',
@@ -212,6 +221,14 @@ export type WikiSummary = {
   thumbnail: string | null // data: URL (the page CSP allows no remote images)
   url: string
 }
+export type WebBounds = { x: number; y: number; width: number; height: number }
+export type WebState = {
+  url: string
+  canGoBack: boolean
+  canGoForward: boolean
+  loading: boolean
+  error: string | null
+}
 export type NotesGroup = { book: Book; notes: { note: Note; quote: string | null }[] }
 
 export interface Api {
@@ -271,6 +288,19 @@ export interface Api {
     renameBookmark(id: string, label: string | null): Promise<void>
     /** Notes across the whole library, grouped by book (newest activity first). */
     listAllNotes(): Promise<NotesGroup[]>
+  }
+  web: {
+    /** Searches `query` (engine and title option from settings) in the in-app web view. */
+    show(query: string, bounds: WebBounds, bookTitle: string | null): Promise<void>
+    /** Puts the view back (same page) after it was hidden. */
+    reveal(bounds: WebBounds): Promise<void>
+    setBounds(bounds: WebBounds): Promise<void>
+    hide(): Promise<void>
+    back(): Promise<void>
+    forward(): Promise<void>
+    reload(): Promise<void>
+    openExternal(): Promise<void>
+    onState(cb: (s: WebState) => void): () => void
   }
   lookup: {
     /** Summary of the best-matching Wikipedia article, or null when there is none. */
