@@ -1,6 +1,6 @@
 {
   "name": "pageturn",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "PageTurn - a PDF reader that reads like a real book",
   "main": "./out/main/index.js",
   "author": "PageTurn",
