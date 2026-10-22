@@ -51,6 +51,12 @@ export const Channels = {
   aiDone: 'ai:done',
   aiError: 'ai:error',
   appSetUnsaved: 'app:setUnsaved',
+  appVersion: 'app:version',
+  appCheckForUpdates: 'app:checkForUpdates',
+  appInstallUpdate: 'app:installUpdate',
+  appOpenLogs: 'app:openLogs',
+  updateAvailable: 'update:available',
+  updateDownloaded: 'update:downloaded',
   appReportError: 'app:reportError',
   exportMarkdown: 'export:markdown',
   exportMarkdownText: 'export:markdownText',
@@ -302,6 +308,15 @@ export interface Api {
     setUnsaved(count: number): Promise<void>
     /** Logs a renderer error to userData/logs. */
     reportError(message: string, stack?: string): Promise<void>
+    version(): Promise<string>
+    /** 'dev' when not packaged (no updates while developing). */
+    checkForUpdates(): Promise<
+      { status: 'available'; version: string } | { status: 'current' | 'dev' | 'error' }
+    >
+    /** Restarts into a downloaded update. */
+    installUpdate(): Promise<void>
+    openLogs(): Promise<void>
+    onUpdateDownloaded(cb: (e: { version: string }) => void): () => void
   }
   export: {
     /** Saves the book's notes as Markdown (save dialog; default `{title}-notes.md`). */

@@ -70,7 +70,12 @@ const api: Api = {
   },
   app: {
     setUnsaved: (count) => invoke(Channels.appSetUnsaved, count),
-    reportError: (message, stack) => invoke(Channels.appReportError, message, stack)
+    reportError: (message, stack) => invoke(Channels.appReportError, message, stack),
+    version: () => invoke(Channels.appVersion),
+    checkForUpdates: () => invoke(Channels.appCheckForUpdates),
+    installUpdate: () => invoke(Channels.appInstallUpdate),
+    openLogs: () => invoke(Channels.appOpenLogs),
+    onUpdateDownloaded: (cb) => subscribe(Channels.updateDownloaded, cb)
   },
   export: {
     markdown: (bookId) => invoke(Channels.exportMarkdown, bookId),
