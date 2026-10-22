@@ -33,7 +33,10 @@ const api: Api = {
   },
   settings: {
     get: () => invoke(Channels.settingsGet),
-    set: (partial) => invoke(Channels.settingsSet, partial)
+    set: (partial) => invoke(Channels.settingsSet, partial),
+    setApiKey: (p, key) => invoke(Channels.settingsSetApiKey, p, key),
+    hasApiKey: (p) => invoke(Channels.settingsHasApiKey, p),
+    clearApiKey: (p) => invoke(Channels.settingsClearApiKey, p)
   },
   annotations: {
     listForBook: (bookId) => invoke(Channels.annotationsList, bookId),
@@ -48,6 +51,9 @@ const api: Api = {
       invoke(Channels.annotationsToggleBookmark, bookId, page, label, id),
     renameBookmark: (id, label) => invoke(Channels.annotationsRenameBookmark, id, label),
     listAllNotes: () => invoke(Channels.annotationsListAllNotes)
+  },
+  ai: {
+    testKey: (p) => invoke(Channels.aiTestKey, p)
   },
   lookup: {
     wikipedia: (query, lang) => invoke(Channels.lookupWikipedia, query, lang),

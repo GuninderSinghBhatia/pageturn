@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { HELP_TABS, PROVIDERS, SEARCH_ENGINES, type AiError, type ProviderId } from './ai'
 import { LANGUAGE_RE, LOOKUP_SITES } from './lookup'
 import {
   HIGHLIGHT_COLORS,
@@ -32,6 +33,10 @@ export const Channels = {
   readerSaveProgress: 'reader:saveProgress',
   settingsGet: 'settings:get',
   settingsSet: 'settings:set',
+  settingsSetApiKey: 'settings:setApiKey',
+  settingsHasApiKey: 'settings:hasApiKey',
+  settingsClearApiKey: 'settings:clearApiKey',
+  aiTestKey: 'ai:testKey',
   annotationsList: 'annotations:list',
   annotationsUpsertHighlight: 'annotations:upsertHighlight',
   annotationsDeleteHighlight: 'annotations:deleteHighlight',
@@ -74,7 +79,14 @@ export const SettingsPartialSchema = z
     lookupSite: z.enum(LOOKUP_SITES),
     lookupLanguage: z.string().regex(LANGUAGE_RE),
     lookupCustomUrl: z.string().max(500),
-    lookupOpenIn: z.enum(['app', 'browser'])
+    lookupOpenIn: z.enum(['app', 'browser']),
+    aiProvider: z.enum(PROVIDERS),
+    aiModel: z.string().trim().min(1).max(120).nullable(),
+    searchEngine: z.enum(SEARCH_ENGINES),
+    searchIncludeTitle: z.boolean(),
+    helpDefaultTab: z.enum(HELP_TABS),
+    helpPanelWidth: z.number().int().min(320).max(4000),
+    aiPrivacyAcknowledged: z.boolean()
   })
   .partial()
   .strict()
@@ -212,6 +224,13 @@ export interface Api {
   settings: {
     get(): Promise<Settings>
     set(partial: SettingsPartial): Promise<Settings>
+    /** Stores the key encrypted in main; the renderer can only ask whether one exists. */
+    setApiKey(p: ProviderId, key: string): Promise<void>
+    hasApiKey(p: ProviderId): Promise<boolean>
+    clearApiKey(p: ProviderId): Promise<void>
+  }
+  ai: {
+    testKey(p: ProviderId): Promise<{ ok: true } | { ok: false; error: AiError }>
   }
   annotations: {
     listForBook(bookId: string): Promise<BookAnnotations>
