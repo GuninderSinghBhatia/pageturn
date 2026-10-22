@@ -22,7 +22,8 @@
     "icons": "electron scripts/make-icons.cjs",
     "test": "vitest run",
     "test:e2e": "electron-vite build && playwright test",
-    "fixtures": "tsx scripts/make-fixtures.ts"
+    "fixtures": "tsx scripts/make-fixtures.ts",
+    "release": "npm version patch -m \"release: v%s\" && git push origin HEAD --follow-tags"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",

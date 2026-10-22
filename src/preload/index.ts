@@ -75,6 +75,7 @@ const api: Api = {
     checkForUpdates: () => invoke(Channels.appCheckForUpdates),
     installUpdate: () => invoke(Channels.appInstallUpdate),
     openLogs: () => invoke(Channels.appOpenLogs),
+    onUpdateAvailable: (cb) => subscribe(Channels.updateAvailable, cb),
     onUpdateDownloaded: (cb) => subscribe(Channels.updateDownloaded, cb)
   },
   export: {
