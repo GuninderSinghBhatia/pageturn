@@ -45,6 +45,7 @@ export const Channels = {
   settingsClearApiKey: 'settings:clearApiKey',
   aiTestKey: 'ai:testKey',
   aiExplain: 'ai:explain',
+  aiListModels: 'ai:listModels',
   aiFollowUp: 'ai:followUp',
   aiCancel: 'ai:cancel',
   aiToken: 'ai:token',
@@ -275,6 +276,8 @@ export interface Api {
   }
   ai: {
     testKey(p: ProviderId): Promise<{ ok: true } | { ok: false; error: AiError }>
+    /** Chat models the saved key can use ([] without a key or offline). */
+    listModels(p: ProviderId): Promise<string[]>
     /** Starts streaming an explanation; results arrive through onToken / onDone / onError. */
     explain(requestId: string, req: ExplainRequest): Promise<void>
     followUp(requestId: string, text: string): Promise<void>

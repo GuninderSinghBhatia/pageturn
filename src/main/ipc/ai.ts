@@ -4,6 +4,7 @@ import {
   ExplainRequestSchema,
   FollowUpSchema,
   ProviderSchema,
+  chatModels,
   RequestIdSchema,
   type AiError
 } from '@shared/ai'
@@ -37,6 +38,17 @@ export function registerAiIpc(
   ipcMain.handle(Channels.aiCancel, (_e, id: unknown) =>
     sessions.cancel(parse(RequestIdSchema, id))
   )
+
+  ipcMain.handle(Channels.aiListModels, async (_e, p: unknown): Promise<string[]> => {
+    const provider = parse(ProviderSchema, p)
+    const key = secrets.get(provider)
+    if (!key) return []
+    try {
+      return chatModels(provider, await getProvider(provider).listModels(key))
+    } catch {
+      return [] // offline or a bad key: the built-in list still works
+    }
+  })
 
   ipcMain.handle(
     Channels.aiTestKey,

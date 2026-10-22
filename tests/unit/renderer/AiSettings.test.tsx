@@ -16,7 +16,10 @@ const api = {
     hasApiKey: vi.fn(async (p: string) => keys.has(p)),
     clearApiKey: vi.fn(async (p: string) => void keys.delete(p))
   },
-  ai: { testKey: vi.fn(async () => ({ ok: true as const })) }
+  ai: {
+    testKey: vi.fn(async () => ({ ok: true as const })),
+    listModels: vi.fn(async (): Promise<string[]> => [])
+  }
 }
 
 beforeEach(() => {
@@ -49,17 +52,41 @@ describe('AiSettings', () => {
     expect(await screen.findByText(/Key works/)).toBeTruthy()
   })
 
-  it('the model placeholder follows the provider; privacy line is shown', async () => {
+  it('the model is picked from a list for the chosen provider (no typing); privacy line is shown', async () => {
     render(<AiSettings />)
     expect(screen.getByText(PRIVACY_LINE)).toBeTruthy()
-    expect((screen.getByLabelText('Model') as HTMLInputElement).placeholder).toBe(
-      'claude-sonnet-5-5'
-    )
-    fireEvent.change(screen.getByLabelText('Provider'), { target: { value: 'openai' } })
-    await waitFor(() => expect(api.settings.set).toHaveBeenCalledWith({ aiProvider: 'openai' }))
+    const model = screen.getByRole('combobox', { name: 'Model' }) as HTMLSelectElement
+    expect(model.tagName).toBe('SELECT')
+    expect(model.value).toBe('claude-sonnet-5-5')
+    expect([...model.options].map((o) => o.value)).toContain('claude-opus-5-5')
+    fireEvent.change(model, { target: { value: 'claude-opus-5-5' } })
     await waitFor(() =>
-      expect((screen.getByLabelText('Model') as HTMLInputElement).placeholder).toBe('gpt-5')
+      expect(api.settings.set).toHaveBeenCalledWith({ aiModel: 'claude-opus-5-5' })
     )
+
+    fireEvent.change(screen.getByLabelText('Provider'), { target: { value: 'openai' } })
+    await waitFor(() =>
+      expect(api.settings.set).toHaveBeenCalledWith({ aiProvider: 'openai', aiModel: null })
+    )
+    await waitFor(() =>
+      expect((screen.getByRole('combobox', { name: 'Model' }) as HTMLSelectElement).value).toBe(
+        'gpt-5'
+      )
+    )
+  })
+
+  it('with a saved key, the list also offers the models that key can use', async () => {
+    keys.add('anthropic')
+    api.ai.listModels.mockResolvedValueOnce(['claude-sonnet-5-5', 'claude-fable-5-1'])
+    render(<AiSettings />)
+    await waitFor(() =>
+      expect(
+        [...(screen.getByRole('combobox', { name: 'Model' }) as HTMLSelectElement).options].map(
+          (o) => o.value
+        )
+      ).toContain('claude-fable-5-1')
+    )
+    expect(api.ai.listModels).toHaveBeenCalledWith('anthropic')
   })
 
   it('explains when secure storage is unavailable', async () => {

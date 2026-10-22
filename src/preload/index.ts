@@ -61,6 +61,7 @@ const api: Api = {
   },
   ai: {
     testKey: (p) => invoke(Channels.aiTestKey, p),
+    listModels: (p) => invoke(Channels.aiListModels, p),
     explain: (id, req) => invoke(Channels.aiExplain, id, req),
     followUp: (id, text) => invoke(Channels.aiFollowUp, id, text),
     cancel: (id) => invoke(Channels.aiCancel, id),

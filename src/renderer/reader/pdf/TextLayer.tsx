@@ -36,12 +36,25 @@ export function TextLayer({ doc, page, width, inert }: Props): React.JSX.Element
     }
   }, [doc, page, layoutWidth])
 
+  // Between a zoom step and the relayout, keep the layer at the size it was laid out for and
+  // scale it to the page. (Stretching the layer to the new size *and* scaling it would apply
+  // the zoom twice: pdf.js positions text in % of the layer, so words drifted off the page.)
   const k = layoutWidth > 0 ? width / layoutWidth : 1
   return (
     <div
       ref={ref}
       className={`textLayer${inert ? ' inert' : ''}`}
-      style={k !== 1 ? { transform: `scale(${k})`, transformOrigin: '0 0' } : undefined}
+      style={
+        k !== 1
+          ? {
+              inset: '0 auto auto 0',
+              width: `${100 / k}%`,
+              height: `${100 / k}%`,
+              transform: `scale(${k})`,
+              transformOrigin: '0 0'
+            }
+          : undefined
+      }
     />
   )
 }

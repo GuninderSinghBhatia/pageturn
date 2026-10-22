@@ -21,6 +21,12 @@ export class OpenAiProvider implements Provider {
     }
   }
 
+  async listModels(key: string): Promise<string[]> {
+    const ids: string[] = []
+    for await (const m of client(key).models.list()) ids.push(m.id)
+    return ids
+  }
+
   async test(key: string): Promise<void> {
     await client(key).models.list()
   }

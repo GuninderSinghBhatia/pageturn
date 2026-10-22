@@ -23,6 +23,10 @@ export class MockProvider implements Provider {
     }
   }
 
+  async listModels(): Promise<string[]> {
+    return ['claude-sonnet-5-5', 'claude-mock-1']
+  }
+
   async test(key: string): Promise<void> {
     if (!key.startsWith('sk-')) throw Object.assign(new Error('bad key'), { status: 401 })
   }

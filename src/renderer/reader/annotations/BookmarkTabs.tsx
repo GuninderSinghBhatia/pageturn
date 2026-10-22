@@ -20,6 +20,8 @@ export function BookmarkTabs({ doc }: { doc: OpenedDoc }): React.JSX.Element {
   const visible = useReaderStore((s) =>
     s.doc ? spreadPages(spreadFor(s.page, s.doc.numPages, s.layout)).join(',') : ''
   )
+  // Zoomed in, the page edge is off-screen or moving: the tabs fade out instead of jumping.
+  const zoomed = useReaderStore((s) => s.zoom > 1)
   const [menu, setMenu] = useState<Menu>(null)
   const [snippets, setSnippets] = useState<Record<number, string>>({})
   const tabs = show ? bookmarkTabs(bookmarks) : []
@@ -47,7 +49,7 @@ export function BookmarkTabs({ doc }: { doc: OpenedDoc }): React.JSX.Element {
   }
 
   return (
-    <div className={styles.tabs} data-no-turn>
+    <div className={`${styles.tabs} ${zoomed ? styles.tabsAway : ''}`} data-no-turn>
       <button
         className={`${styles.tab} ${styles.gearTab}`}
         aria-label="Settings tab"
