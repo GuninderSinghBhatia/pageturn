@@ -70,7 +70,10 @@ const api: Api = {
   },
   export: {
     markdown: (bookId) => invoke(Channels.exportMarkdown, bookId),
-    markdownText: (bookId) => invoke(Channels.exportMarkdownText, bookId)
+    markdownText: (bookId) => invoke(Channels.exportMarkdownText, bookId),
+    backup: () => invoke(Channels.exportBackup),
+    importBackup: () => invoke(Channels.exportImportBackup),
+    openDataFolder: () => invoke(Channels.exportOpenDataFolder)
   },
   web: {
     show: (query, bounds, title) => invoke(Channels.webShow, query, bounds, title),

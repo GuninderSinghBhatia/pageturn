@@ -19,6 +19,7 @@ import { THEME_SETTINGS, themeChoice, type ThemeChoice } from '../app/theme'
 import { WIDTH_LABELS } from '../reader/ink/inkInput'
 import { useSettingsStore } from '../stores/settingsStore'
 import { AiSettings } from './AiSettings'
+import { DataSettings } from './DataSettings'
 import styles from './SettingsView.module.css'
 
 type Option<T> = { value: T; label: string }
@@ -160,6 +161,8 @@ export function SettingsView({
         <AiSettings />
         <h2 className={styles.section}>Pen</h2>
         <PenSettings />
+        <h2 className={styles.section}>Data</h2>
+        <DataSettings />
       </main>
     </div>
   )

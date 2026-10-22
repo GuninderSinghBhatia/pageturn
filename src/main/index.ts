@@ -8,6 +8,7 @@ import { openDb } from './db/connection'
 import { BooksRepo } from './db/repositories/books'
 import { registerIpc } from './ipc'
 import { importAsBooks } from './ipc/library'
+import { scheduleDailyBackup } from './export/backup'
 
 // Tests (and power users) can isolate all app data in a custom folder.
 if (process.env.PAGETURN_USER_DATA) app.setPath('userData', process.env.PAGETURN_USER_DATA)
@@ -93,6 +94,8 @@ if (!app.requestSingleInstanceLock()) {
     books = new BooksRepo(db)
     mainWindow = createWindow()
     registerIpc(db, mainWindow)
+    // Daily JSON backup to userData/backups (keeps the last 7).
+    scheduleDailyBackup(db, join(app.getPath('userData'), 'backups'))
     mainWindow.webContents.once('did-finish-load', () => void openFromArgs(process.argv))
 
     app.on('activate', () => {
