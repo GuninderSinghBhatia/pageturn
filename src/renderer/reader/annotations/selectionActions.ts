@@ -1,4 +1,5 @@
 import { effectiveSite, lookupUrl } from '@shared/lookup'
+import { useAskStore } from '../../ask/askStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { annotateSelection, hasTextSelection, highlightSelection } from './selection'
 import { useOverlayUi, type CardKind } from './uiStore'
@@ -36,6 +37,14 @@ export function lookUp(root: HTMLElement | null): boolean {
   const text = window.getSelection()?.toString().replace(/s+/g, ' ').trim()
   if (!text || !hasTextSelection(root)) return false
   void window.api.lookup.open(lookupUrl(settings, text.slice(0, 300)), settings.lookupOpenIn)
+  return true
+}
+
+/** "Who is this?": the Ask drawer tells who/what the selected name is, spoiler-safe. */
+export function whoIsThis(root: HTMLElement | null): boolean {
+  const text = window.getSelection()?.toString().replace(/\s+/g, ' ').trim()
+  if (!text || !hasTextSelection(root)) return false
+  useAskStore.getState().askWho(text.slice(0, 100))
   return true
 }
 

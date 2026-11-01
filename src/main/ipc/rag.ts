@@ -1,6 +1,12 @@
 import { ipcMain } from 'electron'
 import { z } from 'zod'
-import { Channels, RagCurrentPageSchema, RagQuestionSchema, type RagAnswer } from '@shared/ipc'
+import {
+  Channels,
+  RagCurrentPageSchema,
+  RagNameSchema,
+  RagQuestionSchema,
+  type RagAnswer
+} from '@shared/ipc'
 import { parse } from './validate'
 
 const RAG_URL = 'http://localhost:8000'
@@ -23,24 +29,37 @@ export function registerRagIpc(): void {
     }
   })
 
-  ipcMain.handle(Channels.ragAsk, async (_e, question: unknown, currentPage: unknown): Promise<RagAnswer> => {
-    const q = parse(RagQuestionSchema, question)
-    const page = parse(RagCurrentPageSchema, currentPage)
-    try {
-      // Retrieval + an LLM call: allow far longer than a health check.
-      const res = await fetch(`${RAG_URL}/ask`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: q, current_page: page }),
-        signal: AbortSignal.timeout(60_000)
-      })
-      if (!res.ok) return { ok: false, error: `rag-service answered HTTP ${res.status}` }
-      const body = AskResponseSchema.safeParse(await res.json())
-      if (!body.success) return { ok: false, error: 'rag-service sent an unexpected reply' }
-      const pages = [...new Set(body.data.context_pages)].sort((a, b) => a - b)
-      return { ok: true, answer: body.data.answer, pages }
-    } catch {
-      return { ok: false, error: UNREACHABLE }
-    }
-  })
+  ipcMain.handle(Channels.ragAsk, async (_e, question: unknown, currentPage: unknown) =>
+    postForAnswer('/ask', {
+      question: parse(RagQuestionSchema, question),
+      current_page: parse(RagCurrentPageSchema, currentPage)
+    })
+  )
+
+  ipcMain.handle(Channels.ragWho, async (_e, name: unknown, currentPage: unknown) =>
+    postForAnswer('/who', {
+      name: parse(RagNameSchema, name),
+      current_page: parse(RagCurrentPageSchema, currentPage)
+    })
+  )
+}
+
+/** POSTs to an endpoint that answers with text + the pages it used. */
+async function postForAnswer(path: string, payload: object): Promise<RagAnswer> {
+  try {
+    // Retrieval + an LLM call: allow far longer than a health check.
+    const res = await fetch(`${RAG_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(60_000)
+    })
+    if (!res.ok) return { ok: false, error: `rag-service answered HTTP ${res.status}` }
+    const body = AskResponseSchema.safeParse(await res.json())
+    if (!body.success) return { ok: false, error: 'rag-service sent an unexpected reply' }
+    const pages = [...new Set(body.data.context_pages)].sort((a, b) => a - b)
+    return { ok: true, answer: body.data.answer, pages }
+  } catch {
+    return { ok: false, error: UNREACHABLE }
+  }
 }

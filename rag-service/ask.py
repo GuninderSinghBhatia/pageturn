@@ -91,5 +91,58 @@ def ask_question(question : str, current_page : int | None = None) -> dict :
     return {"answer": response.content, "context_pages": pages}
 
 
+WHO_MAX_KEYWORD_CHUNKS = 8  # mentions sent to the LLM, spread evenly over the pages read so far
+WHO_VECTOR_CHUNKS = 3       # related passages that may not contain the exact name ("she", "the model")
+
+
+def find_mentions(name: str, max_page: int) -> list[dict]:
+    """Every chunk up to max_page whose text contains `name` exactly (keyword search), by page."""
+    found = collection.get(
+        where={"page": {"$lte": max_page}}, where_document={"$contains": name}, include=["documents", "metadatas"]
+    )
+    mentions = [{"text": t, "metadata": m} for t, m in zip(found["documents"], found["metadatas"])]
+    return sorted(mentions, key=lambda c: c["metadata"]["page"])
+
+
+def spread(items: list, n: int) -> list:
+    """At most n items picked evenly across the list, so the history covers the whole range."""
+    if len(items) <= n:
+        return items
+    return [items[round(i * (len(items) - 1) / (n - 1))] for i in range(n)]
+
+
+def build_who_prompt(name: str, context: list) -> str:
+    context_text = "\n".join(f"Page {c['metadata']['page']}: {c['text']}" for c in context)
+    return f"""
+    rules :
+        1. Use only the excerpts below. Do not make anything up and do not add what happens later.
+        2. Say who or what "{name}" is, then what the excerpts tell about it, in page order.
+        3. After each fact, give the page number in parentheses.
+        4. Keep it short: a few sentences.
+
+    Excerpts:\n{context_text}\n\nWho or what is {name}?\n\nAnswer:
+    """
+
+
+def who_is(name: str, current_page: int) -> dict:
+    """Spoiler-safe history of a name: everything up to current_page, nothing after.
+
+    Keyword search finds every mention; vector search adds passages about it that never use the name.
+    """
+    mentions = find_mentions(name, current_page)
+    if not mentions:
+        # Nothing yet: say whether the name shows up later, without revealing anything about it.
+        later = find_mentions(name, 10**6)
+        text = f"You haven't got to {name} yet." if later else f"I can't find {name} in this book."
+        return {"answer": text, "context_pages": []}
+    context = spread(mentions, WHO_MAX_KEYWORD_CHUNKS)
+    for c in retrieve(f"Who or what is {name}?", mode="vector", k=WHO_VECTOR_CHUNKS, max_page=current_page):
+        if not any(c["text"] == m["text"] for m in context):
+            context.append(c)
+    context.sort(key=lambda c: c["metadata"]["page"])
+    response = invoke_paced(llm, build_who_prompt(name, context))
+    return {"answer": response.content, "context_pages": [c["metadata"]["page"] for c in context]}
+
+
 if __name__ == "__main__":
     print(ask_question("What is a tokenizer?"))

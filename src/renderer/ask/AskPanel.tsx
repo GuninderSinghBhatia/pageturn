@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import type { RagAnswer } from '@shared/ipc'
 import { useReaderStore } from '../stores/readerStore'
 import { useAskStore } from './askStore'
 import { splitCitations } from './citations'
@@ -16,6 +17,32 @@ export function AskPanel(): React.JSX.Element | null {
   const close = useAskStore((s) => s.close)
   const [question, setQuestion] = useState('')
   const [result, setResult] = useState<Result>({ kind: 'idle' })
+
+  /** Shows `label` in the input, then the call's answer (or its failure) in the body. */
+  const run = async (label: string, call: Promise<RagAnswer>): Promise<void> => {
+    setQuestion(label)
+    setResult({ kind: 'loading' })
+    const r = await call
+    setResult(
+      r.ok
+        ? { kind: 'answer', answer: r.answer, pages: r.pages }
+        : { kind: 'error', message: r.error }
+    )
+  }
+
+  // "Who is this?" from the selection menu: look the name up as soon as the drawer opens.
+  useEffect(
+    () =>
+      useAskStore.subscribe((s) => {
+        if (!s.pendingName) return
+        const name = s.pendingName
+        s.clearPendingName()
+        void run(`Who is ${name}?`, window.api.rag.who(name, useReaderStore.getState().page))
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run only sets this panel's own state
+    []
+  )
+
   if (!open) return null
 
   const jump = (page: number): void => useReaderStore.getState().goTo(page)
@@ -23,13 +50,7 @@ export function AskPanel(): React.JSX.Element | null {
   const submit = async (): Promise<void> => {
     const q = question.trim()
     if (!q || result.kind === 'loading') return
-    setResult({ kind: 'loading' })
-    const r = await window.api.rag.ask(q, useReaderStore.getState().page)
-    setResult(
-      r.ok
-        ? { kind: 'answer', answer: r.answer, pages: r.pages }
-        : { kind: 'error', message: r.error }
-    )
+    await run(q, window.api.rag.ask(q, useReaderStore.getState().page))
   }
 
   return (

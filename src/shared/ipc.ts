@@ -27,6 +27,9 @@ import {
 /** A question for the book (kept short: it is embedded and sent to the LLM). */
 export const RagQuestionSchema = z.string().trim().min(1).max(500)
 
+/** A name selected in the book ("Who is this again?"). */
+export const RagNameSchema = z.string().trim().min(1).max(100)
+
 /** Spoiler Shield: the reader's current page (1-based); the book is searched only up to here. */
 export const RagCurrentPageSchema = z.number().int().positive()
 
@@ -51,6 +54,7 @@ export const Channels = {
   readerSaveProgress: 'reader:saveProgress',
   ragHealth: 'rag:health',
   ragAsk: 'rag:ask',
+  ragWho: 'rag:who',
   settingsGet: 'settings:get',
   settingsSet: 'settings:set',
   settingsSetApiKey: 'settings:setApiKey',
@@ -287,6 +291,8 @@ export interface Api {
      * (failures come back as `ok: false`).
      */
     ask(question: string, currentPage: number): Promise<RagAnswer>
+    /** Who/what a selected name is, from the text up to `currentPage` only; never rejects. */
+    who(name: string, currentPage: number): Promise<RagAnswer>
   }
   settings: {
     get(): Promise<Settings>
