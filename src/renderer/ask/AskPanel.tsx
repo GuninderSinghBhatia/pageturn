@@ -39,7 +39,6 @@ export function AskPanel(): React.JSX.Element | null {
         s.clearPendingName()
         void run(`Who is ${name}?`, window.api.rag.who(name, useReaderStore.getState().page))
       }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- run only sets this panel's own state
     []
   )
 
