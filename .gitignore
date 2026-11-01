@@ -9,3 +9,10 @@ playwright-report
 .eslintcache
 src/renderer/public/standard_fonts
 dist-perf
+
+# rag-service (Python)
+rag-service/.venv/
+rag-service/data/
+rag-service/.env
+__pycache__/
+.pytest_cache/
