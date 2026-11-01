@@ -11,6 +11,7 @@ import { registerAnnotationsIpc } from './annotations'
 import { registerBackupIpc, registerExportIpc } from './export'
 import { registerLibraryIpc } from './library'
 import { registerLookupIpc } from './lookup'
+import { registerRagIpc } from './rag'
 import { registerReaderIpc } from './reader'
 import { registerSettingsIpc } from './settings'
 import { registerWebIpc } from './web'
@@ -20,6 +21,7 @@ export function registerIpc(db: Database.Database, win: BrowserWindow): void {
   const books = new BooksRepo(db)
   registerLibraryIpc(books, win)
   registerReaderIpc(books)
+  registerRagIpc()
   const secrets = new SecretStore(join(app.getPath('userData'), 'secrets.bin'), {
     isAvailable: () => safeStorage.isEncryptionAvailable(),
     encrypt: (s) => safeStorage.encryptString(s),

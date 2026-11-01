@@ -63,6 +63,12 @@ export const Icons = {
       <path d="M6 3v18M3 7h3M3 12h3M3 17h3M10 8h6M10 12h6" />
     </>
   ),
+  ask: svg(
+    <>
+      <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" />
+      <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5M12 16h.01" />
+    </>
+  ),
   search: svg(
     <>
       <circle cx="11" cy="11" r="7" />

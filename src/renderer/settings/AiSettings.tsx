@@ -59,6 +59,17 @@ export function AiSettings(): React.JSX.Element {
     (id, i, all) => all.indexOf(id) === i && !known.some((m) => m.id === id)
   )
 
+  const [ragStatus, setRagStatus] = useState<Status>(null)
+  const checkRag = async (): Promise<void> => {
+    setRagStatus({ kind: 'info', text: 'Checking…' })
+    const r = await window.api.rag.health()
+    setRagStatus(
+      r.ok
+        ? { kind: 'ok', text: `✓ ${JSON.stringify(r.body)}` }
+        : { kind: 'error', text: r.error }
+    )
+  }
+
   const save = async (): Promise<void> => {
     try {
       await window.api.settings.setApiKey(provider, draft.trim())
@@ -219,6 +230,20 @@ export function AiSettings(): React.JSX.Element {
           ))}
         </select>
         <p className={styles.hint}>{PRIVACY_LINE}</p>
+      </fieldset>
+
+      <fieldset className={styles.group}>
+        <legend className={styles.legend}>RAG service</legend>
+        <div className={styles.row}>
+          <button className={styles.button} onClick={() => void checkRag()}>
+            Check health
+          </button>
+        </div>
+        {ragStatus && (
+          <p className={ragStatus.kind === 'error' ? styles.error : styles.hint} role="status">
+            {ragStatus.text}
+          </p>
+        )}
       </fieldset>
     </>
   )

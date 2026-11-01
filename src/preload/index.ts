@@ -38,6 +38,10 @@ const api: Api = {
   reader: {
     saveProgress: (bookId, page) => invoke(Channels.readerSaveProgress, bookId, page)
   },
+  rag: {
+    health: () => invoke(Channels.ragHealth),
+    ask: (question) => invoke(Channels.ragAsk, question)
+  },
   settings: {
     get: () => invoke(Channels.settingsGet),
     set: (partial) => invoke(Channels.settingsSet, partial),

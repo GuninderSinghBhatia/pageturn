@@ -24,6 +24,14 @@ import {
   type Settings
 } from './types'
 
+/** A question for the book (kept short: it is embedded and sent to the LLM). */
+export const RagQuestionSchema = z.string().trim().min(1).max(500)
+
+/** rag-service's answer: text citing pages, plus the (1-based) pages that were retrieved. */
+export type RagAnswer =
+  | { ok: true; answer: string; pages: number[] }
+  | { ok: false; error: string }
+
 /** IPC channel names: one per Api method (plus main → renderer events). */
 export const Channels = {
   libraryList: 'library:list',
@@ -38,6 +46,8 @@ export const Channels = {
   libraryOpenRequest: 'library:openRequest', // event: main → renderer
   libraryChanged: 'library:changed', // event: main → renderer (import/remove/relocate)
   readerSaveProgress: 'reader:saveProgress',
+  ragHealth: 'rag:health',
+  ragAsk: 'rag:ask',
   settingsGet: 'settings:get',
   settingsSet: 'settings:set',
   settingsSetApiKey: 'settings:setApiKey',
@@ -265,6 +275,12 @@ export interface Api {
   }
   reader: {
     saveProgress(bookId: string, page: number): Promise<void>
+  }
+  rag: {
+    /** Pings the local rag-service; never rejects (an unreachable service is `ok: false`). */
+    health(): Promise<{ ok: true; body: unknown } | { ok: false; error: string }>
+    /** Asks the indexed book a question; never rejects (failures come back as `ok: false`). */
+    ask(question: string): Promise<RagAnswer>
   }
   settings: {
     get(): Promise<Settings>
