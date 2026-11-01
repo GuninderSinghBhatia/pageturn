@@ -27,6 +27,9 @@ import {
 /** A question for the book (kept short: it is embedded and sent to the LLM). */
 export const RagQuestionSchema = z.string().trim().min(1).max(500)
 
+/** Spoiler Shield: the reader's current page (1-based); the book is searched only up to here. */
+export const RagCurrentPageSchema = z.number().int().positive()
+
 /** rag-service's answer: text citing pages, plus the (1-based) pages that were retrieved. */
 export type RagAnswer =
   | { ok: true; answer: string; pages: number[] }
@@ -279,8 +282,11 @@ export interface Api {
   rag: {
     /** Pings the local rag-service; never rejects (an unreachable service is `ok: false`). */
     health(): Promise<{ ok: true; body: unknown } | { ok: false; error: string }>
-    /** Asks the indexed book a question; never rejects (failures come back as `ok: false`). */
-    ask(question: string): Promise<RagAnswer>
+    /**
+     * Asks the indexed book a question, using only text up to `currentPage`; never rejects
+     * (failures come back as `ok: false`).
+     */
+    ask(question: string, currentPage: number): Promise<RagAnswer>
   }
   settings: {
     get(): Promise<Settings>

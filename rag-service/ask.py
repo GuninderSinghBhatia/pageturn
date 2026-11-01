@@ -5,6 +5,8 @@ load_dotenv()
 import os
 from pathlib import Path
 from langchain_groq import ChatGroq
+from tree import invoke_paced
+from typing import List
 
 # Anchored to this file, so the same index is used wherever the service is started from.
 client = chromadb.PersistentClient(path=str(Path(__file__).parent / "data" / "chroma"))
@@ -12,12 +14,28 @@ collection = client.get_or_create_collection("books")
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-llm = ChatGroq(model="openai/gpt-oss-120b", api_key=os.getenv("GROQ_API_KEY"))  # Replace with
+llm = ChatGroq(model=os.getenv("RAG_ANSWER_MODEL", "openai/gpt-oss-120b"), api_key=os.getenv("GROQ_API_KEY"))
 
-def retrieve(question:str) : 
-    embed= model.encode(question,show_progress_bar=True)
+def retrieve(question: str, mode: str | None = None, where: dict | None = None, k: int = 3, max_page: int | None = None):
+    """Top-k passages for a question.
+
+    mode: "vector" (similarity search), "tree" (an LLM picks sections from the table of contents)
+    or "hybrid" (tree narrows the page range, then vector search inside it). Defaults to the
+    RAG_RETRIEVER setting, then "vector". where: optional Chroma metadata filter.
+    max_page: Spoiler Shield, nothing after this page is returned (any mode).
+    """
+    mode = mode or os.getenv("RAG_RETRIEVER", "vector")
+    if mode != "vector":
+        import retrievers  # imported here: retrievers imports this module too
+
+        if mode == "tree":
+            return retrievers.retrieve_tree(question, k, max_page)
+        return retrievers.retrieve_hybrid(question, k, max_page)
+    if max_page is not None and where is None:
+        where = {"page": {"$lte": max_page}}
+    embed= model.encode(question,show_progress_bar=False)
     results = collection.query(
-        query_embeddings=[embed], n_results=3
+        query_embeddings=[embed], n_results=k, where=where
     )
     final = []
     for text , metadata in zip(results["documents"][0],results["metadatas"][0]) : 
@@ -46,13 +64,29 @@ def build_prompt(question :str, context :list) -> str :
 
 
 
-def ask_question(question : str) -> dict : 
+def is_ahead(results : List ,current_page :int ) -> bool :
+   ahead = 0
+   for i in results :
+       if i['metadata']['page'] > current_page :
+           ahead += 1
+   return ahead > len(results) / 2
+
+
+def ask_question(question : str, current_page : int | None = None) -> dict :
     """
     Asks a question to the LLM using the provided context.
+    current_page: Spoiler Shield. Only text up to this page is used; if the best matches are
+    past it, the reader is told they haven't got there yet.
     """
-    context = retrieve(question)
+    if current_page is not None:
+        # Only the single best match decides: when a topic appears both early and late in the
+        # book, a majority vote of the top 3 would refuse questions the reader can already answer.
+        # Vector search is used for the check in every mode: it is free, the tree costs LLM tokens.
+        if is_ahead(retrieve(question, mode="vector", k=1), current_page):
+            return {"answer": "You haven't got there yet.", "context_pages": []}
+    context = retrieve(question, max_page=current_page)
     prompt = build_prompt(question, context)
-    response = llm.invoke(prompt)
+    response = invoke_paced(llm, prompt)
     pages = [item['metadata']['page'] for item in context]
     return {"answer": response.content, "context_pages": pages}
 

@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
 import { z } from 'zod'
-import { Channels, RagQuestionSchema, type RagAnswer } from '@shared/ipc'
+import { Channels, RagCurrentPageSchema, RagQuestionSchema, type RagAnswer } from '@shared/ipc'
 import { parse } from './validate'
 
 const RAG_URL = 'http://localhost:8000'
@@ -23,14 +23,15 @@ export function registerRagIpc(): void {
     }
   })
 
-  ipcMain.handle(Channels.ragAsk, async (_e, question: unknown): Promise<RagAnswer> => {
+  ipcMain.handle(Channels.ragAsk, async (_e, question: unknown, currentPage: unknown): Promise<RagAnswer> => {
     const q = parse(RagQuestionSchema, question)
+    const page = parse(RagCurrentPageSchema, currentPage)
     try {
       // Retrieval + an LLM call: allow far longer than a health check.
       const res = await fetch(`${RAG_URL}/ask`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: q }),
+        body: JSON.stringify({ question: q, current_page: page }),
         signal: AbortSignal.timeout(60_000)
       })
       if (!res.ok) return { ok: false, error: `rag-service answered HTTP ${res.status}` }

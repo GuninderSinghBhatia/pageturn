@@ -40,7 +40,7 @@ const api: Api = {
   },
   rag: {
     health: () => invoke(Channels.ragHealth),
-    ask: (question) => invoke(Channels.ragAsk, question)
+    ask: (question, currentPage) => invoke(Channels.ragAsk, question, currentPage)
   },
   settings: {
     get: () => invoke(Channels.settingsGet),

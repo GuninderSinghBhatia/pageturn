@@ -1,2 +1,7 @@
-time,label,hit_rate_at_3,within_1_page,refused_offtopic
-2026-11-01T13:50:46,baseline_chunk500_overlap100,0.800,0.840,4/4
+time,label,mode,hit_rate,within_1_page,refused_offtopic,avg_pages_covered,avg_retrieval_s,avg_retrieval_tokens
+2026-11-01T13:50:46,baseline_chunk500_overlap100,vector,0.800,0.840,4/4,,,
+2026-11-01T15:33:46,m5_vector,vector,0.800,0.840,4/4,3.0,0.03,0
+2026-11-01T15:58:35,m5_tree_v1_prompt_could_answer_empty,tree,0.680,0.680,4/4,53.2,,2253
+2026-11-01T16:29:01,m5_tree_prefixed_ids_gptoss20b,tree,0.800,0.800,4/4,76.9,2.11,2453
+2026-11-01T16:43:35,m5_hybrid_prefixed_ids_gptoss20b,hybrid,0.680,0.720,4/4,3.0,1.13,2463
+2026-11-02T00:58:03,m6-spoiler-shield-regression,vector,0.800,0.840,4/4,3.0,0.03,0

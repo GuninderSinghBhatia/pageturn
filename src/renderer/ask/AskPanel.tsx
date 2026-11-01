@@ -24,7 +24,7 @@ export function AskPanel(): React.JSX.Element | null {
     const q = question.trim()
     if (!q || result.kind === 'loading') return
     setResult({ kind: 'loading' })
-    const r = await window.api.rag.ask(q)
+    const r = await window.api.rag.ask(q, useReaderStore.getState().page)
     setResult(
       r.ok
         ? { kind: 'answer', answer: r.answer, pages: r.pages }
