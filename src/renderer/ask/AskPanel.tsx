@@ -15,6 +15,7 @@ type Result =
 export function AskPanel(): React.JSX.Element | null {
   const open = useAskStore((s) => s.open)
   const close = useAskStore((s) => s.close)
+  const readingPage = useReaderStore((s) => s.page)
   const [question, setQuestion] = useState('')
   const [result, setResult] = useState<Result>({ kind: 'idle' })
 
@@ -60,6 +61,9 @@ export function AskPanel(): React.JSX.Element | null {
           ×
         </button>
       </header>
+      <p className={styles.shield}>
+        <span aria-hidden="true">🛡</span> Spoiler Shield: answers only use pages 1–{readingPage}
+      </p>
       <form
         className={styles.form}
         onSubmit={(e) => {
