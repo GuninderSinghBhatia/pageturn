@@ -39,37 +39,104 @@
   position: relative;
   z-index: 1;
   outline: none;
+  perspective: 1100px;
 }
 
-.card {
+/* ---- Shelf: books stand as spines, the focused one turns to its cover ---- */
+.book {
   position: absolute;
-  top: 34px;
+  bottom: 30px; /* sits on the plank */
   left: 50%;
-  transform-origin: 50% 50%;
   transition:
-    transform 460ms cubic-bezier(0.22, 0.8, 0.24, 1),
-    opacity 460ms ease,
-    filter 460ms ease;
-  will-change: transform;
+    width 480ms cubic-bezier(0.22, 0.8, 0.24, 1),
+    height 480ms cubic-bezier(0.22, 0.8, 0.24, 1),
+    transform 480ms cubic-bezier(0.22, 0.8, 0.24, 1),
+    opacity 300ms ease;
 }
 
-.cover {
+.bookBtn {
   position: relative;
   display: block;
   width: 100%;
-  aspect-ratio: 2 / 3;
+  height: 100%;
   padding: 0;
-  border: 1px solid var(--h-line);
-  border-radius: var(--radius-card);
-  background: var(--h-card);
-  box-shadow: 0 10px 24px rgb(0 0 0 / 0.28);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
   cursor: pointer;
+  transform-origin: 50% 100%;
+  transition:
+    transform 320ms cubic-bezier(0.22, 0.8, 0.24, 1),
+    filter 200ms;
 }
 
-.cover img {
+.spine,
+.face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 3px 5px 5px 3px;
+  transition: opacity 260ms ease;
+}
+
+/* Spine: number tab, vertical title, author. */
+.spine {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 14px;
+  box-shadow:
+    inset 3px 0 5px rgb(255 255 255 / 0.16),
+    inset -4px 0 6px rgb(0 0 0 / 0.28),
+    0 12px 18px rgb(0 0 0 / 0.3);
+}
+
+.spineTab {
+  align-self: stretch;
+  padding: 8px 0 7px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.spineTitle {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.15;
+  writing-mode: vertical-rl;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spineAuthor {
+  max-height: 64px;
+  overflow: hidden;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+}
+
+.face {
+  border: 1px solid var(--h-line);
+  background: var(--h-card);
+  box-shadow: 0 18px 34px rgb(0 0 0 / 0.4);
+  opacity: 0;
+}
+
+.face img {
+  display: block;
   width: 100%;
   height: 100%;
-  border-radius: 7px;
   object-fit: cover;
 }
 
@@ -78,30 +145,109 @@
   place-items: center;
   height: 100%;
   padding: 16px;
-  color: var(--h-muted);
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
 }
 
-.focused .cover {
+.book:not(.focused) .bookBtn:hover {
+  transform: translateY(-14px);
+  filter: brightness(1.12);
+}
+
+.focused .spine {
+  opacity: 0;
+}
+
+.focused .face {
+  opacity: 1;
+}
+
+.focused .bookBtn {
+  transform: perspective(1000px) rotateY(-14deg) rotateX(2deg);
+}
+
+.focused .face {
   box-shadow:
     0 0 0 2px var(--h-accent),
-    0 16px 36px rgb(0 0 0 / 0.35),
+    0 22px 40px rgb(0 0 0 / 0.4),
     0 0 36px var(--h-accent-soft);
 }
 
-.cover:focus-visible {
+.bookBtn:focus-visible {
   outline: 3px solid var(--h-accent);
   outline-offset: 4px;
 }
 
-.card:not(.focused) .cover:hover {
-  filter: brightness(1.15);
+.missing .spine,
+.missing .face {
+  filter: grayscale(1);
+  opacity: 0.6;
 }
 
-.missing img {
-  filter: grayscale(1);
-  opacity: 0.55;
+.focused.missing .spine {
+  opacity: 0;
+}
+
+.plank {
+  position: absolute;
+  right: 4%;
+  bottom: 14px;
+  left: 4%;
+  height: 16px;
+  border-radius: 3px;
+  background: linear-gradient(var(--h-line), var(--h-card));
+  box-shadow: 0 10px 22px rgb(0 0 0 / 0.25);
+}
+
+/* ---- Filter pills above the shelf ---- */
+.pills {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-self: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--h-line);
+  border-radius: 999px;
+  background: var(--h-card);
+}
+
+.pill {
+  padding: 5px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--h-muted);
+  font: 600 12px inherit;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background 160ms,
+    color 160ms;
+}
+
+.pill:hover {
+  color: var(--h-text);
+}
+
+.pillOn,
+.pillOn:hover {
+  background: var(--h-text);
+  color: var(--h-bg);
+}
+
+.pill:focus-visible {
+  outline: 2px solid var(--h-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book,
+  .bookBtn,
+  .spine,
+  .face {
+    transition: none;
+  }
 }
 
 .likedBadge {
@@ -279,7 +425,9 @@
 }
 
 .arrow {
-  width: 36px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   border-color: var(--h-line);
   background: var(--h-card);
   color: var(--h-text);
@@ -356,4 +504,26 @@
 
 .danger:hover {
   border-color: var(--danger);
+}
+
+/* ---- Shelf heading ---- */
+.shelfHead {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.shelfTitle {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.shelfCount {
+  color: var(--h-muted);
+  font-size: 13px;
 }
