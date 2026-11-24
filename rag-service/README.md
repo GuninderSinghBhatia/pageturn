@@ -1,7 +1,7 @@
 # rag-service
 
 The Python service that adds RAG features to Page Turn. The app calls it over HTTP on
-`localhost:8000`. Milestones and learning plan: see MENTOR.md.
+`localhost:8000`. Milestones and learning plan: see MENTOR.md. Graph RAG plan: GRAPH_RAG.md.
 
 ## Setup (once)
 
