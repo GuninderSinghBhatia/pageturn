@@ -10,12 +10,10 @@ import slider from './Slider.module.css'
 
 type Menu = { bookId: string; x: number; y: number } | null
 
-type Shelf = 'all' | 'reading' | 'unread' | 'liked'
+type Shelf = 'all' | 'reading'
 const SHELVES: { id: Shelf; label: string; test(b: Book): boolean }[] = [
   { id: 'all', label: 'All', test: () => true },
-  { id: 'reading', label: 'Reading', test: (b) => b.lastPage > 1 },
-  { id: 'unread', label: 'Not started', test: (b) => b.lastPage <= 1 },
-  { id: 'liked', label: 'Liked', test: (b) => b.liked }
+  { id: 'reading', label: 'Reading', test: (b) => b.lastPage > 1 }
 ]
 
 const isTyping = (t: EventTarget | null): boolean =>
