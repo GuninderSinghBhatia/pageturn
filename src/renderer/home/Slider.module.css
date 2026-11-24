@@ -162,10 +162,6 @@
   opacity: 1;
 }
 
-.focused .bookBtn {
-  transform: perspective(1000px) rotateY(-14deg) rotateX(2deg);
-}
-
 .focused .face {
   box-shadow:
     0 0 0 2px var(--h-accent),
