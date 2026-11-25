@@ -30,7 +30,10 @@
     "tauri:build": "tauri build",
     "tauri:build:debug": "cd src-tauri && cargo build --no-default-features",
     "tauri:test": "playwright test -c playwright.tauri.config.ts",
-    "tauri:test:e2e": "playwright test -c playwright.tauri-e2e.config.ts"
+    "tauri:test:e2e": "playwright test -c playwright.tauri-e2e.config.ts",
+    "release:tauri": "node scripts/release-tauri.mjs",
+    "tauri:test:installers:build": "node scripts/build-test-installers.mjs",
+    "tauri:test:installers": "playwright test -c playwright.installer.config.ts"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.12.5",

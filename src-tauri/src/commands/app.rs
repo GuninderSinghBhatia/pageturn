@@ -158,30 +158,21 @@ pub async fn app_report_error(message: String, stack: Option<String>) -> AppResu
 }
 
 #[tauri::command]
-pub async fn app_version() -> AppResult<String> {
-    Ok(env!("CARGO_PKG_VERSION").to_string())
+pub async fn app_version(app: AppHandle) -> AppResult<String> {
+    // From tauri.conf.json (the same version the updater compares against).
+    Ok(app.package_info().version.to_string())
 }
 
-/// Result of an update check, same shape as the Electron build.
-pub fn check_status() -> serde_json::Value {
-    if cfg!(debug_assertions) {
-        serde_json::json!({ "status": "dev" })
-    } else {
-        // TODO(updater stage): check the signed update feed (tauri-plugin-updater) and return
-        // {status:'available', version}; emit `update:available` / `update:downloaded`.
-        serde_json::json!({ "status": "current" })
-    }
-}
-
+/// Checks for a newer signed version. `{status:'dev'}` while developing, like the Electron build.
 #[tauri::command]
-pub async fn app_check_for_updates() -> AppResult<serde_json::Value> {
-    Ok(check_status())
+pub async fn app_check_for_updates(app: AppHandle) -> AppResult<serde_json::Value> {
+    Ok(crate::updater::check(&app).await.to_json())
 }
 
+/// Installs the downloaded update and restarts into it.
 #[tauri::command]
-pub async fn app_install_update() -> AppResult<()> {
-    // TODO(updater stage): download and install the signed update, then restart.
-    Ok(())
+pub async fn app_install_update(app: AppHandle) -> AppResult<()> {
+    crate::updater::install(&app).map_err(AppError::Msg)
 }
 
 #[tauri::command]
@@ -237,15 +228,5 @@ mod tests {
     #[test]
     fn truncation_counts_characters() {
         assert_eq!(truncate_chars("héllo", 2), "hé");
-    }
-
-    #[test]
-    fn update_status_matches_build() {
-        let expected = if cfg!(debug_assertions) {
-            "dev"
-        } else {
-            "current"
-        };
-        assert_eq!(check_status()["status"], expected);
     }
 }

@@ -49,9 +49,18 @@ async function waitForCdp(port: number, ms = 40_000): Promise<void> {
 /** Starts the app. `args` are command-line arguments (e.g. a PDF path for "Open with"). */
 export async function launch(
   userData: string = makeUserData(),
-  opts: { env?: Record<string, string>; args?: string[] } = {}
+  opts: {
+    env?: Record<string, string>
+    args?: string[]
+    /** Another build of the app (an installed copy); defaults to the debug binary. */
+    exe?: string
+    /** Part of the page URL that identifies the app's page (dev server vs. installed copy). */
+    urlIncludes?: string
+    /** Fixed debugging port (when the app relaunches itself, e.g. after an update). */
+    port?: number
+  } = {}
 ): Promise<Running> {
-  const port = nextPort++
+  const port = opts.port ?? nextPort++
   const webview = join(userData, 'webview')
   mkdirSync(webview, { recursive: true })
   const env: Record<string, string | undefined> = {
@@ -62,7 +71,10 @@ export async function launch(
     WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
     ...opts.env
   }
-  const proc = spawn(EXE, opts.args ?? [], { env: env as NodeJS.ProcessEnv, stdio: 'ignore' })
+  const proc = spawn(opts.exe ?? EXE, opts.args ?? [], {
+    env: env as NodeJS.ProcessEnv,
+    stdio: 'ignore'
+  })
   await waitForCdp(port)
   const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`)
   const deadline = Date.now() + 30_000
@@ -71,7 +83,7 @@ export async function launch(
     page = browser
       .contexts()
       .flatMap((c) => c.pages())
-      .find((p) => p.url().includes('localhost:5174'))
+      .find((p) => p.url().includes(opts.urlIncludes ?? 'localhost:5174'))
     if (!page) await new Promise((r) => setTimeout(r, 250))
   }
   if (!page) throw new Error('The PageTurn page did not load (is the Vite server on :5174 up?)')

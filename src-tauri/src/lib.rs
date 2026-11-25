@@ -7,6 +7,7 @@ mod error;
 mod models;
 mod paths;
 mod state;
+mod updater;
 
 use state::AppState;
 use std::sync::Mutex;
@@ -64,6 +65,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             if let Some(w) = app.get_webview_window("main") {
                 let _ = w.unminimize();
@@ -95,6 +97,7 @@ pub fn run() {
             }
             commands::export::schedule_daily_backup(data_dir);
             commands::window::setup(app.handle());
+            updater::start(app.handle().clone());
 
             let argv: Vec<String> = std::env::args().collect();
             open_from_args(app.handle(), argv, 1500);
