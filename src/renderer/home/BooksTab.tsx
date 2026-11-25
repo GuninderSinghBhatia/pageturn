@@ -10,6 +10,12 @@ import slider from './Slider.module.css'
 
 type Menu = { bookId: string; x: number; y: number } | null
 
+type Shelf = 'all' | 'reading'
+const SHELVES: { id: Shelf; label: string; test(b: Book): boolean }[] = [
+  { id: 'all', label: 'All', test: () => true },
+  { id: 'reading', label: 'Reading', test: (b) => b.lastPage > 1 }
+]
+
 const isTyping = (t: EventTarget | null): boolean =>
   t instanceof HTMLElement &&
   (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
@@ -22,13 +28,18 @@ export function BooksTab({ query, onAdd }: { query: string; onAdd(): void }): Re
   const [removing, setRemoving] = useState<string | null>(null)
   const [focusId, setFocusId] = useState<string | null>(null)
 
+  const [shelf, setShelf] = useState<Shelf>('all')
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return books
     return books.filter(
-      (b) => displayTitle(b).toLowerCase().includes(q) || (b.author ?? '').toLowerCase().includes(q)
+      (b) =>
+        SHELVES.find((s) => s.id === shelf)!.test(b) &&
+        (!q ||
+          displayTitle(b).toLowerCase().includes(q) ||
+          (b.author ?? '').toLowerCase().includes(q))
     )
-  }, [books, query])
+  }, [books, query, shelf])
 
   // Focus is kept by book id so it survives refreshes and filtering.
   const focus = Math.max(
@@ -85,8 +96,11 @@ export function BooksTab({ query, onAdd }: { query: string; onAdd(): void }): Re
     const drop = (e: DragEvent): void => {
       e.preventDefault()
       setDragging(false)
-      const paths = [...(e.dataTransfer?.files ?? [])].map((f) => window.api.library.pathForFile(f))
-      void importPaths(paths)
+      // Tauri gives no paths here (its own drag-drop event imports them); skip empty ones.
+      const paths = [...(e.dataTransfer?.files ?? [])]
+        .map((f) => window.api.library.pathForFile(f))
+        .filter(Boolean)
+      if (paths.length) void importPaths(paths)
     }
     window.addEventListener('dragover', over)
     window.addEventListener('dragleave', leave)
@@ -117,40 +131,64 @@ export function BooksTab({ query, onAdd }: { query: string; onAdd(): void }): Re
             Add books
           </button>
         </div>
-      ) : !focused ? (
-        <p className={styles.muted}>No books match “{query}”.</p>
       ) : (
         <div className={slider.stage}>
-          {/* Soft glow of the focused cover behind the slider; cross-fades on change. */}
-          {focused.thumbnailUrl && (
-            <div
-              key={focused.id}
-              className={slider.ambient}
-              style={{ backgroundImage: `url(${focused.thumbnailUrl})` }}
-              aria-hidden="true"
-            />
+          <div className={slider.shelfHead}>
+            <h2 className={slider.shelfTitle}>Your shelf</h2>
+            <span className={slider.shelfCount}>
+              {visible.length} {visible.length === 1 ? 'book' : 'books'}
+            </span>
+          </div>
+          <div className={slider.pills} role="group" aria-label="Filter shelf">
+            {SHELVES.map((s) => (
+              <button
+                key={s.id}
+                aria-pressed={shelf === s.id}
+                className={`${slider.pill} ${shelf === s.id ? slider.pillOn : ''}`}
+                onClick={() => setShelf(s.id)}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+          {!focused ? (
+            <p className={styles.muted}>
+              {query ? `No books match “${query}”.` : 'Nothing on this shelf yet.'}
+            </p>
+          ) : (
+            <>
+              {/* Soft glow of the focused cover behind the slider; cross-fades on change. */}
+              {focused.thumbnailUrl && (
+                <div
+                  key={focused.id}
+                  className={slider.ambient}
+                  style={{ backgroundImage: `url(${focused.thumbnailUrl})` }}
+                  aria-hidden="true"
+                />
+              )}
+              <BookSlider
+                books={visible}
+                focus={focus}
+                onFocus={focusAt}
+                onOpen={open}
+                onContextMenu={(b, e) => {
+                  e.preventDefault()
+                  setMenu({ bookId: b.id, x: e.clientX, y: e.clientY })
+                }}
+              />
+              <SelectedBook
+                book={focused}
+                canPrev={focus > 0}
+                canNext={focus < visible.length - 1}
+                onPrev={() => focusAt(focus - 1)}
+                onNext={() => focusAt(focus + 1)}
+                onOpen={() => open(focused)}
+                onLike={(liked) => setLiked(focused.id, liked)}
+                onRelocate={() => void relocate(focused.id)}
+                onRemove={() => setRemoving(focused.id)}
+              />
+            </>
           )}
-          <BookSlider
-            books={visible}
-            focus={focus}
-            onFocus={focusAt}
-            onOpen={open}
-            onContextMenu={(b, e) => {
-              e.preventDefault()
-              setMenu({ bookId: b.id, x: e.clientX, y: e.clientY })
-            }}
-          />
-          <SelectedBook
-            book={focused}
-            canPrev={focus > 0}
-            canNext={focus < visible.length - 1}
-            onPrev={() => focusAt(focus - 1)}
-            onNext={() => focusAt(focus + 1)}
-            onOpen={() => open(focused)}
-            onLike={(liked) => setLiked(focused.id, liked)}
-            onRelocate={() => void relocate(focused.id)}
-            onRemove={() => setRemoving(focused.id)}
-          />
         </div>
       )}
 

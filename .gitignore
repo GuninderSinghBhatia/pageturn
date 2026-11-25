@@ -16,3 +16,8 @@ rag-service/data/
 rag-service/.env
 __pycache__/
 .pytest_cache/
+rag-service/docs/
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/

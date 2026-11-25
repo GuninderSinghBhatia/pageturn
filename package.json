@@ -23,9 +23,20 @@
     "test": "vitest run",
     "test:e2e": "electron-vite build && playwright test",
     "fixtures": "tsx scripts/make-fixtures.ts",
-    "release": "node scripts/release.mjs"
+    "release": "node scripts/release.mjs",
+    "tauri:vite": "vite --config vite.tauri.config.ts",
+    "tauri:vite:build": "vite build --config vite.tauri.config.ts",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "tauri:build:debug": "cd src-tauri && cargo build --no-default-features",
+    "tauri:test": "playwright test -c playwright.tauri.config.ts",
+    "tauri:test:e2e": "playwright test -c playwright.tauri-e2e.config.ts",
+    "release:tauri": "node scripts/release-tauri.mjs",
+    "tauri:test:installers:build": "node scripts/build-test-installers.mjs",
+    "tauri:test:installers": "playwright test -c playwright.installer.config.ts"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.12.5",
     "better-sqlite3": "^13.0.3",
     "electron-log": "^5.4.4",
     "electron-updater": "^6.8.9"
@@ -43,6 +54,7 @@
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "@google/genai": "^2.30.0",
     "@playwright/test": "^1.64.1",
+    "@tauri-apps/cli": "^2.12.6",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@types/better-sqlite3": "^9.6.0",

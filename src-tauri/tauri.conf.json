@@ -1,0 +1,62 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "PageTurn",
+  "version": "1.0.1",
+  "identifier": "com.pageturn.app",
+  "build": {
+    "devUrl": "http://localhost:5174",
+    "frontendDist": "../out/renderer-tauri",
+    "beforeDevCommand": "npm run tauri:vite",
+    "beforeBuildCommand": "npm run tauri:vite:build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "PageTurn",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 640,
+        "minHeight": 480,
+        "decorations": false,
+        "dragDropEnabled": true,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self' ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
+    "fileAssociations": [
+      {
+        "ext": ["pdf"],
+        "name": "PDF document",
+        "role": "Viewer"
+      }
+    ],
+    "resources": {
+      "../resources/sample/Welcome-to-PageTurn.pdf": "sample/Welcome-to-PageTurn.pdf"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI0Q0U5QzNCMDJCMTIxMjIKUldRaUliRUNPNXpPdEJnVklSb3UzWWlXTElEUk10NHZWRGFncGpXektLcVY1RkNtT0EyWERCUW0K",
+      "endpoints": [
+        "https://github.com/GuninderSinghBhatia/pageturn/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

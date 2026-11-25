@@ -12,6 +12,8 @@ import { makeNote } from './annotations/selectionActions'
 import { HelpPanel } from '../help/HelpPanel'
 import { useHelpStore } from '../help/helpStore'
 import { openHelp } from '../help/openHelp'
+import { AskPanel } from '../ask/AskPanel'
+import { useAskStore } from '../ask/askStore'
 import { NotebookPanel } from '../notebook/NotebookPanel'
 import { useNotebookStore } from '../notebook/notebookStore'
 import { displayTitle } from '../library/displayTitle'
@@ -95,7 +97,8 @@ export function ReaderView({
   // to one page (and then, via the window fit, keep it that way).
   const helpOpen = useHelpStore((s) => s.open)
   const notebookOpen = useNotebookStore((s) => s.open)
-  const sidePanel = helpOpen || notebookOpen
+  const askOpen = useAskStore((s) => s.open)
+  const sidePanel = helpOpen || notebookOpen || askOpen
   const { setLayout } = r
   useEffect(() => {
     if (viewport.width > 0)
@@ -136,6 +139,10 @@ export function ReaderView({
       }
       if (useNotebookStore.getState().open) {
         useNotebookStore.getState().close()
+        return true
+      }
+      if (useAskStore.getState().open) {
+        useAskStore.getState().close()
         return true
       }
       return useChromeStore.getState().escape()
@@ -252,6 +259,7 @@ export function ReaderView({
     () => () => {
       useHelpStore.getState().close()
       useNotebookStore.getState().close()
+      useAskStore.getState().close()
     },
     []
   )
@@ -277,6 +285,7 @@ export function ReaderView({
       )}
       <div className={styles.body}>
         {r.doc && <NotebookPanel bookId={bookId} />}
+        {r.doc && <AskPanel />}
         {r.doc && <InkHost viewportRef={viewportRef} />}
         <div
           ref={viewportRef}

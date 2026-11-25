@@ -2,7 +2,7 @@ import { useEffect, type RefObject } from 'react'
 import { hasTextSelection } from './selection'
 import { openHelp } from '../../help/openHelp'
 import { LookupCard } from './LookupCard'
-import { copySelection, highlight, lookUp, makeNote } from './selectionActions'
+import { copySelection, highlight, lookUp, makeNote, whoIsThis } from './selectionActions'
 import { useOverlayUi } from './uiStore'
 import styles from './Annotations.module.css'
 
@@ -89,6 +89,15 @@ export function SelectionMenu({
         }}
       >
         <span aria-hidden="true">🔎</span> Look up
+      </button>
+      <button
+        role="menuitem"
+        onClick={() => {
+          close()
+          whoIsThis(rootRef.current)
+        }}
+      >
+        <span aria-hidden="true">👤</span> Who is this?
       </button>
       <hr className={styles.menuSep} />
       <button
