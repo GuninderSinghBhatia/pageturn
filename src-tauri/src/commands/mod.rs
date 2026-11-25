@@ -1,10 +1,10 @@
-pub mod library;
-pub mod annotations;
-pub mod settings;
-pub mod export;
 pub mod ai;
+pub mod annotations;
+pub mod app;
+pub mod export;
+pub mod library;
 pub mod lookup;
 pub mod rag;
-pub mod window;
-pub mod app;
+pub mod settings;
 pub mod web;
+pub mod window;

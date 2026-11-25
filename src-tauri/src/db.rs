@@ -6,10 +6,22 @@ use std::path::Path;
 
 const MIGRATIONS: &[(i64, &str)] = &[
     (1, include_str!("../../src/main/db/migrations/001_init.sql")),
-    (2, include_str!("../../src/main/db/migrations/002_annotations.sql")),
-    (3, include_str!("../../src/main/db/migrations/003_reader_redesign.sql")),
-    (4, include_str!("../../src/main/db/migrations/004_book_likes.sql")),
-    (5, include_str!("../../src/main/db/migrations/005_note_tags.sql")),
+    (
+        2,
+        include_str!("../../src/main/db/migrations/002_annotations.sql"),
+    ),
+    (
+        3,
+        include_str!("../../src/main/db/migrations/003_reader_redesign.sql"),
+    ),
+    (
+        4,
+        include_str!("../../src/main/db/migrations/004_book_likes.sql"),
+    ),
+    (
+        5,
+        include_str!("../../src/main/db/migrations/005_note_tags.sql"),
+    ),
 ];
 
 /// Opens (creating if needed) the database and brings it up to the latest migration.
@@ -49,7 +61,9 @@ mod tests {
     #[test]
     fn applies_every_migration_including_fts5() {
         let conn = open_in_memory().unwrap();
-        let v: i64 = conn.pragma_query_value(None, "user_version", |r| r.get(0)).unwrap();
+        let v: i64 = conn
+            .pragma_query_value(None, "user_version", |r| r.get(0))
+            .unwrap();
         assert_eq!(v, 5);
         conn.execute(
             "INSERT INTO books (id, path, added_at) VALUES ('b', 'x.pdf', 1)",

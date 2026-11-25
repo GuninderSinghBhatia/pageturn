@@ -96,7 +96,11 @@ pub fn to_book(row: BookRow, thumb_dir: &Path) -> Book {
 
 /// Book ids are SHA-256 hex (`BookIdSchema`).
 pub fn check_book_id(id: &str) -> AppResult<()> {
-    if id.len() == 64 && id.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)) {
+    if id.len() == 64
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    {
         Ok(())
     } else {
         Err(invalid("book id"))
@@ -105,7 +109,9 @@ pub fn check_book_id(id: &str) -> AppResult<()> {
 
 /// Annotation ids are UUIDs (`IdSchema`).
 pub fn check_uuid(id: &str) -> AppResult<()> {
-    uuid::Uuid::parse_str(id).map(|_| ()).map_err(|_| invalid("id"))
+    uuid::Uuid::parse_str(id)
+        .map(|_| ())
+        .map_err(|_| invalid("id"))
 }
 
 /// Looks a book up or fails with "Unknown book".
