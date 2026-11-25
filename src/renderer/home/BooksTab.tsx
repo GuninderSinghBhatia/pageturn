@@ -96,8 +96,11 @@ export function BooksTab({ query, onAdd }: { query: string; onAdd(): void }): Re
     const drop = (e: DragEvent): void => {
       e.preventDefault()
       setDragging(false)
-      const paths = [...(e.dataTransfer?.files ?? [])].map((f) => window.api.library.pathForFile(f))
-      void importPaths(paths)
+      // Tauri gives no paths here (its own drag-drop event imports them); skip empty ones.
+      const paths = [...(e.dataTransfer?.files ?? [])]
+        .map((f) => window.api.library.pathForFile(f))
+        .filter(Boolean)
+      if (paths.length) void importPaths(paths)
     }
     window.addEventListener('dragover', over)
     window.addEventListener('dragleave', leave)
