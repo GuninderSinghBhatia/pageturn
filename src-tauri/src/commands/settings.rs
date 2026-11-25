@@ -30,3 +30,9 @@ pub async fn settings_has_api_key(app: AppHandle, state: State<'_, AppState>, pr
 pub async fn settings_clear_api_key(app: AppHandle, state: State<'_, AppState>, provider: String) -> AppResult<()> {
     Err(AppError::NotImplemented("settings_clear_api_key"))
 }
+
+/// The saved API key for a provider ("anthropic" | "openai" | "gemini"), or None.
+/// Used by the AI module. STUB until the settings module is built; keep this signature.
+pub fn api_key(state: &AppState, provider: &str) -> AppResult<Option<String>> {
+    Err(AppError::NotImplemented("settings::api_key"))
+}
