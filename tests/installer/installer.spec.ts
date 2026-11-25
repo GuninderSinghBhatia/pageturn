@@ -3,6 +3,8 @@ import { chromium, type Browser, type Page } from '@playwright/test'
 import { execFileSync, spawn } from 'node:child_process'
 import {
   copyFileSync,
+  realpathSync,
+  rmSync,
   createReadStream,
   existsSync,
   mkdtempSync,
@@ -47,14 +49,6 @@ function uninstallEntries(pattern: string): string[] {
     }
     $r -join "\`n"`)
   return out ? out.split('\n').map((s) => s.trim()) : []
-}
-
-/** The 8.3 form of a path, which has no spaces. */
-function shortPath(dir: string): string {
-  const short = run(
-    `(New-Object -ComObject Scripting.FileSystemObject).GetFolder('${dir.replace(/'/g, "''")}').ShortPath`
-  )
-  return short && !short.includes(' ') ? short : dir
 }
 
 const startMenu = (): string =>
@@ -149,8 +143,11 @@ test.describe.configure({ mode: 'serial' })
 
 test.beforeAll(async () => {
   test.setTimeout(120_000)
-  // NSIS reads /D= literally, so the path must not contain spaces (Node would quote them).
-  installDir = join(shortPath(mkdtempSync(join(tmpdir(), 'pt-install-'))), 'app')
+  // A normal long path WITH spaces, as a real user would have. NSIS reads /D= (and _?=) as the
+  // rest of the command line, so these are passed verbatim, unquoted.
+  // realpath: Node's temp path may be the abbreviated 8.3 form (GUNIND~1), which would not
+  // match the shortcut target the installer records.
+  installDir = join(mkdtempSync(join(realpathSync.native(tmpdir()), 'pt install ')), NAME)
   userData = makeUserData()
   before = realInstallFingerprint()
   server = createServer((req, res) => {
@@ -191,19 +188,26 @@ test.afterAll(async () => {
   const un = join(installDir, 'uninstall.exe')
   if (existsSync(un)) {
     try {
-      execFileSync(un, ['/S', `_?=${installDir}`], { stdio: 'ignore', timeout: 60_000 })
+      execFileSync(un, ['/S', `_?=${installDir}`], {
+        stdio: 'ignore',
+        timeout: 60_000,
+        windowsVerbatimArguments: true
+      })
     } catch {
       /* best effort */
     }
   }
+  rmSync(join(installDir, '..'), { recursive: true, force: true })
 })
 
 test('1. silent install: files, uninstaller, registry entry and shortcut; a real install is untouched', async () => {
   test.setTimeout(180_000)
   expect(uninstallEntries(`${NAME}*`)).toEqual([])
   // /D= must be last and unquoted (NSIS).
-  expect(installDir).not.toContain(' ')
-  execFileSync(setupOf('1.0.1'), ['/S', `/D=${installDir}`], { timeout: 150_000 })
+  execFileSync(setupOf('1.0.1'), ['/S', `/D=${installDir}`], {
+    timeout: 150_000,
+    windowsVerbatimArguments: true
+  })
   await expect
     .poll(() => existsSync(join(installDir, 'uninstall.exe')), { timeout: 60_000 })
     .toBe(true)
@@ -361,7 +365,10 @@ test('5. uninstall removes the program, shortcut and registry entry but keeps th
   expect(existsSync(un)).toBe(true)
 
   // `_?=` makes the uninstaller run in place and wait, instead of copying itself and returning.
-  const child = spawn(un, ['/S', `_?=${installDir}`], { stdio: 'ignore' })
+  const child = spawn(un, ['/S', `_?=${installDir}`], {
+    stdio: 'ignore',
+    windowsVerbatimArguments: true
+  })
   await new Promise<void>((res) => child.once('exit', () => res()))
   await expect.poll(() => existsSync(exe), { timeout: 60_000 }).toBe(false)
   expect(uninstallEntries(`${NAME}*`)).toEqual([])
