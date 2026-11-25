@@ -42,20 +42,24 @@ export function buildSigned({ config, outDir, env = {} }) {
     writeFileSync(file, JSON.stringify(config))
     args.push('--config', `"${file}"`)
   }
-  const r = spawnSync('npx', args, {
-    cwd: ROOT,
-    stdio: 'inherit',
-    shell: true,
-    env: { ...process.env, CARGO_BUILD_JOBS: '1', ...signingEnv(), ...env }
-  })
-  if (r.status !== 0) throw new Error(`tauri build failed (exit ${r.status})`)
-  const version =
-    config?.version ??
-    JSON.parse(readFileSync(join(ROOT, 'src-tauri', 'tauri.conf.json'), 'utf8')).version
-  const setup = readdirSync(NSIS_DIR).find(
-    (f) => f.includes(`_${version}_`) && f.endsWith('-setup.exe')
-  )
-  if (!setup) throw new Error(`No installer for ${version} in ${NSIS_DIR}`)
+  // PAGETURN_SKIP_BUILD=1 re-packages the installer that is already built (no compile).
+  if (process.env.PAGETURN_SKIP_BUILD !== '1') {
+    const r = spawnSync('npx', args, {
+      cwd: ROOT,
+      stdio: 'inherit',
+      shell: true,
+      env: { ...process.env, CARGO_BUILD_JOBS: '1', ...signingEnv(), ...env }
+    })
+    if (r.status !== 0) throw new Error(`tauri build failed (exit ${r.status})`)
+  }
+  const base = JSON.parse(readFileSync(join(ROOT, 'src-tauri', 'tauri.conf.json'), 'utf8'))
+  const version = config?.version ?? base.version
+  const productName = config?.productName ?? base.productName
+  // The exact file name: other builds (e.g. the "PageTurn Test" installers) share the folder.
+  const setup = `${productName}_${version}_x64-setup.exe`
+  if (!existsSync(join(NSIS_DIR, setup)) || !existsSync(join(NSIS_DIR, `${setup}.sig`))) {
+    throw new Error(`Expected ${setup} (and its .sig) in ${NSIS_DIR}`)
+  }
   mkdirSync(outDir, { recursive: true })
   copyFileSync(join(NSIS_DIR, setup), join(outDir, setup))
   copyFileSync(join(NSIS_DIR, `${setup}.sig`), join(outDir, `${setup}.sig`))
