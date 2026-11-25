@@ -45,7 +45,22 @@ fn open_from_args(app: &tauri::AppHandle, argv: Vec<String>, wait_ms: u64) {
     });
 }
 
+/// `PAGETURN_DISABLE_WEBGL=1` forces the slide-transition fallback (tests, GPU troubleshooting),
+/// like the Electron build. Must run before the webview is created.
+fn apply_webgl_switch() {
+    if std::env::var("PAGETURN_DISABLE_WEBGL").as_deref() != Ok("1") {
+        return;
+    }
+    let key = "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS";
+    let current = std::env::var(key).unwrap_or_default();
+    std::env::set_var(
+        key,
+        format!("{current} --disable-gpu --disable-webgl --disable-3d-apis"),
+    );
+}
+
 pub fn run() {
+    apply_webgl_switch();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -73,7 +88,8 @@ pub fn run() {
                 data_dir: data_dir.clone(),
             });
 
-            if let Err(e) = commands::library::set_up_first_run(app.handle(), &app.state::<AppState>())
+            if let Err(e) =
+                commands::library::set_up_first_run(app.handle(), &app.state::<AppState>())
             {
                 log::error!("First-run setup failed: {e}");
             }

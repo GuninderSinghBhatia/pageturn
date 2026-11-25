@@ -27,7 +27,10 @@
     "tauri:vite": "vite --config vite.tauri.config.ts",
     "tauri:vite:build": "vite build --config vite.tauri.config.ts",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "tauri:build:debug": "cd src-tauri && cargo build --no-default-features",
+    "tauri:test": "playwright test -c playwright.tauri.config.ts",
+    "tauri:test:e2e": "playwright test -c playwright.tauri-e2e.config.ts"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.12.5",

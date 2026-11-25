@@ -9,7 +9,7 @@ type SettingsState = {
   set(partial: Partial<Settings>): Promise<void>
 }
 
-export const useSettingsStore = create<SettingsState>((set) => ({
+export const useSettingsStore = create<SettingsState>((set, get) => ({
   settings: DEFAULT_SETTINGS,
   loaded: false,
   load: async () => {
@@ -17,9 +17,21 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     applyTheme(settings.theme)
     set({ settings, loaded: true })
   },
+  // Optimistic: controls (radios, switches) update at once; Rust's validated answer replaces the
+  // guess, and a rejected change is rolled back.
   set: async (partial) => {
-    const settings = await window.api.settings.set(partial)
-    applyTheme(settings.theme)
-    set({ settings })
+    const before = get().settings
+    const guess = { ...before, ...partial }
+    applyTheme(guess.theme)
+    set({ settings: guess })
+    try {
+      const settings = await window.api.settings.set(partial)
+      applyTheme(settings.theme)
+      set({ settings })
+    } catch (err) {
+      applyTheme(before.theme)
+      set({ settings: before })
+      throw err
+    }
   }
 }))

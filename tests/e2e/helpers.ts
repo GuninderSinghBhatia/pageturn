@@ -2,6 +2,7 @@ import { _electron as electron, type ElectronApplication, type Page } from '@pla
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { launch as launchTauri } from '../tauri/helpers'
 
 export const CSP = "default-src 'self'; img-src 'self' data: blob:; worker-src 'self' blob:"
 
@@ -14,6 +15,13 @@ export async function launchApp(
   userData: string = makeUserDataDir(),
   extraEnv: Record<string, string> = {}
 ): Promise<{ app: ElectronApplication; page: Page }> {
+  // PAGETURN_TAURI=1 runs the same specs against the Tauri build (see playwright.tauri-e2e.config.ts).
+  if (process.env.PAGETURN_TAURI === '1') {
+    const r = await launchTauri(userData, { env: extraEnv })
+    // `evaluate` (Electron main-process access) is a no-op here, e.g. for focusing the window.
+    const app = { close: r.close, evaluate: async () => undefined }
+    return { app: app as unknown as ElectronApplication, page: r.page }
+  }
   // VS Code terminals export ELECTRON_RUN_AS_NODE=1, which would start Electron as plain Node.
   const env: Record<string, string | undefined> = {
     ...process.env,
