@@ -84,6 +84,25 @@ Runs the app window and everything that needs the computer.
 
 ---
 
+## A2. Tauri build (Rust): `src-tauri/`
+
+The same React UI, with a Rust backend instead of the Electron main process. `window.api` is provided by
+`src/renderer/platform/tauriApi.ts`, which calls Rust commands by name.
+
+| Part                                                     | Where                                                                                                                 |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Entry, plugins, start-up wiring                          | `src/lib.rs`, `src/main.rs`                                                                                           |
+| Commands (one file per area)                             | `src/commands/`: library, annotations, settings, export, ai, lookup, rag, window, app, web                            |
+| Database and migrations (same SQL files as Electron)     | `src/db.rs`, `src/models.rs`, `src/state.rs`                                                                          |
+| Data folder (`%APPDATA%\PageTurn`, shared with Electron) | `src/paths.rs`                                                                                                        |
+| Signed auto-updater                                      | `src/updater.rs`; see [UPDATER.md](UPDATER.md)                                                                        |
+| Config, icons, permissions                               | `tauri.conf.json`, `icons/`, `capabilities/`                                                                          |
+| Tests                                                    | Rust unit tests in each file; `tests/tauri/` (real app), `tests/installer/` (installer and updates), `tests/measure/` |
+
+Details and measured results: [the migration spec](superpowers/specs/2026-11-25-tauri-migration.md).
+
+---
+
 ## B. rag-service (Python + FastAPI): `rag-service/`
 
 A separate local server on `localhost:8000`. The app reaches it through `src/main/ipc/rag.ts`.

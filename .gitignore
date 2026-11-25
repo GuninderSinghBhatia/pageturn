@@ -21,3 +21,4 @@ rag-service/docs/
 # Tauri
 src-tauri/target/
 src-tauri/gen/
+dist-tauri/
