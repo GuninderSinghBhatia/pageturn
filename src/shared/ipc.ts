@@ -33,9 +33,21 @@ export const RagNameSchema = z.string().trim().min(1).max(100)
 /** Spoiler Shield: the reader's current page (1-based); the book is searched only up to here. */
 export const RagCurrentPageSchema = z.number().int().positive()
 
-/** rag-service's answer: text citing pages, plus the (1-based) pages that were retrieved. */
+/** A term the knowledge graph links to the asked one ("QLoRA —is a quantized version of→ LoRA"). */
+export interface RagRelated {
+  name: string
+  relation: string
+  /** 'out': asked term → name; 'in': name → asked term. */
+  direction: 'in' | 'out'
+  pages: number[]
+}
+
+/**
+ * rag-service's answer: text citing pages, plus the (1-based) pages that were retrieved.
+ * `related` comes only with "Who is this?" and is empty when the graph is not running.
+ */
 export type RagAnswer =
-  | { ok: true; answer: string; pages: number[] }
+  | { ok: true; answer: string; pages: number[]; related?: RagRelated[] }
   | { ok: false; error: string }
 
 /** IPC channel names: one per Api method (plus main → renderer events). */

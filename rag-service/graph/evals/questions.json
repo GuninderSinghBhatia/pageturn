@@ -1,0 +1,21 @@
+{
+  "scope": "Graph built from chapter 7 (Finetuning), PDF pages 594-693 only. Every question here is about how things connect inside that chapter.",
+  "notes": "pages = 1-based PDF pages that hold the answer (any one counts as a hit). must_contain = a phrase on the first listed page, used only to check this answer key against the PDF.",
+  "questions": [
+    {"id": 1, "question": "How are QLoRA and LoRA related?", "pages": [661], "must_contain": "quantized version of LoRA"},
+    {"id": 2, "question": "Besides 4-bit quantization, what else does QLoRA use to save GPU memory?", "pages": [662], "must_contain": "paged optimizers"},
+    {"id": 3, "question": "Which 4-bit format does QLoRA use, and what idea is it based on?", "pages": [662], "must_contain": "NF4"},
+    {"id": 4, "question": "How is LoRA different from the original adapter method by Houlsby et al.?", "pages": [649], "must_contain": "doesn’t incur extra inference latency"},
+    {"id": 5, "question": "Why do the original adapters slow down inference compared to full finetuning?", "pages": [644], "must_contain": "increases the inference latency"},
+    {"id": 6, "question": "What are the two main buckets of PEFT techniques?", "pages": [645], "must_contain": "soft prompt-based methods"},
+    {"id": 7, "question": "Which adapter-based methods other than LoRA are mentioned, and how do they relate to LoRA?", "pages": [645], "must_contain": "BitFit"},
+    {"id": 8, "question": "What is LongLoRA a variant of, and what does it add?", "pages": [645], "must_contain": "LongLoRA"},
+    {"id": 9, "question": "How do prefix tuning and prompt tuning differ?", "pages": [647], "must_contain": "prefix tuning prepends"},
+    {"id": 10, "question": "How does model merging help avoid catastrophic forgetting?", "pages": [666, 665], "must_contain": "less risk of catastrophic forgetting"},
+    {"id": 11, "question": "How is model merging connected to federated learning?", "pages": [666], "must_contain": "federated learning"},
+    {"id": 12, "question": "How do task vectors relate to LoRA and task arithmetic?", "pages": [671], "must_contain": "task arithmetic"},
+    {"id": 13, "question": "How do LoRA and full finetuning compare on cost, performance and data needs?", "pages": [682], "must_contain": "full finetuning might not outperform LoRA"},
+    {"id": 14, "question": "What is post-training quantization and how common is it compared to quantizing during training?", "pages": [633], "must_contain": "PTQ is by far the most common"},
+    {"id": 15, "question": "Why is quantizing the model weights a better memory saving than shrinking LoRA's own parameters?", "pages": [661], "must_contain": "memory of a LoRA adapter is minimal"}
+  ]
+}
