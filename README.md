@@ -2,6 +2,8 @@
 
 **A Windows PDF reader that feels like a real book.** Open a PDF and you get only the book: a two-page spread on a calm background, a realistic WebGL page flip when you turn, and tools that stay hidden until you reach for them.
 
+**It is also a RAG application.** *Ask the book* answers questions from your PDF using **both vector RAG and graph RAG**, cites every page, and won't spoil pages you haven't read yet. On a hand-checked golden set it finds the right page in the top 3 passages **80%** of the time, and **87%** on relationship questions when vector and graph retrieval work together ([numbers below](#ask-the-book-vector-rag--graph-rag)).
+
 ![A page flipping over mid-turn](tests/e2e/curl.spec.ts-snapshots-tauri/flip-mid-win32.png)
 
 ## Download
@@ -45,6 +47,13 @@ It hides again 800 ms after the pointer leaves. It stays pinned while a tool is 
 - **Bookmark tabs:** pastel, numbered ribbons sticking out of the right page edge. Click to jump; right-click to rename or delete.
 - Annotations are **baked into the page texture**, so they curl with the paper.
 - Everything is saved locally and survives restarts and moving the PDF: books are identified by a content hash, not a path.
+
+### Ask the book (RAG)
+
+- **Ask the book:** ask a question and get an answer built only from passages found in your PDF, with clickable page citations.
+- **Who is this?:** select a name or term and get a summary of every mention so far, plus related terms from the knowledge graph ("Connected in the book").
+- **Spoiler Shield:** passages past the page you are on are never used.
+- Runs in a separate local Python service (`rag-service/`, FastAPI). It is a preview and ships separately for now.
 
 ### Help, notebook and your data
 
@@ -119,9 +128,39 @@ window shape (aspect lock)                 ├─ ReaderToolbar (hidden pill)
 - **Annotations:** coordinates are normalized 0..1 of the page, so they survive zoom and layout changes. Saves are optimistic, with 3 retries and a rollback plus toast on failure. Ink points are stored as packed `Float32Array` blobs.
 - **Data** lives in `%APPDATA%/PageTurn/` (`pageturn.db`, `thumbnails/`). Removing a book can keep its annotations, which come back if the same file is re-imported.
 
+### Ask the book: vector RAG + graph RAG
+
+```
+PDF ─▶ chunks (500 chars, 100 overlap, page kept) ─┬─▶ embeddings (all-MiniLM-L6-v2) ─▶ Chroma      (vector RAG)
+                                                  └─▶ LLM extracts terms + relations ─▶ Neo4j       (graph RAG)
+question ─▶ vector search  ┐
+         ─▶ graph lookup   ┴─▶ top passages (none past your page) ─▶ gpt-oss-120b on Groq ─▶ answer with page citations
+```
+
+1. **Vector RAG** finds passages whose meaning is closest to the question.
+2. **Graph RAG**: an LLM read each passage and pulled out terms and how they relate, stored as a knowledge graph in Neo4j. Questions about connections ("what is X a variant of?") follow the links.
+3. Only the retrieved passages go to the model, which answers from them and cites pages. The retriever is chosen with `RAG_RETRIEVER=vector|tree|hybrid|graph|vector+graph`.
+
+**Results on the golden set** (hit@3 = the right page is in the top 3 passages; page numbers in every question were checked against the PDF):
+
+| Question set | Vector | Graph only | Vector + graph |
+| --- | --- | --- | --- |
+| 25 whole-book questions | **80%** | 8% | 76% |
+| 15 relationship questions (graph chapter) | 80% | 53% | **87%** |
+| Avg retrieval time | 0.03 s | 0.10 s | 0.15–0.21 s |
+
+- Right page within one page: 84%. Off-topic questions refused: 4 of 4.
+- Also tried a table-of-contents tree retriever (80%, but ~2,450 LLM tokens per question) and a tree + vector hybrid (68%); plain vector won on cost.
+- Test book: a 991-page technical book (2,990 chunks). The graph so far covers one 100-page chapter (314 chunks → 1,019 terms, 1,136 links), so `vector+graph` only consults it inside that chapter.
+- Caveat: the sets are small, so one question moves a score by 4–7 points.
+
+Details: [rag-service/README.md](rag-service/README.md) · [rag-service/GRAPH_RAG.md](rag-service/GRAPH_RAG.md) · raw results in `rag-service/evals/results.csv` and `rag-service/graph/evals/results.csv`.
+
 ### Tech stack
 
 Tauri 2 (Rust, WebView2) · rusqlite · reqwest · TypeScript (strict) · React 18 · Vite · Zustand · CSS Modules · pdfjs-dist · WebGL2 · zod · perfect-freehand · Vitest · Testing Library · Playwright · ESLint · Prettier
+
+RAG service: Python · FastAPI · LangChain · Chroma · sentence-transformers · Neo4j · Groq (gpt-oss-120b / gpt-oss-20b) · pytest
 
 ### Project layout
 
@@ -143,7 +182,10 @@ src/renderer/
 tests/unit/      Vitest (shared, renderer)
 tests/e2e/       Playwright attached to the Tauri app, incl. screenshot and frame-time tests
 tests/tauri/     the Rust commands through the real app; installer/ and measure/ next to it
-docs/superpowers/ design specs and implementation plans
+rag-service/     Python RAG service (FastAPI): vector RAG (Chroma), graph RAG (Neo4j), evals
+site/            the website (Next.js), deployed to pageturn.vercel.app
+scripts/         release tools; demo-video/ films the app and edits the site's video
+docs/superpowers/ design specs
 ```
 
 ---
@@ -157,10 +199,4 @@ docs/superpowers/ design specs and implementation plans
 
 ---
 
-Design docs: [`docs/superpowers/specs/`](docs/superpowers/specs/) · implementation plans: [`docs/superpowers/plans/`](docs/superpowers/plans/) · progress log: [`docs/PROGRESS.md`](docs/PROGRESS.md)
-
-## Branches
-
-- `main`: library, reader and page curl (Plan 1).
-- `plan2-annotations`: adds highlights, notes, bookmarks and ink.
-- `reader-redesign`: the immersive reader, built on `plan2-annotations`. **This is the latest work**, pending merge into `main`.
+Design docs: [`docs/superpowers/specs/`](docs/superpowers/specs/) · components: [`docs/COMPONENTS.md`](docs/COMPONENTS.md) · updates: [`docs/UPDATER.md`](docs/UPDATER.md) · RAG service: [`rag-service/`](rag-service/) · website: [`site/`](site/)
