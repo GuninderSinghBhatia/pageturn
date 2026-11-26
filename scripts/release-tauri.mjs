@@ -21,6 +21,7 @@ const built = buildSigned({ outDir })
 const baseUrl = `https://github.com/GuninderSinghBhatia/pageturn/releases/download/v${built.version}`
 const feed = latestJson({ ...built, baseUrl, notes: process.env.RELEASE_NOTES ?? '' })
 writeFileSync(join(outDir, 'latest.json'), JSON.stringify(feed, null, 2) + '\n')
+copyFileSync(built.setupPath, join(outDir, 'PageTurn-Setup.exe'))
 console.log(
   `\nBuilt ${built.setup}\nWrote dist-tauri/latest.json and PageTurn-Setup.exe for v${built.version}\nNothing was uploaded.`
 )
