@@ -1,6 +1,7 @@
 import type { ResolvedLayout } from '../layout'
 import { THEME_SETTINGS, themeChoice, type ThemeChoice } from '../../app/theme'
 import { useNav } from '../../app/nav'
+import { MAX_ZOOM, MIN_ZOOM } from '../../stores/readerStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import styles from './Toolbar.module.css'
 
@@ -36,11 +37,21 @@ export function DisplayMenu({ zoom, layout, onZoom, onLayout }: Props): React.JS
         ))}
       </div>
       <div className={styles.row}>
-        <button className={styles.chip} aria-label="Zoom out" onClick={() => onZoom(zoom / 1.25)}>
+        <button
+          className={styles.chip}
+          aria-label="Zoom out"
+          disabled={zoom <= MIN_ZOOM}
+          onClick={() => onZoom(zoom / 1.25)}
+        >
           −
         </button>
         <span className={styles.zoom}>{Math.round(zoom * 100)}%</span>
-        <button className={styles.chip} aria-label="Zoom in" onClick={() => onZoom(zoom * 1.25)}>
+        <button
+          className={styles.chip}
+          aria-label="Zoom in"
+          disabled={zoom >= MAX_ZOOM}
+          onClick={() => onZoom(zoom * 1.25)}
+        >
           +
         </button>
       </div>

@@ -149,6 +149,12 @@
   background: var(--chrome-hover);
 }
 
+.chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+
 .chip[aria-pressed='true'] {
   border-color: var(--accent);
   color: var(--chrome-strong);
