@@ -1,0 +1,136 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+/*
+ * Light and warm, after worklist.in: an off-white canvas, near-black ink, one blue for actions
+ * and one orange word per headline. shadcn's tokens point at the same colours.
+ */
+@theme {
+  --color-canvas: #fafaf9;
+  --color-canvas-2: #f1f0ed;
+  --color-paper: #f6f4ef;
+  --color-ink: #171717;
+  --color-ink-soft: #6e6e76;
+  --color-brand: #2f5fd8; /* blue: buttons, links, focus */
+  --color-brand-hover: #2552c4;
+  --color-brand-deep: #2f5fd8;
+  --color-spark: #e0680a; /* orange: one word per headline, large text only */
+  --ease-fluid: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@theme inline {
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: #fafaf9;
+  --foreground: #171717;
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --popover: #ffffff;
+  --popover-foreground: #171717;
+  --primary: #2f5fd8;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f0ed;
+  --secondary-foreground: #171717;
+  --muted: #f1f0ed;
+  --muted-foreground: #6e6e76;
+  --accent: #f1f0ed;
+  --accent-foreground: #171717;
+  --destructive: #b3261e;
+  --border: rgb(23 23 23 / 0.08);
+  --input: rgb(23 23 23 / 0.14);
+  --ring: #2f5fd8;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/60;
+  }
+  html {
+    @apply font-sans;
+    background: var(--color-canvas);
+    scroll-behavior: smooth;
+    scrollbar-color: rgb(23 23 23 / 0.3) var(--color-canvas);
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p,
+  li {
+    text-wrap: pretty;
+  }
+  ::selection {
+    background: rgb(47 95 216 / 0.18); /* blue */
+    color: var(--color-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 3px;
+  }
+  input,
+  textarea {
+    caret-color: var(--color-brand-deep);
+  }
+}
+
+/* The hero's one entrance: the text settles, then the book rises into place. */
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+    filter: blur(8px);
+  }
+}
+
+.settle {
+  animation: settle 1100ms var(--ease-fluid) both;
+  animation-delay: var(--settle-delay, 0ms);
+}
+
+/* A faint dot grid that fades out toward the middle, so it only frames the hero. */
+.dots {
+  background-image: radial-gradient(rgb(23 23 23 / 0.13) 1px, transparent 1.5px);
+  background-size: 18px 18px;
+  mask-image: radial-gradient(ellipse 60% 55% at 50% 40%, transparent 40%, black 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .settle {
+    animation: none;
+  }
+}
