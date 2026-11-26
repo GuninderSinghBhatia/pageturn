@@ -2,7 +2,7 @@ export const REPO = 'https://github.com/GuninderSinghBhatia/pageturn'
 /** Always the newest installer: the release script uploads it under this fixed name. */
 export const DOWNLOAD_URL = `${REPO}/releases/latest/download/PageTurn-Setup.exe`
 export const RELEASES_URL = `${REPO}/releases`
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://pageturn.vercel.app'
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://pageturn-wheat.vercel.app'
 
 /**
  * The newest release's version, e.g. "2.0.1", fetched from GitHub at most once an hour.

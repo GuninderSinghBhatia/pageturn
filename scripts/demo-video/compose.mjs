@@ -298,7 +298,7 @@ const CARDS = {
       '<div class="big muted" style="font-size:104px">' + words('that knows', t, { delay: 0.45 }) + ' ' + words('your book.', t, { delay: 0.6, cls: 'accent' }) + '</div>' +
       '<div style="margin-top:54px;display:flex;align-items:center;gap:18px;' + fadeIn(t, 1.0) + '">' +
         '<span class="pill" style="background:var(--brand);color:#fff;font:600 30px Geist;padding:20px 38px;box-shadow:0 14px 34px -12px rgba(47,95,216,.7)">Download free for Windows</span></div>' +
-      '<div style="margin-top:26px;font:400 24px Geist;color:var(--soft);' + fadeIn(t, 1.25) + '">pageturn.vercel.app · Windows 10 and 11 · about 5 MB</div></div>'
+      '<div style="margin-top:26px;font:400 24px Geist;color:var(--soft);' + fadeIn(t, 1.25) + '">pageturn-wheat.vercel.app · Windows 10 and 11 · about 5 MB</div></div>'
   }
 }
 

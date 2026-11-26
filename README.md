@@ -183,7 +183,7 @@ tests/unit/      Vitest (shared, renderer)
 tests/e2e/       Playwright attached to the Tauri app, incl. screenshot and frame-time tests
 tests/tauri/     the Rust commands through the real app; installer/ and measure/ next to it
 rag-service/     Python RAG service (FastAPI): vector RAG (Chroma), graph RAG (Neo4j), evals
-site/            the website (Next.js), deployed to pageturn.vercel.app
+site/            the website (Next.js), deployed to pageturn-wheat.vercel.app
 scripts/         release tools; demo-video/ films the app and edits the site's video
 docs/superpowers/ design specs
 ```
