@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { RagAnswer } from '@shared/ipc'
+import type { RagAnswer, RagRelated } from '@shared/ipc'
 import { useReaderStore } from '../stores/readerStore'
 import { useAskStore } from './askStore'
 import { splitCitations } from './citations'
@@ -8,7 +8,7 @@ import styles from './Ask.module.css'
 type Result =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'answer'; answer: string; pages: number[] }
+  | { kind: 'answer'; answer: string; pages: number[]; related: RagRelated[] }
   | { kind: 'error'; message: string }
 
 /** Left drawer: ask the indexed book a question; page citations jump the reader there. */
@@ -26,7 +26,7 @@ export function AskPanel(): React.JSX.Element | null {
     const r = await call
     setResult(
       r.ok
-        ? { kind: 'answer', answer: r.answer, pages: r.pages }
+        ? { kind: 'answer', answer: r.answer, pages: r.pages, related: r.related ?? [] }
         : { kind: 'error', message: r.error }
     )
   }
@@ -111,6 +111,31 @@ export function AskPanel(): React.JSX.Element | null {
                     p. {p}
                   </button>
                 ))}
+              </div>
+            )}
+            {result.related.length > 0 && (
+              <div className={styles.related}>
+                <span className={styles.hint}>Connected in the book:</span>
+                <ul>
+                  {result.related.map((r) => (
+                    <li key={`${r.direction}-${r.relation}-${r.name}`}>
+                      <span className={styles.hint}>
+                        {r.direction === 'out' ? r.relation : `← ${r.relation}`}
+                      </span>{' '}
+                      <button
+                        className={styles.term}
+                        onClick={() => useAskStore.getState().askWho(r.name)}
+                      >
+                        {r.name}
+                      </button>
+                      {r.pages.slice(0, 3).map((p) => (
+                        <button key={p} className={styles.cite} onClick={() => jump(p)}>
+                          p. {p}
+                        </button>
+                      ))}
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </>

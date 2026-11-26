@@ -39,11 +39,15 @@ allows 8,000 tokens a minute, so every LLM call goes through `tree.invoke_paced`
 - `vector`: similarity search over the chunks.
 - `tree`: an LLM picks chapters, then sections, from the summaries; returns the start of each section.
 - `hybrid`: the tree narrows the pages, then vector search runs inside them.
+- `graph`: walks the Neo4j knowledge graph from the terms in the question (see `graph/README.md`);
+  falls back to `vector` when Neo4j is down or the graph knows none of the terms.
+- `vector+graph`: both lists merged, vector first, repeats removed.
 
 ## Evals
 
 ```
-python -m evals.run_evals <vector|tree|hybrid> [label]
+python -m evals.run_evals <vector|tree|hybrid|graph|vector+graph> [label]
+python -m graph.evals.run_graph_evals [label]     # relation questions, see graph/README.md
 pytest
 ```
 

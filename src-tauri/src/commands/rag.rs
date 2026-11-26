@@ -92,7 +92,36 @@ async fn post_for_answer(base: &str, path: &str, payload: Value) -> Value {
             _ => return unexpected(),
         }
     }
-    json!({ "ok": true, "answer": answer, "pages": pages.into_iter().collect::<Vec<_>>() })
+    let mut out =
+        json!({ "ok": true, "answer": answer, "pages": pages.into_iter().collect::<Vec<_>>() });
+    if let Some(related) = body.get("related") {
+        match related_ok(related) {
+            Some(r) => out["related"] = r,
+            None => return unexpected(),
+        }
+    }
+    out
+}
+
+/// Graph neighbours sent with "Who is this?": [{name, relation, direction, pages}].
+fn related_ok(v: &Value) -> Option<Value> {
+    let mut items = Vec::new();
+    for item in v.as_array()? {
+        let name = item.get("name")?.as_str()?;
+        let relation = item.get("relation")?.as_str()?;
+        let direction = item.get("direction")?.as_str()?;
+        if direction != "in" && direction != "out" {
+            return None;
+        }
+        let mut pages = Vec::new();
+        for p in item.get("pages")?.as_array()? {
+            pages.push(p.as_i64().filter(|n| *n > 0)?);
+        }
+        items.push(
+            json!({ "name": name, "relation": relation, "direction": direction, "pages": pages }),
+        );
+    }
+    Some(Value::Array(items))
 }
 
 #[tauri::command]
@@ -188,6 +217,27 @@ mod tests {
         let (base, _) = fake(200, r#"{"answer":"x","context_pages":[0]}"#).await;
         assert_eq!(
             post_for_answer(&base, "/ask", json!({})).await,
+            fail("rag-service sent an unexpected reply")
+        );
+    }
+
+    #[tokio::test]
+    async fn who_passes_related_terms_through() {
+        let (base, _) = fake(
+            200,
+            r#"{"answer":"a","context_pages":[3],"related":[{"name":"LoRA","relation":"is a version of","direction":"out","pages":[661]}]}"#,
+        )
+        .await;
+        let r = post_for_answer(&base, "/who", json!({})).await;
+        assert_eq!(r["related"][0]["name"], "LoRA");
+        assert_eq!(r["related"][0]["pages"], json!([661]));
+        let (base, _) = fake(
+            200,
+            r#"{"answer":"a","context_pages":[3],"related":[{"name":"x"}]}"#,
+        )
+        .await;
+        assert_eq!(
+            post_for_answer(&base, "/who", json!({})).await,
             fail("rag-service sent an unexpected reply")
         );
     }

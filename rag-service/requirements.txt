@@ -13,3 +13,6 @@ langchain-community
 langchain-text-splitters
 langgraph
 langchain-groq
+langchain-neo4j
+langchain-experimental
+langchain-huggingface

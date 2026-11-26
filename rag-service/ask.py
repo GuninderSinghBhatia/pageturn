@@ -20,11 +20,18 @@ def retrieve(question: str, mode: str | None = None, where: dict | None = None, 
     """Top-k passages for a question.
 
     mode: "vector" (similarity search), "tree" (an LLM picks sections from the table of contents)
-    or "hybrid" (tree narrows the page range, then vector search inside it). Defaults to the
+    or "hybrid" (tree narrows the page range, then vector search inside it), "graph" (walk the
+    Neo4j graph, see graph/retrieve.py) or "vector+graph" (both, merged). Defaults to the
     RAG_RETRIEVER setting, then "vector". where: optional Chroma metadata filter.
     max_page: Spoiler Shield, nothing after this page is returned (any mode).
     """
     mode = mode or os.getenv("RAG_RETRIEVER", "vector")
+    if mode in ("graph", "vector+graph"):
+        from graph import retrieve as graph_retrieve  # imported here: graph imports this module too
+
+        if mode == "graph":
+            return graph_retrieve.retrieve_graph_or_vector(question, k, max_page)
+        return graph_retrieve.retrieve_combined(question, k, max_page)
     if mode != "vector":
         import retrievers  # imported here: retrievers imports this module too
 
