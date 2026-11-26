@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { RagAnswer, RagRelated } from '@shared/ipc'
 import { useReaderStore } from '../stores/readerStore'
+import { lastVisiblePage } from '../reader/layout'
+
+/** Spoiler Shield limit: the last page on screen, not the first page of the spread. */
+const readingLimit = (s: ReturnType<typeof useReaderStore.getState>): number =>
+  s.doc ? lastVisiblePage(s.page, s.doc.numPages, s.layout) : s.page
 import { useAskStore } from './askStore'
 import { splitCitations } from './citations'
 import styles from './Ask.module.css'
@@ -15,7 +20,7 @@ type Result =
 export function AskPanel(): React.JSX.Element | null {
   const open = useAskStore((s) => s.open)
   const close = useAskStore((s) => s.close)
-  const readingPage = useReaderStore((s) => s.page)
+  const readingPage = useReaderStore(readingLimit)
   const [question, setQuestion] = useState('')
   const [result, setResult] = useState<Result>({ kind: 'idle' })
 
@@ -38,7 +43,14 @@ export function AskPanel(): React.JSX.Element | null {
         if (!s.pendingName) return
         const name = s.pendingName
         s.clearPendingName()
-        void run(`Who is ${name}?`, window.api.rag.who(name, useReaderStore.getState().page))
+        void run(
+          `Who is ${name}?`,
+          window.api.rag.who(
+            name,
+            readingLimit(useReaderStore.getState()),
+            useReaderStore.getState().bookId ?? undefined
+          )
+        )
       }),
     []
   )
@@ -50,7 +62,14 @@ export function AskPanel(): React.JSX.Element | null {
   const submit = async (): Promise<void> => {
     const q = question.trim()
     if (!q || result.kind === 'loading') return
-    await run(q, window.api.rag.ask(q, useReaderStore.getState().page))
+    await run(
+      q,
+      window.api.rag.ask(
+        q,
+        readingLimit(useReaderStore.getState()),
+        useReaderStore.getState().bookId ?? undefined
+      )
+    )
   }
 
   return (

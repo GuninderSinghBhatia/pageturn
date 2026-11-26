@@ -48,6 +48,11 @@ export function spreadPages(s: Spread): number[] {
   return [s.left, s.right].filter((p): p is number => p !== null)
 }
 
+/** The furthest page the reader can see: the right page of a spread (the Spoiler Shield limit). */
+export function lastVisiblePage(page: number, numPages: number, layout: ResolvedLayout): number {
+  return Math.max(page, ...spreadPages(spreadFor(page, numPages, layout)))
+}
+
 /** Per-page CSS size that fits the book (one or two pages + margins) in the viewport. */
 export function fitPageSize(
   pageSize: { width: number; height: number },

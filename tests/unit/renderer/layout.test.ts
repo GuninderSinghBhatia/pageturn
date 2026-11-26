@@ -4,7 +4,8 @@ import {
   spreadFor,
   nextSpreadStart,
   prevSpreadStart,
-  fitPageSize
+  fitPageSize,
+  lastVisiblePage
 } from '@renderer/reader/layout'
 
 describe('spreadFor', () => {
@@ -75,5 +76,16 @@ describe('fitPageSize', () => {
     expect(s.width).toBeCloseTo(200) // (464 - 64) / 2
     expect(s.width / s.height).toBeCloseTo(432 / 648)
     expect(fitPageSize(page, { width: 464, height: 2000 }, 'single').width).toBeCloseTo(464) // full width, no margin
+  })
+})
+
+describe('lastVisiblePage', () => {
+  it('is the right page of a two-page spread', () => {
+    expect(lastVisiblePage(4, 30, 'spread')).toBe(5)
+  })
+  it('is the page itself on the cover, the last page, and in single layout', () => {
+    expect(lastVisiblePage(1, 30, 'spread')).toBe(1)
+    expect(lastVisiblePage(30, 30, 'spread')).toBe(30)
+    expect(lastVisiblePage(4, 30, 'single')).toBe(4)
   })
 })

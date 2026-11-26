@@ -81,8 +81,8 @@ const api: Api = {
   reader: { saveProgress: (bookId, page) => call('reader_save_progress', { bookId, page }) },
   rag: {
     health: () => call('rag_health'),
-    ask: (question, currentPage) => call('rag_ask', { question, currentPage }),
-    who: (name, currentPage) => call('rag_who', { name, currentPage })
+    ask: (question, currentPage, bookId) => call('rag_ask', { question, currentPage, bookId }),
+    who: (name, currentPage, bookId) => call('rag_who', { name, currentPage, bookId })
   },
   settings: {
     get: () => call('settings_get'),

@@ -29,6 +29,22 @@ fn name_ok(s: &str) -> AppResult<String> {
     Ok(t.to_string())
 }
 
+/// The app's id for the open book (a content hash): sent so rag-service searches that book only.
+fn book_ok(id: Option<String>) -> AppResult<Option<String>> {
+    match id {
+        None => Ok(None),
+        Some(s)
+            if !s.is_empty()
+                && s.len() <= 200
+                && s.chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') =>
+        {
+            Ok(Some(s))
+        }
+        Some(_) => Err(invalid("bookId must be 1 to 200 letters, digits, - or _")),
+    }
+}
+
 fn page_ok(p: i64) -> AppResult<i64> {
     if p < 1 {
         return Err(invalid("currentPage must be a positive integer"));
@@ -130,21 +146,44 @@ pub async fn rag_health() -> AppResult<Value> {
 }
 
 #[tauri::command]
-pub async fn rag_ask(question: String, current_page: i64) -> AppResult<Value> {
-    let payload =
-        json!({ "question": question_ok(&question)?, "current_page": page_ok(current_page)? });
+pub async fn rag_ask(
+    question: String,
+    current_page: i64,
+    book_id: Option<String>,
+) -> AppResult<Value> {
+    let payload = json!({
+        "question": question_ok(&question)?,
+        "current_page": page_ok(current_page)?,
+        "book_id": book_ok(book_id)?,
+    });
     Ok(post_for_answer(RAG_URL, "/ask", payload).await)
 }
 
 #[tauri::command]
-pub async fn rag_who(name: String, current_page: i64) -> AppResult<Value> {
-    let payload = json!({ "name": name_ok(&name)?, "current_page": page_ok(current_page)? });
+pub async fn rag_who(name: String, current_page: i64, book_id: Option<String>) -> AppResult<Value> {
+    let payload = json!({
+        "name": name_ok(&name)?,
+        "current_page": page_ok(current_page)?,
+        "book_id": book_ok(book_id)?,
+    });
     Ok(post_for_answer(RAG_URL, "/who", payload).await)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn book_id_validation() {
+        assert_eq!(book_ok(None).unwrap(), None);
+        assert_eq!(
+            book_ok(Some("abc-123_X".into())).unwrap(),
+            Some("abc-123_X".into())
+        );
+        assert!(book_ok(Some(String::new())).is_err());
+        assert!(book_ok(Some("../etc".into())).is_err());
+        assert!(book_ok(Some("x".repeat(201))).is_err());
+    }
     use std::sync::{Arc, Mutex};
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;

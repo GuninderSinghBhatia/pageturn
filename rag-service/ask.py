@@ -16,7 +16,46 @@ model = SentenceTransformer("all-MiniLM-L6-v2")
 
 llm = ChatGroq(model=os.getenv("RAG_ANSWER_MODEL", "openai/gpt-oss-120b"), api_key=os.getenv("GROQ_API_KEY"))
 
-def retrieve(question: str, mode: str | None = None, where: dict | None = None, k: int = 3, max_page: int | None = None):
+# --- One index per book --------------------------------------------------------------------------
+# Every chunk carries a book_id; each search is filtered to one book. The app sends its own id for
+# the open book (a content hash). data/books.json maps app ids to index ids for books indexed under
+# another name (the first book was indexed as "book1"). A request without a book id means "book1",
+# so older clients keep working.
+DEFAULT_BOOK = "book1"
+BOOKS_FILE = Path(__file__).parent / "data" / "books.json"
+
+
+def book_aliases() -> dict:
+    """App book id -> index book id, from data/books.json (empty when the file is missing)."""
+    if not BOOKS_FILE.exists():
+        return {}
+    import json
+
+    return json.loads(BOOKS_FILE.read_text(encoding="utf-8"))
+
+
+def resolve_book(app_book_id: str | None) -> str | None:
+    """The index id for the app's book, or None when that book has not been indexed."""
+    if not app_book_id:
+        return DEFAULT_BOOK
+    book = book_aliases().get(app_book_id, app_book_id)
+    found = collection.get(where={"book_id": book}, limit=1, include=[])
+    return book if found["ids"] else None
+
+
+def book_where(book_id: str | None, max_page: int | None = None) -> dict | None:
+    """Chroma filter for one book and, for the Spoiler Shield, pages up to max_page."""
+    parts = []
+    if book_id:
+        parts.append({"book_id": book_id})
+    if max_page is not None:
+        parts.append({"page": {"$lte": max_page}})
+    if not parts:
+        return None
+    return parts[0] if len(parts) == 1 else {"$and": parts}
+
+def retrieve(question: str, mode: str | None = None, where: dict | None = None, k: int = 3, max_page: int | None = None,
+             book_id: str | None = DEFAULT_BOOK):
     """Top-k passages for a question.
 
     mode: "vector" (similarity search), "tree" (an LLM picks sections from the table of contents)
@@ -24,8 +63,12 @@ def retrieve(question: str, mode: str | None = None, where: dict | None = None, 
     Neo4j graph, see graph/retrieve.py) or "vector+graph" (both, merged). Defaults to the
     RAG_RETRIEVER setting, then "vector". where: optional Chroma metadata filter.
     max_page: Spoiler Shield, nothing after this page is returned (any mode).
+    book_id: only this book's passages. The tree and graph indexes exist for book1 only, so any
+    other book uses vector search.
     """
     mode = mode or os.getenv("RAG_RETRIEVER", "vector")
+    if book_id != DEFAULT_BOOK:
+        mode = "vector"
     if mode in ("graph", "vector+graph"):
         from graph import retrieve as graph_retrieve  # imported here: graph imports this module too
 
@@ -38,8 +81,8 @@ def retrieve(question: str, mode: str | None = None, where: dict | None = None, 
         if mode == "tree":
             return retrievers.retrieve_tree(question, k, max_page)
         return retrievers.retrieve_hybrid(question, k, max_page)
-    if max_page is not None and where is None:
-        where = {"page": {"$lte": max_page}}
+    if where is None:
+        where = book_where(book_id, max_page)
     embed= model.encode(question,show_progress_bar=False)
     results = collection.query(
         query_embeddings=[embed], n_results=k, where=where
@@ -79,7 +122,7 @@ def is_ahead(results : List ,current_page :int ) -> bool :
    return ahead > len(results) / 2
 
 
-def ask_question(question : str, current_page : int | None = None) -> dict :
+def ask_question(question : str, current_page : int | None = None, book_id: str = DEFAULT_BOOK) -> dict :
     """
     Asks a question to the LLM using the provided context.
     current_page: Spoiler Shield. Only text up to this page is used; if the best matches are
@@ -89,9 +132,9 @@ def ask_question(question : str, current_page : int | None = None) -> dict :
         # Only the single best match decides: when a topic appears both early and late in the
         # book, a majority vote of the top 3 would refuse questions the reader can already answer.
         # Vector search is used for the check in every mode: it is free, the tree costs LLM tokens.
-        if is_ahead(retrieve(question, mode="vector", k=1), current_page):
+        if is_ahead(retrieve(question, mode="vector", k=1, book_id=book_id), current_page):
             return {"answer": "You haven't got there yet.", "context_pages": []}
-    context = retrieve(question, max_page=current_page)
+    context = retrieve(question, max_page=current_page, book_id=book_id)
     prompt = build_prompt(question, context)
     response = invoke_paced(llm, prompt)
     pages = [item['metadata']['page'] for item in context]
@@ -102,10 +145,10 @@ WHO_MAX_KEYWORD_CHUNKS = 8  # mentions sent to the LLM, spread evenly over the p
 WHO_VECTOR_CHUNKS = 3       # related passages that may not contain the exact name ("she", "the model")
 
 
-def find_mentions(name: str, max_page: int) -> list[dict]:
+def find_mentions(name: str, max_page: int, book_id: str = DEFAULT_BOOK) -> list[dict]:
     """Every chunk up to max_page whose text contains `name` exactly (keyword search), by page."""
     found = collection.get(
-        where={"page": {"$lte": max_page}}, where_document={"$contains": name}, include=["documents", "metadatas"]
+        where=book_where(book_id, max_page), where_document={"$contains": name}, include=["documents", "metadatas"]
     )
     mentions = [{"text": t, "metadata": m} for t, m in zip(found["documents"], found["metadatas"])]
     return sorted(mentions, key=lambda c: c["metadata"]["page"])
@@ -131,19 +174,20 @@ def build_who_prompt(name: str, context: list) -> str:
     """
 
 
-def who_is(name: str, current_page: int) -> dict:
+def who_is(name: str, current_page: int, book_id: str = DEFAULT_BOOK) -> dict:
     """Spoiler-safe history of a name: everything up to current_page, nothing after.
 
     Keyword search finds every mention; vector search adds passages about it that never use the name.
     """
-    mentions = find_mentions(name, current_page)
+    mentions = find_mentions(name, current_page, book_id)
     if not mentions:
         # Nothing yet: say whether the name shows up later, without revealing anything about it.
-        later = find_mentions(name, 10**6)
+        later = find_mentions(name, 10**6, book_id)
         text = f"You haven't got to {name} yet." if later else f"I can't find {name} in this book."
         return {"answer": text, "context_pages": []}
     context = spread(mentions, WHO_MAX_KEYWORD_CHUNKS)
-    for c in retrieve(f"Who or what is {name}?", mode="vector", k=WHO_VECTOR_CHUNKS, max_page=current_page):
+    for c in retrieve(f"Who or what is {name}?", mode="vector", k=WHO_VECTOR_CHUNKS, max_page=current_page,
+                      book_id=book_id):
         if not any(c["text"] == m["text"] for m in context):
             context.append(c)
     context.sort(key=lambda c: c["metadata"]["page"])

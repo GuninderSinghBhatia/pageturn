@@ -301,12 +301,13 @@ export interface Api {
     /** Pings the local rag-service; never rejects (an unreachable service is `ok: false`). */
     health(): Promise<{ ok: true; body: unknown } | { ok: false; error: string }>
     /**
-     * Asks the indexed book a question, using only text up to `currentPage`; never rejects
+     * Asks the open book (`bookId`; the first indexed book when omitted) a question, using only
+     * text up to `currentPage`; never rejects
      * (failures come back as `ok: false`).
      */
-    ask(question: string, currentPage: number): Promise<RagAnswer>
+    ask(question: string, currentPage: number, bookId?: string): Promise<RagAnswer>
     /** Who/what a selected name is, from the text up to `currentPage` only; never rejects. */
-    who(name: string, currentPage: number): Promise<RagAnswer>
+    who(name: string, currentPage: number, bookId?: string): Promise<RagAnswer>
   }
   settings: {
     get(): Promise<Settings>
