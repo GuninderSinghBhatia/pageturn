@@ -31,10 +31,11 @@ never commit it. To rotate it, a release signed with the old key must first ship
 ## Publishing a release
 
 1. Raise the version in `src-tauri/tauri.conf.json` (and `package.json`, `src-tauri/Cargo.toml`).
-2. `npm run release:tauri` builds the installer and its `.sig` and writes `dist-tauri/latest.json`.
-   It uploads nothing.
+2. `npm run release` builds the installer and its `.sig` and writes `dist-tauri/latest.json`, plus
+   `dist-tauri/PageTurn-Setup.exe` (a copy under the fixed name the README's download button
+   links to). It uploads nothing.
 3. Create a GitHub release `v<version>` and attach `dist-tauri/*` (the installer, the `.sig`,
-   `latest.json`). Installed apps pick it up within 4 hours.
+   `latest.json`, `PageTurn-Setup.exe`). Installed apps pick it up within 4 hours.
 
 Existing **Electron** users cannot update into the Tauri app (different updater); they need to
 download the new installer once.

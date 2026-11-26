@@ -1,26 +1,26 @@
-//! SQLite connection and migrations. The migration files are the SAME ones the Electron
-//! build uses (`src/main/db/migrations`); each NNN_name.sql moves `user_version` to NNN.
+//! SQLite connection and migrations (`src-tauri/migrations`, unchanged from the Electron build,
+//! so existing libraries open as they are); each NNN_name.sql moves `user_version` to NNN.
 
 use rusqlite::Connection;
 use std::path::Path;
 
 const MIGRATIONS: &[(i64, &str)] = &[
-    (1, include_str!("../../src/main/db/migrations/001_init.sql")),
+    (1, include_str!("../migrations/001_init.sql")),
     (
         2,
-        include_str!("../../src/main/db/migrations/002_annotations.sql"),
+        include_str!("../migrations/002_annotations.sql"),
     ),
     (
         3,
-        include_str!("../../src/main/db/migrations/003_reader_redesign.sql"),
+        include_str!("../migrations/003_reader_redesign.sql"),
     ),
     (
         4,
-        include_str!("../../src/main/db/migrations/004_book_likes.sql"),
+        include_str!("../migrations/004_book_likes.sql"),
     ),
     (
         5,
-        include_str!("../../src/main/db/migrations/005_note_tags.sql"),
+        include_str!("../migrations/005_note_tags.sql"),
     ),
 ];
 

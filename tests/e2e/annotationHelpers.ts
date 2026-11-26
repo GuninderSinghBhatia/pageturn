@@ -6,6 +6,8 @@ export const TEXT500 = join(FIXTURES, 'text-500.pdf')
 
 /** Imports a PDF (no-op if already in the library), opens it and goes to spread 2–3. */
 export async function openAtSpread2(page: Page, file = TEXT500): Promise<void> {
+  // After a reload, Tauri installs window.api asynchronously (src/renderer/main.tsx).
+  await page.waitForFunction(() => typeof window.api?.library?.import === 'function')
   await page.evaluate((p) => window.api.library.import([p]), file)
   await page.getByTestId('book-card').getByRole('button').first().click()
   const stage = page.getByTestId('book-stage')

@@ -12,7 +12,7 @@ async function selectLine(page: Page, p: number, first = false): Promise<void> {
 
 test('help panel: mock explanation, follow-up, rate-limit error, web tab, Esc', async () => {
   test.setTimeout(90_000)
-  const { app, page } = await launchApp(makeUserDataDir(), { PAGETURN_AI_MOCK: '1' })
+  const { app, page, browser } = await launchApp(makeUserDataDir(), { PAGETURN_AI_MOCK: '1' })
   try {
     await page.evaluate(() => window.api.settings.setApiKey('anthropic', 'sk-test'))
     await openAtSpread2(page, HELP)
@@ -40,20 +40,26 @@ test('help panel: mock explanation, follow-up, rate-limit error, web tab, Esc', 
     await expect(panel.getByText(/rate limiting/i)).toBeVisible()
     await expect(panel.getByRole('button', { name: 'Retry' })).toBeVisible()
 
+    const base = app.visibleWindows() // the main window plus WebView2's own helper windows
     await panel.getByRole('tab', { name: 'Web' }).click()
     await expect(page.getByTestId('web-slot')).toHaveAttribute(
       'data-url',
       /^https:\/\/duckduckgo\.com\/\?q=/
     )
-    const views = (): Promise<number> =>
-      app.evaluate(
-        ({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].contentView.children.length
-      )
-    await expect.poll(views).toBe(1)
+    // The web page lives in its own Tauri window (src-tauri/src/commands/web.rs): it loads as a
+    // second CDP target, and closing the panel hides that window (WebView2 keeps reporting the
+    // page as visible, so count the app's visible OS windows against the baseline instead).
+    const webLoaded = (): boolean =>
+      browser
+        .contexts()
+        .flatMap((c) => c.pages())
+        .some((p) => p.url().startsWith('https://duckduckgo.com/'))
+    await expect.poll(webLoaded, { timeout: 15_000 }).toBe(true)
+    await expect.poll(() => app.visibleWindows()).toBe(base + 1)
 
     await page.keyboard.press('Escape')
     await expect(panel).toHaveCount(0)
-    await expect.poll(views).toBe(0)
+    await expect.poll(() => app.visibleWindows()).toBe(base)
   } finally {
     await app.close()
   }

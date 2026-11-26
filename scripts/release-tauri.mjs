@@ -1,15 +1,17 @@
 // Builds the signed Tauri installer and the updater feed, in dist-tauri/. It does NOT publish.
 //
-//   npm run release:tauri
+//   npm run release
 //
 // Then, by hand: create a GitHub release tagged v<version> and attach everything in dist-tauri/
-// (the installer, its .sig and latest.json). The app reads
+// (the installer, its .sig, latest.json and PageTurn-Setup.exe). The app reads
 // https://github.com/GuninderSinghBhatia/pageturn/releases/latest/download/latest.json
+// and the README's download button links to .../releases/latest/download/PageTurn-Setup.exe,
+// a copy of the installer under a name that never changes.
 //
 // Needs the signing key in ~/.tauri/pageturn-updater.key (+ pageturn-updater.password), or
 // PAGETURN_SIGNING_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD. Keep that key private and backed up:
 // without it installed copies can never be updated.
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { ROOT, buildSigned, latestJson } from './tauri-release-lib.mjs'
 
@@ -20,5 +22,5 @@ const baseUrl = `https://github.com/GuninderSinghBhatia/pageturn/releases/downlo
 const feed = latestJson({ ...built, baseUrl, notes: process.env.RELEASE_NOTES ?? '' })
 writeFileSync(join(outDir, 'latest.json'), JSON.stringify(feed, null, 2) + '\n')
 console.log(
-  `\nBuilt ${built.setup}\nWrote dist-tauri/latest.json for v${built.version}\nNothing was uploaded.`
+  `\nBuilt ${built.setup}\nWrote dist-tauri/latest.json and PageTurn-Setup.exe for v${built.version}\nNothing was uploaded.`
 )

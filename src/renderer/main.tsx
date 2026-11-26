@@ -3,14 +3,12 @@ import { createRoot } from 'react-dom/client'
 import '@fontsource-variable/inter'
 import '@fontsource-variable/jetbrains-mono'
 import App from './app/App'
+import { install } from './platform/tauriApi'
 
-// Inside Tauri there is no Electron preload: install the Tauri-backed window.api first.
-async function start(): Promise<void> {
-  if ('__TAURI_INTERNALS__' in window) await (await import('./platform/tauriApi')).install()
-  createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-      <App />
-    </StrictMode>
-  )
-}
-void start()
+// window.api (backed by the Rust commands) must exist before any component runs.
+install()
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+)
