@@ -2,38 +2,31 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug Main Process",
+      "name": "Debug PageTurn (Tauri)",
       "type": "node",
       "request": "launch",
       "cwd": "${workspaceRoot}",
-      "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/electron-vite",
-      "windows": {
-        "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/electron-vite.cmd"
-      },
-      "runtimeArgs": ["--sourcemap"],
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
       "env": {
-        "REMOTE_DEBUGGING_PORT": "9222"
-      }
+        "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS": "--remote-debugging-port=9222"
+      },
+      "console": "integratedTerminal"
     },
     {
-      "name": "Debug Renderer Process",
-      "port": 9222,
+      "name": "Attach to the PageTurn window (WebView2)",
+      "type": "msedge",
       "request": "attach",
-      "type": "chrome",
+      "port": 9222,
       "webRoot": "${workspaceFolder}/src/renderer",
-      "timeout": 60000,
-      "presentation": {
-        "hidden": true
-      }
+      "timeout": 60000
     }
   ],
   "compounds": [
     {
       "name": "Debug All",
-      "configurations": ["Debug Main Process", "Debug Renderer Process"],
-      "presentation": {
-        "order": 1
-      }
+      "configurations": ["Debug PageTurn (Tauri)", "Attach to the PageTurn window (WebView2)"],
+      "presentation": { "order": 1 }
     }
   ]
 }

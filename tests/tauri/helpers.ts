@@ -116,3 +116,32 @@ export async function waitExit(r: Running, ms = 10_000): Promise<boolean> {
   }
   return false
 }
+
+const VISIBLE_WINDOWS_PS = `
+Add-Type @"
+using System; using System.Runtime.InteropServices;
+public static class W {
+  public delegate bool P(IntPtr h, IntPtr l);
+  [DllImport("user32.dll")] public static extern bool EnumWindows(P p, IntPtr l);
+  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+  public static int Count(uint want) {
+    int n = 0;
+    EnumWindows((h, l) => { uint pid; GetWindowThreadProcessId(h, out pid);
+      if (pid == want && IsWindowVisible(h)) n++; return true; }, IntPtr.Zero);
+    return n;
+  }
+}
+"@
+[W]::Count($args[0])
+`
+
+/** How many visible top-level windows the app process has (includes WebView2 helper windows). */
+export function visibleWindows(pid: number): number {
+  const out = execFileSync(
+    'powershell',
+    ['-NoProfile', '-NonInteractive', '-Command', `& {${VISIBLE_WINDOWS_PS}} ${pid}`],
+    { encoding: 'utf8' }
+  )
+  return Number(out.trim())
+}

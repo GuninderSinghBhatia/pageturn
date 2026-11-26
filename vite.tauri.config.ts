@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 
 const BASE_CSP = "default-src 'self'; img-src 'self' data: blob:; worker-src 'self' blob:"
 
-// The shared index.html carries the Electron CSP. Tauri's webview also needs to reach its IPC
+// index.html carries the base CSP. Tauri's webview also needs to reach its IPC
 // endpoint (ipc: / http://ipc.localhost); in dev, Vite's HMR needs inline scripts and a socket.
 function tauriCsp(dev: boolean): Plugin {
   return {
@@ -19,7 +19,7 @@ function tauriCsp(dev: boolean): Plugin {
   }
 }
 
-// Renderer build for the Tauri app: the same React code as the Electron build, served from
+// Renderer build for the Tauri app, served from
 // its own port in dev and written to out/renderer-tauri for `tauri build`.
 export default defineConfig(({ command }) => ({
   root: resolve('src/renderer'),

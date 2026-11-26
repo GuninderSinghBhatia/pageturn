@@ -261,6 +261,8 @@ export type WebState = {
   loading: boolean
   error: string | null
 }
+/** Files dragged over the window from outside: hovering, leaving, or dropped (absolute paths). */
+export type FileDrop = { type: 'over' } | { type: 'leave' } | { type: 'drop'; paths: string[] }
 export type NotesGroup = { book: Book; notes: { note: Note; quote: string | null }[] }
 
 export interface Api {
@@ -277,8 +279,8 @@ export interface Api {
     setLiked(bookId: string, liked: boolean): Promise<void>
     onOpenRequest(cb: (book: Book) => void): () => void
     onChanged(cb: () => void): () => void
-    /** Absolute path of a dropped File (Electron webUtils). */
-    pathForFile(file: File): string
+    /** Files dragged onto the window from the desktop; returns the unsubscribe function. */
+    onFileDrop(cb: (e: FileDrop) => void): () => void
   }
   reader: {
     saveProgress(bookId: string, page: number): Promise<void>

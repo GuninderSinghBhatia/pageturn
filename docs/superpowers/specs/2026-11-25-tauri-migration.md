@@ -90,10 +90,32 @@ against the existing suites.
 - Changing rag-service.
 - macOS / Linux builds (kept possible, not tested).
 
-## Status and measured results (2026-11-25)
+## Status and measured results
 
-All stages S0 to S4 are done and S5 is largely done. Electron is still in the repository and still
-works (44 of 44 end-to-end specs pass), so the two builds can ship side by side.
+**2026-11-26: done.** All stages S0 to S5 are complete. Electron is removed from the repository
+(`src/main`, `src/preload`, electron-builder and electron-vite configs, Electron dependencies);
+the SQL migrations moved to `src-tauri/migrations`. The 42 end-to-end specs in `tests/e2e` now run
+only against the Tauri app (Playwright attached to WebView2 over CDP, which replaced the planned
+move to `tauri-driver`), next to the 30 specs in `tests/tauri`, 97 Rust unit tests and 205 Vitest
+tests, all passing. Changes made for the move:
+
+- `library.pathForFile` was replaced by `library.onFileDrop`: Tauri owns OS file drops, so the
+  shelf now gets them (and shows its drop overlay) from Tauri's drag-drop event. Drops while
+  reading are ignored, as in the Electron build.
+- `window.api` is installed synchronously before React starts (`src/renderer/main.tsx`).
+- The web tab (its own window) is now covered by `tests/e2e/help.spec.ts`: it opens on the search
+  page and is hidden when the panel closes.
+
+Still to do, all at release time:
+
+- The first Tauri release (`npm run release`, then a GitHub release by hand; see
+  [UPDATER.md](../../UPDATER.md)).
+- Existing Electron users (v1.0.1) cannot auto-update into the Tauri app. Either ship one last
+  Electron release from `main` with a "download the new version" notice, or tell them to reinstall.
+- A real drag from Explorer onto the shelf, checked by hand once: the tests drive Tauri's drag-drop
+  events, not the OS hand-off itself.
+
+Measured on 2026-11-25, while both builds still existed:
 
 | Measured                                           | Electron   | Tauri      |
 | -------------------------------------------------- | ---------- | ---------- |
@@ -114,12 +136,8 @@ How to read this honestly:
 - **Speed is not better; start-up is about 330 ms slower** and opening a book about 300 ms slower in
   this measurement. Page turns are identical, as expected (the same WebGL code on the same GPU).
 - The numbers come from 3 interleaved runs each through the same remote-debugging harness
-  (`tests/measure/startup.spec.ts`, `npm run` is not wired; run
+  (`tests/measure/startup.spec.ts`, which now measures only the Tauri build; run
   `npx playwright test -c playwright.measure.config.ts`). The first Tauri run was a cold-start outlier
   (1746 ms). They are indicative, not a benchmark.
 - Not yet investigated: where the extra Tauri start-up time goes (WebView2 creation, first-run work,
   or the page's own start-up). Worth profiling if start-up matters.
-
-Remaining: the web tab is a separate window (not embedded) and untested in a real session; dropping a
-PDF onto the shelf is untested; the first real release and the one-time reinstall notice for Electron
-users.

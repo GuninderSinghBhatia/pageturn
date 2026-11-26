@@ -6,10 +6,10 @@ talks to. Paths are relative to the repo root.
 ## The big picture
 
 ```
-┌──────────────────────────── Electron app (TypeScript) ───────────────────────────┐
+┌──────────────────────────── Tauri app (TypeScript UI + Rust) ─────────────────────┐
 │                                                                                    │
-│  Renderer (React UI)  ──preload bridge──▶  Main process  ──▶  SQLite (books,      │
-│  src/renderer             src/preload       src/main          notes, ink, settings)│
+│  Renderer (React UI)  ──window.api────▶  Rust commands ──▶  SQLite (books,        │
+│  src/renderer (WebView2)  platform/      src-tauri          notes, ink, settings)  │
 │                                                  │                                 │
 │                                                  ├──▶ AI providers (Anthropic /    │
 │                                                  │     OpenAI / Gemini)            │
@@ -25,43 +25,47 @@ talks to. Paths are relative to the repo root.
 └───────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Rule of thumb: the renderer never touches files, the database or the network. It asks the
-main process through the preload bridge, and the main process does the work.
+Rule of thumb: the renderer never touches files, the database or the network. It calls
+`window.api`, which invokes a Rust command, and the Rust side does the work.
 
 ---
 
-## A. Desktop app (Electron + React + TypeScript)
+## A. Desktop app (Tauri: React + TypeScript UI, Rust backend)
 
-Every sub-component, with its file, is listed in [DESKTOP_APP.md](DESKTOP_APP.md).
+Every UI sub-component, with its file, is listed in [DESKTOP_APP.md](DESKTOP_APP.md).
 
 ### A1. Shared contract: `src/shared/`
 
-Types and message definitions used by every other part of the app.
+Types used by the UI and its tests.
 
 - `types.ts` book, annotation and settings shapes
-- `ipc.ts` channel names and zod schemas that validate every message (including the RAG ones)
+- `ipc.ts` the `Api` type that `window.api` implements, plus the settings schema
 - `ai.ts`, `lookup.ts` shapes for AI and look-up results
 
-### A2. Preload bridge: `src/preload/`
+### A2. The bridge: `src/renderer/platform/tauriApi.ts`
 
-The only door between the UI and the main process. Exposes `window.api.*` and its types
-(`api.d.ts`). Nothing else from Node reaches the UI.
+Builds `window.api` before React starts: each method invokes a Rust command (`library_list`,
+`rag_ask`, ...) or subscribes to a Rust event (`library:changed`, `ai:token`, ...). The page
+has no other way to reach the computer, and no global Tauri object.
 
-### A3. Main process: `src/main/`
+### A3. Rust backend: `src-tauri/`
 
-Runs the app window and everything that needs the computer.
+| Part                               | Where                                                                                                              |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Entry, plugins, start-up wiring    | `src/lib.rs`, `src/main.rs`: single instance and "Open with", first-run Welcome book, daily backup, close handling |
+| Commands (one file per area)       | `src/commands/`: library, annotations, settings, export, ai, lookup, **rag**, window, app, web                     |
+| Database and migrations            | `migrations/*.sql`, `src/db.rs`, `src/models.rs`, `src/state.rs`                                                   |
+| Data folder (`%APPDATA%\PageTurn`) | `src/paths.rs`                                                                                                     |
+| API keys                           | `src/commands/settings.rs`: encrypted with Windows DPAPI, never sent to the UI                                     |
+| AI providers                       | `src/commands/ai.rs`: Anthropic, OpenAI, Gemini and a mock, streamed with `reqwest`                                |
+| Signed auto-updater                | `src/updater.rs`; see [UPDATER.md](UPDATER.md)                                                                     |
+| Config, icons, permissions         | `tauri.conf.json`, `icons/`, `capabilities/`                                                                       |
 
-| Part          | Where                                   | What it does                                                                                                                            |
-| ------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| App start-up  | `index.ts`, `firstRun.ts`, `logging.ts` | creates the window, single-instance lock, first-run sample book                                                                         |
-| IPC handlers  | `ipc/*.ts`                              | one file per area: library, reader, annotations, settings, ai, lookup, web, export, window, **rag**. `validate.ts` checks every payload |
-| Database      | `db/`                                   | SQLite connection, 5 migrations, repositories for books, annotations, ink, settings                                                     |
-| Library       | `library/`                              | PDF import and file hashing (same file is not added twice)                                                                              |
-| AI providers  | `ai/`                                   | Anthropic, OpenAI, Gemini and a mock, behind one `provider.ts`; `session.ts` keeps chat state, `prompt.ts` builds prompts               |
-| Secrets       | `secrets.ts`                            | API keys encrypted with the OS (Electron safeStorage)                                                                                   |
-| Web / look-up | `web/searchView.ts`, `ipc/lookup.ts`    | Wikipedia cards and the in-app web window                                                                                               |
-| Export        | `export/`                               | backup and Markdown export of notes                                                                                                     |
-| Updates       | `updater.ts`                            | background updates with "Restart now"                                                                                                   |
+Known limit: the Help panel's Web tab is a separate borderless window placed over the panel
+(`src/commands/web.rs`), because Tauri's embedded second webview is still unstable.
+
+History and measured results against the old Electron build:
+[the migration spec](superpowers/specs/2026-11-25-tauri-migration.md).
 
 ### A4. Renderer (UI): `src/renderer/`
 
@@ -84,28 +88,9 @@ Runs the app window and everything that needs the computer.
 
 ---
 
-## A2. Tauri build (Rust): `src-tauri/`
-
-The same React UI, with a Rust backend instead of the Electron main process. `window.api` is provided by
-`src/renderer/platform/tauriApi.ts`, which calls Rust commands by name.
-
-| Part                                                     | Where                                                                                                                 |
-| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Entry, plugins, start-up wiring                          | `src/lib.rs`, `src/main.rs`                                                                                           |
-| Commands (one file per area)                             | `src/commands/`: library, annotations, settings, export, ai, lookup, rag, window, app, web                            |
-| Database and migrations (same SQL files as Electron)     | `src/db.rs`, `src/models.rs`, `src/state.rs`                                                                          |
-| Data folder (`%APPDATA%\PageTurn`, shared with Electron) | `src/paths.rs`                                                                                                        |
-| Signed auto-updater                                      | `src/updater.rs`; see [UPDATER.md](UPDATER.md)                                                                        |
-| Config, icons, permissions                               | `tauri.conf.json`, `icons/`, `capabilities/`                                                                          |
-| Tests                                                    | Rust unit tests in each file; `tests/tauri/` (real app), `tests/installer/` (installer and updates), `tests/measure/` |
-
-Details and measured results: [the migration spec](superpowers/specs/2026-11-25-tauri-migration.md).
-
----
-
 ## B. rag-service (Python + FastAPI): `rag-service/`
 
-A separate local server on `localhost:8000`. The app reaches it through `src/main/ipc/rag.ts`.
+A separate local server on `localhost:8000`. The app reaches it through `src-tauri/src/commands/rag.rs`.
 
 | Part           | Where                      | What it does                                                                                                              |
 | -------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
@@ -132,20 +117,22 @@ Roadmap: `rag-service/GRAPH_RAG.md` (G0–G7). Neo4j in Docker, LangChain
 
 ## C. Quality and tooling
 
-| Part              | Where                                                         | What it does                                                |
-| ----------------- | ------------------------------------------------------------- | ----------------------------------------------------------- |
-| Unit tests        | `tests/unit/` (main, renderer, shared)                        | 289 tests, Vitest                                           |
-| End-to-end tests  | `tests/e2e/`, `tests/fixtures/`                               | 44 tests, Playwright drives the real Electron app           |
-| Build and release | `electron.vite.config.ts`, `electron-builder.yml`, `scripts/` | build, icons, installer, release script                     |
-| Docs              | `docs/`                                                       | progress log, release checklist, specs and plans, this file |
+| Part              | Where                                                           | What it does                                                |
+| ----------------- | --------------------------------------------------------------- | ----------------------------------------------------------- |
+| Unit tests        | `tests/unit/` (renderer, shared)                                | 205 tests, Vitest                                           |
+| Rust tests        | `src-tauri/src/**` (`npm run test:rust`)                        | 97 tests                                                    |
+| End-to-end tests  | `tests/e2e/`, `tests/fixtures/`                                 | 42 tests, Playwright attached to the real Tauri app         |
+| Command tests     | `tests/tauri/`, `tests/installer/`, `tests/measure/`            | Rust commands through the app; installer and updates; speed |
+| Build and release | `src-tauri/tauri.conf.json`, `vite.tauri.config.ts`, `scripts/` | build, installer, release script                            |
+| Docs              | `docs/`                                                         | progress log, release checklist, specs and plans, this file |
 
 ---
 
 ## D. How a request travels (example: "Ask the book")
 
 1. You type a question in the Ask panel (`renderer/ask`) while reading page 200.
-2. The panel calls `window.api.rag.ask(question, page)` (preload).
-3. `main/ipc/rag.ts` validates it and sends `POST /ask` to `localhost:8000`.
+2. The panel calls `window.api.rag.ask(question, page)`, which invokes the Rust command `rag_ask`.
+3. `src-tauri/src/commands/rag.rs` validates it and sends `POST /ask` to `localhost:8000`.
 4. `ask.py` finds the best chunks in Chroma, checks the Spoiler Shield, asks Groq, and
    returns an answer with page numbers.
 5. The panel shows the answer; clicking a page number jumps the reader to it.

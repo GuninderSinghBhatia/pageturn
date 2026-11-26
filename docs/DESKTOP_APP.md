@@ -1,96 +1,70 @@
 # Desktop app: components and sub-components
 
 Detail for part A of [COMPONENTS.md](COMPONENTS.md). Each component lists its
-sub-components, with the file that holds each one. Paths are relative to `src/`.
+sub-components, with the file that holds each one. Paths are relative to `src/`, except in
+section 3 (relative to `src-tauri/`).
 
-Contents: [1 Shared](#1-shared-contract-shared) · [2 Preload](#2-preload-bridge-preload) ·
-[3 Main process](#3-main-process-main) · [4 Renderer](#4-renderer-renderer) ·
+Contents: [1 Shared](#1-shared-contract-shared) · [2 Bridge](#2-bridge-rendererplatform) ·
+[3 Rust backend](#3-rust-backend-src-tauri) · [4 Renderer](#4-renderer-renderer) ·
 [5 Where data lives](#5-where-data-lives) · [6 Cross-cutting rules](#6-cross-cutting-rules)
 
 ---
 
 ## 1. Shared contract: `shared/`
 
-Used by main, preload and renderer, so a message means the same thing everywhere.
+Used by the renderer and the tests. The Rust commands mirror these shapes.
 
-| Sub-component | File        | Role                                                                                                                                             |
-| ------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Domain types  | `types.ts`  | book, highlight, note, ink stroke, bookmark, settings                                                                                            |
-| IPC contract  | `ipc.ts`    | every channel name (library, reader, rag, settings, ai, app, update, export, web, annotations, window, lookup) and a zod schema for each payload |
-| AI types      | `ai.ts`     | request and answer shapes for explain / follow-up                                                                                                |
-| Look-up types | `lookup.ts` | Wikipedia result shape and look-up settings                                                                                                      |
+| Sub-component | File        | Role                                                                                                                                            |
+| ------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Domain types  | `types.ts`  | book, highlight, note, ink stroke, bookmark, settings                                                                                           |
+| API contract  | `ipc.ts`    | the `Api` type of `window.api` (library, reader, rag, settings, ai, app, update, export, web, annotations, window, lookup), the settings schema |
+| AI types      | `ai.ts`     | request and answer shapes for explain / follow-up                                                                                               |
+| Look-up types | `lookup.ts` | Wikipedia result shape and look-up settings                                                                                                     |
 
-## 2. Preload bridge: `preload/`
+## 2. Bridge: `renderer/platform/`
 
-| Sub-component | File       | Role                                                                                                                   |
-| ------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Bridge        | `index.ts` | exposes `window.api.*` (library, reader, rag, settings, ai, export, web, annotations, window, lookup) and nothing else |
-| Typings       | `api.d.ts` | the type of `window.api`, used by the renderer                                                                         |
+| Sub-component | File                | Role                                                                                                     |
+| ------------- | ------------------- | -------------------------------------------------------------------------------------------------------- |
+| Bridge        | `tauriApi.ts`       | builds `window.api.*` from Rust commands (`invoke`) and events (`listen`); installed before React starts |
+| Typings       | `renderer/api.d.ts` | declares `window.api` as the `Api` type                                                                  |
 
 ---
 
-## 3. Main process: `main/`
+## 3. Rust backend: `src-tauri/`
 
 ### 3.1 Start-up and app life
 
-| Sub-component | File          | Role                                                                              |
-| ------------- | ------------- | --------------------------------------------------------------------------------- |
-| Entry         | `index.ts`    | creates the window, single-instance lock, custom data folder for tests, wires IPC |
-| First run     | `firstRun.ts` | adds the bundled Welcome book                                                     |
-| Logging       | `logging.ts`  | `userData/logs/main.log`, rotated at 5 MB, nothing sent anywhere                  |
-| Updater       | `updater.ts`  | background download, "Restart now"                                                |
+| Sub-component        | File                                           | Role                                                                                            |
+| -------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Entry                | `src/main.rs`                                  | starts the library crate                                                                        |
+| Wiring               | `src/lib.rs`                                   | plugins, single instance and "Open with", first run, daily backup, close handling, command list |
+| State, paths, errors | `src/state.rs`, `src/paths.rs`, `src/error.rs` | database handle; `%APPDATA%\PageTurn` and its folders; errors sent to the UI                    |
+| Updater              | `src/updater.rs`                               | signed background updates ([UPDATER.md](UPDATER.md))                                            |
 
-### 3.2 IPC handlers: `ipc/`
+### 3.2 Commands: `src/commands/`
 
-One file per area; each validates its payload (`validate.ts`) before doing work.
+One file per area; each validates its arguments before doing anything.
 
-| File             | Area                                                                                        |
-| ---------------- | ------------------------------------------------------------------------------------------- |
-| `library.ts`     | list, import, open dialog, remove, relocate, read file, save thumbnail, like, change events |
-| `reader.ts`      | save reading progress                                                                       |
-| `annotations.ts` | highlights, notes, tags, ink, bookmarks, all-notes list                                     |
-| `settings.ts`    | settings and API keys (set, has, clear)                                                     |
-| `ai.ts`          | test key, list models, explain, follow-up, cancel, token streaming                          |
-| `lookup.ts`      | Wikipedia summary, open in window or browser                                                |
-| `web.ts`         | in-app web view: show, bounds, back, forward, reload, open external                         |
-| `export.ts`      | Markdown export, backup, restore, open data folder                                          |
-| `window.ts`      | custom window buttons, aspect fit, state                                                    |
-| `rag.ts`         | `rag:health`, `rag:ask`, `rag:who` → HTTP to rag-service on `localhost:8000`                |
-| `index.ts`       | registers everything                                                                        |
+| File             | Role                                                                                                                    |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `library.rs`     | list, import (content hash, no duplicates), dialogs, remove, relocate, PDF bytes, covers, likes, first-run Welcome book |
+| `annotations.rs` | highlights, notes, ink strokes, bookmarks                                                                               |
+| `settings.rs`    | settings (defaults and checks), API keys encrypted with DPAPI in `secrets.bin`                                          |
+| `export.rs`      | Markdown export of notes, backup and restore, the daily backup                                                          |
+| `ai.rs`          | Anthropic, OpenAI, Gemini and a mock provider; prompts, streamed tokens, follow-ups, cancel                             |
+| `lookup.rs`      | Wikipedia summaries and look-up addresses                                                                               |
+| `rag.rs`         | rag-service calls on `localhost:8000` (`/health`, `/ask`, `/who`)                                                       |
+| `web.rs`         | the Help panel's Web tab, as its own window placed over the panel                                                       |
+| `window.rs`      | window controls, state events, aspect lock                                                                              |
+| `app.rs`         | version, logs, update checks, quit warning                                                                              |
 
-### 3.3 Database: `db/`
+### 3.3 Database
 
-| Sub-component | File                                                               | Role                                                      |
-| ------------- | ------------------------------------------------------------------ | --------------------------------------------------------- |
-| Connection    | `connection.ts`                                                    | SQLite (better-sqlite3, WAL), runs migrations in order    |
-| Migrations    | `migrations/001–005`                                               | init, annotations, reader redesign, book likes, note tags |
-| Repositories  | `repositories/books.ts`, `annotations.ts`, `ink.ts`, `settings.ts` | all SQL lives here, nothing else touches tables           |
-| Retry         | `retry.ts`                                                         | retries a failed save before the UI is told               |
-
-### 3.4 Library: `library/`
-
-| Sub-component | File        | Role                                                                                      |
-| ------------- | ----------- | ----------------------------------------------------------------------------------------- |
-| Import        | `import.ts` | imports PDFs by content, so a renamed copy updates the path instead of adding a duplicate |
-| Book id       | `hash.ts`   | book id = SHA-256 of the first 1 MB plus the file size                                    |
-
-### 3.5 AI providers: `ai/`
-
-| Sub-component      | File                                     | Role                                                                          |
-| ------------------ | ---------------------------------------- | ----------------------------------------------------------------------------- |
-| Provider interface | `provider.ts`                            | one shape for every AI service; runs only in main, so keys never reach the UI |
-| Providers          | `anthropic.ts`, `openai.ts`, `gemini.ts` | the real services                                                             |
-| Mock               | `mock.ts`                                | fixed answers for tests and demos (`PAGETURN_AI_MOCK=1`)                      |
-| Session            | `session.ts`                             | keeps chat state, streaming, cancel                                           |
-| Prompt             | `prompt.ts`                              | trims the selected text to the context budget                                 |
-
-### 3.6 Other main-process parts
-
-| Sub-component | File                                     | Role                                                                    |
-| ------------- | ---------------------------------------- | ----------------------------------------------------------------------- |
-| Secrets       | `secrets.ts`                             | API keys encrypted with the OS (safeStorage)                            |
-| Web view      | `web/searchView.ts`                      | builds search addresses (with the book title) for the in-app web window |
-| Export        | `export/markdown.ts`, `export/backup.ts` | notes to Markdown; full backup and restore                              |
+| Sub-component | File                      | Role                                                     |
+| ------------- | ------------------------- | -------------------------------------------------------- |
+| Migrations    | `migrations/NNN_name.sql` | schema; each file moves `user_version` to NNN            |
+| Connection    | `src/db.rs`               | opens SQLite (rusqlite) and runs the migrations in order |
+| Row types     | `src/models.rs`           | books, annotations and settings as sent to the UI        |
 
 ---
 
@@ -232,21 +206,21 @@ The main screen: one book, nothing but the book.
 
 ## 5. Where data lives
 
-| Data                              | Where                                                           |
-| --------------------------------- | --------------------------------------------------------------- |
-| Books list, progress, likes       | SQLite table `books`                                            |
-| Highlights, notes, ink, bookmarks | tables `highlights`, `notes`, `ink_strokes`, `bookmarks`        |
-| Settings                          | table `settings` (key, JSON value)                              |
-| API keys                          | encrypted by the OS, never sent to the UI                       |
-| PDF files                         | stay where they are; the app stores the path and a content hash |
-| Covers                            | thumbnail folder in the app data directory                      |
-| Logs                              | `userData/logs/main.log`                                        |
+| Data                              | Where                                                             |
+| --------------------------------- | ----------------------------------------------------------------- |
+| Books list, progress, likes       | SQLite table `books`                                              |
+| Highlights, notes, ink, bookmarks | tables `highlights`, `notes`, `ink_strokes`, `bookmarks`          |
+| Settings                          | table `settings` (key, JSON value)                                |
+| API keys                          | `secrets.bin`, encrypted with Windows DPAPI, never sent to the UI |
+| PDF files                         | stay where they are; the app stores the path and a content hash   |
+| Covers                            | thumbnail folder in the app data directory                        |
+| Logs                              | `%APPDATA%\PageTurn\logs\main.log`                                |
 
 ## 6. Cross-cutting rules
 
 - The renderer never touches files, the database or the network; it calls `window.api`.
-- Every IPC message is checked with a zod schema in `shared/ipc.ts`.
-- All SQL lives in `main/db/repositories`.
-- API keys exist only in the main process.
+- Every Rust command checks its arguments before acting.
+- All SQL lives in the Rust backend (`src-tauri/`).
+- API keys exist only on the Rust side.
 - A save that fails is retried, then kept in memory and shown as a toast with Retry.
 - The reader falls back to a slide transition without WebGL.

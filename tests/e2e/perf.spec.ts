@@ -8,7 +8,7 @@ test('page turns hold p95 frame time ≤ 20 ms on the 1000-page fixture', async 
   test.setTimeout(120_000)
   const { app, page } = await launchApp()
   try {
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].focus())
+    await page.bringToFront()
     await page.evaluate((p) => window.api.library.import([p]), TEXT1000)
     await page.getByTestId('book-card').getByRole('button').first().click()
     const stage = page.getByTestId('book-stage')

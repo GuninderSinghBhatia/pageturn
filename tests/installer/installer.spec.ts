@@ -18,6 +18,10 @@ import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { launch, makeUserData, TEXT500, type Running } from '../tauri/helpers'
 
+// NSIS needs its arguments unquoted. Node honours this for execFileSync too, but its types only
+// declare it for spawn, so it is spread in.
+const VERBATIM: object = { windowsVerbatimArguments: true }
+
 /**
  * Installer and signed-update tests. They install the TEST identity ("PageTurn Test") built by
  * `npm run tauri:test:installers:build` into a temp folder, so a real PageTurn is never touched.
@@ -191,7 +195,7 @@ test.afterAll(async () => {
       execFileSync(un, ['/S', `_?=${installDir}`], {
         stdio: 'ignore',
         timeout: 60_000,
-        windowsVerbatimArguments: true
+        ...VERBATIM
       })
     } catch {
       /* best effort */
@@ -206,7 +210,7 @@ test('1. silent install: files, uninstaller, registry entry and shortcut; a real
   // /D= must be last and unquoted (NSIS).
   execFileSync(setupOf('1.0.1'), ['/S', `/D=${installDir}`], {
     timeout: 150_000,
-    windowsVerbatimArguments: true
+    ...VERBATIM
   })
   await expect
     .poll(() => existsSync(join(installDir, 'uninstall.exe')), { timeout: 60_000 })
@@ -367,7 +371,7 @@ test('5. uninstall removes the program, shortcut and registry entry but keeps th
   // `_?=` makes the uninstaller run in place and wait, instead of copying itself and returning.
   const child = spawn(un, ['/S', `_?=${installDir}`], {
     stdio: 'ignore',
-    windowsVerbatimArguments: true
+    ...VERBATIM
   })
   await new Promise<void>((res) => child.once('exit', () => res()))
   await expect.poll(() => existsSync(exe), { timeout: 60_000 }).toBe(false)

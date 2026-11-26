@@ -61,7 +61,7 @@ beforeEach(() => {
     library: {
       list: vi.fn(async () => books),
       onChanged: vi.fn(() => () => {}),
-      pathForFile: vi.fn(() => ''),
+      onFileDrop: vi.fn(() => () => undefined),
       setLiked
     },
     annotations: { listAllNotes },

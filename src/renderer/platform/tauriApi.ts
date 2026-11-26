@@ -1,14 +1,14 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
-import type { Api, WindowState } from '@shared/ipc'
+import type { Api, FileDrop, WindowState } from '@shared/ipc'
 import type { Book } from '@shared/types'
 
 /**
- * `window.api` for the Tauri build: the same `Api` the Electron preload provides, backed by
- * Rust commands. Command names are the Electron channel names in snake_case
- * (`library:list` -> `library_list`); argument keys are camelCase.
- * Main -> UI events keep their Electron names (`library:changed`, `ai:token`, ...).
+ * `window.api`: the `Api` type in src/shared/ipc.ts, backed by the Rust commands in src-tauri.
+ * Command names are the old IPC channel names in snake_case (`library:list` -> `library_list`);
+ * argument keys are camelCase. Rust -> UI events keep the channel names (`library:changed`,
+ * `ai:token`, ...).
  */
 
 const call = <T>(cmd: string, args?: Record<string, unknown>): Promise<T> =>
@@ -16,7 +16,7 @@ const call = <T>(cmd: string, args?: Record<string, unknown>): Promise<T> =>
     throw e instanceof Error ? e : new Error(String(e))
   })
 
-/** Subscribes to a Rust -> UI event; returns the unsubscribe function (sync, like Electron). */
+/** Subscribes to a Rust -> UI event; returns the unsubscribe function synchronously. */
 function subscribe<T>(event: string, cb: (payload: T) => void): () => void {
   let off: (() => void) | null = null
   let cancelled = false
@@ -39,6 +39,27 @@ const bytesToBase64 = (buf: ArrayBuffer): string => {
   return btoa(s)
 }
 
+/** Tauri's window drag-drop event, reduced to what the shelf needs. */
+function onFileDrop(cb: (e: FileDrop) => void): () => void {
+  let off: (() => void) | null = null
+  let cancelled = false
+  void getCurrentWebview()
+    .onDragDropEvent((e) => {
+      const p = e.payload
+      if (p.type === 'drop') cb({ type: 'drop', paths: p.paths })
+      else if (p.type === 'leave') cb({ type: 'leave' })
+      else cb({ type: 'over' })
+    })
+    .then((un) => {
+      if (cancelled) un()
+      else off = un
+    })
+  return () => {
+    cancelled = true
+    off?.()
+  }
+}
+
 const api: Api = {
   library: {
     list: () => call('library_list'),
@@ -54,8 +75,8 @@ const api: Api = {
     setLiked: (bookId, liked) => call('library_set_liked', { bookId, liked }),
     onOpenRequest: (cb) => subscribe<Book>('library:openRequest', cb),
     onChanged: (cb) => subscribe<null>('library:changed', () => cb()),
-    // WebView2 gives no paths for dropped files: Tauri's drag-drop event does (see install()).
-    pathForFile: () => ''
+    // Tauri owns OS file drops (dragDropEnabled), so the page gets no HTML drop events for them.
+    onFileDrop: (cb) => onFileDrop(cb)
   },
   reader: { saveProgress: (bookId, page) => call('reader_save_progress', { bookId, page }) },
   rag: {
@@ -135,12 +156,7 @@ const api: Api = {
   }
 }
 
-/** Installs `window.api` and routes dropped files (paths) to the library import. */
-export async function install(): Promise<void> {
+/** Installs `window.api`. */
+export function install(): void {
   ;(window as unknown as { api: Api }).api = api
-  await getCurrentWebview().onDragDropEvent((e) => {
-    if (e.payload.type !== 'drop') return
-    const pdfs = e.payload.paths.filter((p) => /\.pdf$/i.test(p))
-    if (pdfs.length) void api.library.import(pdfs)
-  })
 }

@@ -5,7 +5,7 @@ import { launchApp } from './helpers'
 
 type Violation = { id: string; impact: string | null; nodes: { target: string[] }[] }
 
-/** Runs axe-core in the page (AxeBuilder needs a second page, which Electron cannot open). */
+/** Runs axe-core in the page (AxeBuilder needs a second page, which the attached app cannot open). */
 async function seriousViolations(page: Page): Promise<string[]> {
   const violations = (await page.evaluate(
     `${axe.source}; axe.run(document, { resultTypes: ['violations'] }).then((r) => r.violations)`

@@ -1,19 +1,27 @@
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
   "include": [
-    "electron.vite.config.*",
     "vitest.config.*",
-    "playwright.config.*",
-    "src/main/**/*",
-    "src/preload/**/*",
+    "playwright*.config.*",
+    "vite.tauri.config.*",
     "src/shared/**/*",
+    "src/renderer/api.d.ts",
     "scripts/**/*",
-    "tests/e2e/**/*"
+    "tests/e2e/**/*",
+    "tests/tauri/**/*",
+    "tests/installer/**/*",
+    "tests/measure/**/*"
   ],
   "compilerOptions": {
     "composite": true,
-    "types": ["electron-vite/node"],
+    "types": [
+      "node"
+    ],
     "baseUrl": ".",
-    "paths": { "@shared/*": ["src/shared/*"] }
+    "paths": {
+      "@shared/*": [
+        "src/shared/*"
+      ]
+    }
   }
 }

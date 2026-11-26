@@ -30,6 +30,42 @@ test('starts empty, imports PDFs, shows them on the shelf, dedupes by content', 
   await expect(page.getByTestId('book-card')).toHaveCount(2)
 })
 
+test('dropping files on the shelf shows the drop overlay and imports only the PDFs', async () => {
+  app = await launch()
+  const { page } = app
+  await expect(page.getByRole('heading', { name: 'Your library is empty' })).toBeVisible()
+  // An OS drop reaches the page as Tauri's tauri://drag-* events (dragDropEnabled); emitting
+  // them drives the same path as a real drag from Explorer, minus the OS hand-off itself.
+  const emit = (event: string, payload: unknown): Promise<void> =>
+    page.evaluate(
+      ([event, payload]) =>
+        (
+          window as unknown as {
+            __TAURI_INTERNALS__: { invoke(c: string, a?: unknown): Promise<void> }
+          }
+        ).__TAURI_INTERNALS__.invoke('plugin:event|emit', { event, payload }),
+      [event, payload] as const
+    )
+  const position = { x: 200, y: 200 }
+  await emit('tauri://drag-enter', { paths: [TEXT500], position })
+  await emit('tauri://drag-over', { position })
+  await expect(page.getByText('Drop PDFs to add them')).toBeVisible()
+  await emit('tauri://drag-leave', null)
+  await expect(page.getByText('Drop PDFs to add them')).toHaveCount(0)
+
+  await emit('tauri://drag-over', { position })
+  await emit('tauri://drag-drop', { paths: [TEXT500, join(__dirname, 'helpers.ts')], position })
+  await expect(page.getByText('Drop PDFs to add them')).toHaveCount(0)
+  await expect(page.getByTestId('book-card')).toHaveCount(1)
+
+  // While reading, a drop is ignored (the shelf is not showing).
+  await page.getByTestId('book-card').getByRole('button').first().click()
+  await expect(page.getByTestId('book-stage')).toBeVisible()
+  await emit('tauri://drag-drop', { paths: [ODD3], position })
+  await page.waitForTimeout(500)
+  expect(await page.evaluate(async () => (await window.api.library.list()).length)).toBe(1)
+})
+
 test('the library, likes and progress survive a restart', async () => {
   const userData = makeUserData()
   app = await launch(userData)
