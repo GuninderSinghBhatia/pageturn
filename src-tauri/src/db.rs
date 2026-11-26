@@ -1,4 +1,4 @@
-//! SQLite connection and migrations (`src-tauri/migrations`, unchanged from the Electron build,
+//! SQLite connection and migrations (`src-tauri/migrations`, unchanged from PageTurn 1.x,
 //! so existing libraries open as they are); each NNN_name.sql moves `user_version` to NNN.
 
 use rusqlite::Connection;
@@ -6,22 +6,10 @@ use std::path::Path;
 
 const MIGRATIONS: &[(i64, &str)] = &[
     (1, include_str!("../migrations/001_init.sql")),
-    (
-        2,
-        include_str!("../migrations/002_annotations.sql"),
-    ),
-    (
-        3,
-        include_str!("../migrations/003_reader_redesign.sql"),
-    ),
-    (
-        4,
-        include_str!("../migrations/004_book_likes.sql"),
-    ),
-    (
-        5,
-        include_str!("../migrations/005_note_tags.sql"),
-    ),
+    (2, include_str!("../migrations/002_annotations.sql")),
+    (3, include_str!("../migrations/003_reader_redesign.sql")),
+    (4, include_str!("../migrations/004_book_likes.sql")),
+    (5, include_str!("../migrations/005_note_tags.sql")),
 ];
 
 /// Opens (creating if needed) the database and brings it up to the latest migration.

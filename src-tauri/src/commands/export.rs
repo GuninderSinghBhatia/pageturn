@@ -1,6 +1,6 @@
 //! `export` commands: Markdown notes, JSON backup / import, daily backup, data folder.
 //! Ports `src/main/ipc/export.ts`, `export/markdown.ts` and `export/backup.ts`.
-//! The backup file format is shared with the Electron build: rows are stored as the database
+//! The backup file format is shared with PageTurn 1.x: rows are stored as the database
 //! has them (snake_case columns), ink strokes keep their blob as base64.
 
 use crate::error::{AppError, AppResult};

@@ -64,7 +64,7 @@ has no other way to reach the computer, and no global Tauri object.
 Known limit: the Help panel's Web tab is a separate borderless window placed over the panel
 (`src/commands/web.rs`), because Tauri's embedded second webview is still unstable.
 
-History and measured results against the old Electron build:
+History and measured results against the 1.x build:
 [the migration spec](superpowers/specs/2026-11-25-tauri-migration.md).
 
 ### A4. Renderer (UI): `src/renderer/`

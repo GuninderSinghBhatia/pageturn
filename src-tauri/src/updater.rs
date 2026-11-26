@@ -1,4 +1,4 @@
-//! Signed auto-update (tauri-plugin-updater), same behaviour as the Electron build:
+//! Signed auto-update (tauri-plugin-updater), same behaviour as PageTurn 1.x:
 //! check at start-up and every 4 hours, download in the background, tell the page
 //! (`update:available`, `update:downloaded`), install and restart when the user agrees.
 //!
@@ -24,7 +24,7 @@ struct Pending {
 
 static PENDING: Mutex<Option<Pending>> = Mutex::new(None);
 
-/// What a check found. Serialised for the UI in the same shape as the Electron build.
+/// What a check found. Serialised for the UI in the same shape as PageTurn 1.x.
 #[derive(Debug, PartialEq)]
 pub enum Status {
     Dev,
@@ -199,7 +199,7 @@ mod tests {
     }
 
     #[test]
-    fn status_json_matches_the_electron_shapes() {
+    fn status_json_matches_the_v1_shapes() {
         assert_eq!(Status::Dev.to_json(), json!({"status": "dev"}));
         assert_eq!(Status::Current.to_json(), json!({"status": "current"}));
         assert_eq!(Status::Error.to_json(), json!({"status": "error"}));

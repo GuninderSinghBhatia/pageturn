@@ -22,7 +22,7 @@ fn pdf_args(argv: &[String]) -> Vec<String> {
         .collect()
 }
 
-/// Imports the given PDFs and tells the UI to open the last one (like the Electron build).
+/// Imports the given PDFs and tells the UI to open the last one (like PageTurn 1.x).
 /// `wait_ms` gives the webview time to load its listeners when the app is only just starting.
 fn open_from_args(app: &tauri::AppHandle, argv: Vec<String>, wait_ms: u64) {
     let paths = pdf_args(&argv);
@@ -47,7 +47,7 @@ fn open_from_args(app: &tauri::AppHandle, argv: Vec<String>, wait_ms: u64) {
 }
 
 /// `PAGETURN_DISABLE_WEBGL=1` forces the slide-transition fallback (tests, GPU troubleshooting),
-/// like the Electron build. Must run before the webview is created.
+/// like PageTurn 1.x. Must run before the webview is created.
 fn apply_webgl_switch() {
     if std::env::var("PAGETURN_DISABLE_WEBGL").as_deref() != Ok("1") {
         return;

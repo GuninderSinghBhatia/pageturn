@@ -1,4 +1,4 @@
-//! Where PageTurn keeps its data. Same folder as the Electron build (`%APPDATA%\PageTurn`),
+//! Where PageTurn keeps its data. Same folder as PageTurn 1.x (`%APPDATA%\PageTurn`),
 //! NOT Tauri's default (`%APPDATA%\com.pageturn.app`), so existing libraries carry over.
 
 use std::path::PathBuf;

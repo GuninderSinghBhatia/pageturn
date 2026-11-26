@@ -1,7 +1,7 @@
 //! `web` commands: the Help panel's Web tab.
 //!
-//! LIMITATION (first version): Electron embeds the page inside the main window with a
-//! WebContentsView. Tauri's multi-webview support is unstable, so here the page lives in its
+//! LIMITATION: the page is not embedded inside the main window, because Tauri's
+//! multi-webview support is unstable, so here the page lives in its
 //! own borderless `tauri::WebviewWindow` (label `web`), owned by the main window and placed
 //! over the rectangle the renderer reserves (CSS pixels relative to the main window's client
 //! area, converted with the scale factor). It is a separate OS window: it does not clip with

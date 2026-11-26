@@ -53,7 +53,7 @@ fn format_line(level: Level, msg: &str) -> String {
     format!("[{ts}] [{}] {msg}\n", level.as_str().to_lowercase())
 }
 
-/// Move `main.log` to `main.old.log` once it reaches `max_bytes` (like electron-log).
+/// Move `main.log` to `main.old.log` once it reaches `max_bytes`.
 pub fn rotate_if_needed(path: &Path, max_bytes: u64) {
     if fs::metadata(path)
         .map(|m| m.len() >= max_bytes)
@@ -163,7 +163,7 @@ pub async fn app_version(app: AppHandle) -> AppResult<String> {
     Ok(app.package_info().version.to_string())
 }
 
-/// Checks for a newer signed version. `{status:'dev'}` while developing, like the Electron build.
+/// Checks for a newer signed version. `{status:'dev'}` while developing, like PageTurn 1.x.
 #[tauri::command]
 pub async fn app_check_for_updates(app: AppHandle) -> AppResult<serde_json::Value> {
     Ok(crate::updater::check(&app).await.to_json())

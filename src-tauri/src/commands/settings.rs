@@ -1,9 +1,9 @@
 //! `settings` commands: the settings table and API-key storage.
 //!
 //! API keys live in `<data_dir>/secrets.bin` as JSON `{ provider: base64(ciphertext) }`
-//! (same file and shape as the Electron build), encrypted with Windows DPAPI. Electron's
-//! safeStorage ciphertext cannot be decrypted by plain DPAPI, so keys saved by the old
-//! Electron build read as "no key" and the user re-enters them (accepted). Keys never leave
+//! (same file and shape as PageTurn 1.x), encrypted with Windows DPAPI. Keys
+//! saved by 1.x used a different scheme that plain DPAPI cannot decrypt, so they read
+//! as "no key" and the user re-enters them (accepted). Keys never leave
 //! Rust: the UI can only store, clear, or ask whether one exists.
 use crate::error::{invalid, AppError, AppResult};
 use crate::state::AppState;
@@ -258,7 +258,7 @@ fn store_set(dir: &Path, c: &dyn SecretCipher, provider: &str, key: &str) -> App
     Ok(())
 }
 
-/// The key, or None when missing or not decryptable (e.g. saved by the Electron build).
+/// The key, or None when missing or not decryptable (e.g. saved by PageTurn 1.x).
 fn store_get(dir: &Path, c: &dyn SecretCipher, provider: &str) -> AppResult<Option<String>> {
     check_provider(provider)?;
     let Some(blob) = read_secrets(dir)

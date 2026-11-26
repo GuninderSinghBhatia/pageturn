@@ -6,7 +6,7 @@ use serde::Serialize;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tauri::{AppHandle, Emitter, Manager, WebviewWindow, WindowEvent};
 
-/// Pixels of the work area kept free for the window frame (same as the Electron build).
+/// Pixels of the work area kept free for the window frame (same as PageTurn 1.x).
 const FRAME_ALLOWANCE: f64 = 40.0;
 /// A resize closer than this to the wanted size is left alone (stops feedback loops).
 const TOLERANCE_PX: f64 = 2.0;

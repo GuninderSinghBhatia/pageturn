@@ -121,7 +121,7 @@ wins and where it does not.
 - Add `RAG_RETRIEVER=graph` and `RAG_RETRIEVER=vector+graph` next to the existing
   `vector|tree|hybrid` switch (merge both result lists, remove duplicate chunks).
 - Optional: a small router (relation-style question -> graph, otherwise vector).
-- Claude can do the Electron side if the app needs a new button or label; you keep the
+- Claude can do the app side if the app needs a new button or label; you keep the
   Python.
 
 **Done when:** `/ask` works with each setting, and the eval table includes `vector+graph`.

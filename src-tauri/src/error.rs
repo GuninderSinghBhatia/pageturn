@@ -1,5 +1,5 @@
 //! One error type for every command. It reaches the UI as a plain string, so `invoke`
-//! rejects with the message (the Electron build rejected with an Error of the same text).
+//! rejects with the message (PageTurn 1.x rejected with an Error of the same text).
 
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
@@ -31,7 +31,7 @@ impl serde::Serialize for AppError {
 
 pub type AppResult<T> = Result<T, AppError>;
 
-/// Rejects a payload that fails validation (the zod schemas' job in the Electron build).
+/// Rejects a payload that fails validation (the zod schemas' job in PageTurn 1.x).
 pub fn invalid(what: impl std::fmt::Display) -> AppError {
     AppError::Msg(format!("Invalid input: {what}"))
 }

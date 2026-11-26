@@ -118,7 +118,7 @@ test('app: version, logs are written, update check says dev, errors are logged',
 test('AI (mock provider): streams tokens, finishes, follow-up and cancel work', async () => {
   app = await launch(undefined, { env: { PAGETURN_AI_MOCK: '1' } })
   const { page } = app
-  // Like the Electron build, the mock still needs a saved key for the selected provider.
+  // Like PageTurn 1.x, the mock still needs a saved key for the selected provider.
   await page.evaluate(async () => {
     const { aiProvider } = await window.api.settings.get()
     await window.api.settings.setApiKey(aiProvider, 'sk-test-key-0001')

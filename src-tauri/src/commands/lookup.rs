@@ -239,7 +239,7 @@ fn open_lookup_window(app: &AppHandle, url: &str) -> AppResult<()> {
             main.outer_size(),
             main.scale_factor(),
         ) {
-            // Top-right of the main window, like the Electron build.
+            // Top-right of the main window, like PageTurn 1.x.
             let x = (pos.x as f64 + size.width as f64) / scale - 520.0 - 24.0;
             b = b.position(x.max(0.0), pos.y as f64 / scale + 48.0);
         }

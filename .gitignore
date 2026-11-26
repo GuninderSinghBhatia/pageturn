@@ -22,3 +22,7 @@ rag-service/docs/
 src-tauri/target/
 src-tauri/gen/
 dist-tauri/
+
+# local tool caches
+.impeccable/
+*.tsbuildinfo

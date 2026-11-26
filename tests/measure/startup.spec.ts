@@ -8,7 +8,7 @@ import { launch, makeUserData, TEXT500 } from '../tauri/helpers'
  * Start-up time and memory of the Tauri release build (`npm run tauri:build` first).
  * Not part of the regular suites. Run: npx playwright test -c playwright.measure.config.ts
  *
- * The last Electron build's numbers, taken with this same harness, are in
+ * The 1.x build's numbers, taken with this same harness, are in
  * docs/superpowers/specs/2026-11-25-tauri-migration.md. "Memory" sums the app process and every
  * child it started (WebView2's helper processes), as working set and as private bytes.
  */

@@ -3,7 +3,7 @@
 Date: 2026-10-16
 Status: Approved in conversation (design sections 1–5); user chose spec → build without a separate plan document.
 Source: user's `reader-ui-spec.md` (Dribbble "Ebook Reader App" reference), reconciled with the PDF reader built in Plans 1–2.
-Builds on: branch `plan2-annotations`. Supersedes the reader-chrome parts of `2026-10-16-pdf-book-reader-design.md` §4.2 and Plan 3's help *panel* (replaced by cards).
+Builds on: branch `plan2-annotations`. Supersedes the original reader chrome and help panel (replaced by cards).
 
 ## 1. Goal
 

@@ -1,6 +1,6 @@
 //! `annotations` commands: highlights, notes, bookmarks and ink strokes.
 //! Port of `src/main/ipc/annotations.ts` and the annotations / ink repositories. The database
-//! layout is shared with the Electron build, so JSON columns and the ink blob are byte-compatible.
+//! layout is shared with PageTurn 1.x, so JSON columns and the ink blob are byte-compatible.
 //! The logic lives in plain functions over `&Connection` (tests use `db::open_in_memory`).
 use crate::error::{invalid, AppResult};
 use crate::models::{check_book_id, check_uuid, now_ms, require_book, to_book, Book, BOOK_COLUMNS};

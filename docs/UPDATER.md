@@ -37,7 +37,7 @@ never commit it. To rotate it, a release signed with the old key must first ship
 3. Create a GitHub release `v<version>` and attach `dist-tauri/*` (the installer, the `.sig`,
    `latest.json`, `PageTurn-Setup.exe`). Installed apps pick it up within 4 hours.
 
-Existing **Electron** users cannot update into the Tauri app (different updater); they need to
+Existing **1.x** users cannot update into the Tauri app (different updater); they need to
 download the new installer once.
 
 ## Testing
