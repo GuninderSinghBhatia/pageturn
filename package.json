@@ -25,7 +25,8 @@
     "tauri:build:debug": "cd src-tauri && cargo build --no-default-features",
     "tauri:test": "playwright test -c playwright.tauri.config.ts",
     "tauri:test:installers:build": "node scripts/build-test-installers.mjs",
-    "tauri:test:installers": "playwright test -c playwright.installer.config.ts"
+    "tauri:test:installers": "playwright test -c playwright.installer.config.ts",
+    "fetch-models": "node scripts/fetch-models.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.12.5"

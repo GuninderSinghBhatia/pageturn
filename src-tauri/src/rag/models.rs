@@ -44,17 +44,37 @@ pub const RERANKER: Spec = Spec {
 
 const FILES: [&str; 3] = ["config.json", "tokenizer.json", "model.safetensors"];
 
+/// The installer's copy of the models: `<install folder>/models/<name>/`, set once at startup.
+static BUNDLED: OnceLock<PathBuf> = OnceLock::new();
+
+pub fn set_bundled_dir(dir: PathBuf) {
+    let _ = BUNDLED.set(dir);
+}
+
+/// Where a model is downloaded when the installer's copy is missing (dev builds, or files
+/// deleted from the install folder).
 pub fn models_dir(data_dir: &Path) -> PathBuf {
     data_dir.join("models")
 }
 
+fn complete(dir: &Path) -> bool {
+    FILES.iter().all(|f| dir.join(f).exists())
+}
+
+/// The installer's copy when it is complete, else the download folder.
 fn dir_of(data_dir: &Path, spec: &Spec) -> PathBuf {
-    models_dir(data_dir).join(spec.name)
+    pick_dir(BUNDLED.get().map(PathBuf::as_path), data_dir, spec)
+}
+
+fn pick_dir(bundled: Option<&Path>, data_dir: &Path, spec: &Spec) -> PathBuf {
+    match bundled.map(|b| b.join(spec.name)) {
+        Some(dir) if complete(&dir) => dir,
+        _ => models_dir(data_dir).join(spec.name),
+    }
 }
 
 pub fn is_downloaded(data_dir: &Path, spec: &Spec) -> bool {
-    let dir = dir_of(data_dir, spec);
-    FILES.iter().all(|f| dir.join(f).exists())
+    complete(&dir_of(data_dir, spec))
 }
 
 /// One download at a time per model, so two books starting at once don't fetch it twice.
@@ -329,4 +349,42 @@ pub fn reranker(data_dir: &Path) -> Result<Arc<Reranker>, String> {
     let r = Arc::new(Reranker::load(&dir_of(data_dir, &RERANKER))?);
     *slot = Some(r.clone());
     Ok(r)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn with_files(dir: &Path, files: &[&str]) {
+        std::fs::create_dir_all(dir).unwrap();
+        for f in files {
+            std::fs::write(dir.join(f), b"x").unwrap();
+        }
+    }
+
+    #[test]
+    fn the_installers_copy_is_used_when_complete() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (install, data) = (tmp.path().join("install/models"), tmp.path().join("data"));
+        with_files(&install.join(EMBEDDER.name), &FILES);
+        with_files(&install.join(RERANKER.name), &["config.json"]); // damaged: weights deleted
+
+        assert_eq!(pick_dir(Some(&install), &data, &EMBEDDER), install.join(EMBEDDER.name));
+        assert_eq!(pick_dir(Some(&install), &data, &RERANKER), data.join("models").join(RERANKER.name));
+        assert_eq!(pick_dir(None, &data, &EMBEDDER), data.join("models").join(EMBEDDER.name));
+    }
+
+    /// The installer's models come from scripts/fetch-models.mjs, which reads the Spec
+    /// constants from this file: keep them in the shape its parser expects.
+    #[test]
+    fn fetch_models_can_read_these_specs() {
+        let src = include_str!("models.rs");
+        let consts = src.lines().filter(|l| l.starts_with("pub const ") && l.ends_with(": Spec = Spec {"));
+        assert_eq!(consts.count(), 2);
+        for spec in [&EMBEDDER, &RERANKER] {
+            for value in [spec.name, spec.repo, spec.rev, spec.weights_sha256] {
+                assert!(src.contains(&format!("\"{value}\"")), "{value} must be a plain string literal");
+            }
+        }
+    }
 }

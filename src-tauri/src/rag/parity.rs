@@ -175,3 +175,64 @@ fn embedding_speed() {
         assert!(worst > 0.9999, "embed_all changed the vectors");
     }
 }
+
+/// A5 by hand: the in-app Self-RAG answering through a real AI provider, the reader's Claude
+/// plan (their installed Claude Code CLI), on the eval book. Spends a few dozen plan messages.
+///
+///     cargo test --release --lib rag::parity::a5_with_claude_plan -- --ignored --nocapture
+#[test]
+#[ignore = "uses the Claude plan through the installed Claude Code CLI"]
+fn a5_with_claude_plan() {
+    use crate::state::AppState;
+    use std::sync::Mutex;
+
+    let (embedder, _) = load_models();
+    let pages: Vec<String> = serde_json::from_str(
+        &std::fs::read_to_string(test_data().join("eval_pages.json")).expect("run hit_at_3 first"),
+    )
+    .unwrap();
+    let mut chunks = Vec::new();
+    for (i, text) in pages.iter().enumerate() {
+        for c in chunk::split_text(text) {
+            chunks.push(store::Chunk { page: i as i64 + 1, text: c });
+        }
+    }
+    let texts: Vec<String> = chunks.iter().map(|c| c.text.clone()).collect();
+    let vecs = embedder.embed_all(&texts, &|_| {}).unwrap();
+
+    let mut conn = crate::db::open_in_memory().unwrap();
+    conn.execute("INSERT INTO books (id, path, added_at) VALUES ('eval', 'eval.pdf', 1)", [])
+        .unwrap();
+    conn.execute("INSERT INTO settings (key, value_json) VALUES ('aiProvider', '\"claude\"')", [])
+        .unwrap();
+    store::save_book(&mut conn, "eval", "eval.pdf", models::EMBEDDER.name, &chunks, &vecs).unwrap();
+    let state = AppState { db: Mutex::new(conn), data_dir: test_data() };
+
+    let end = 10_000;
+    let cases: [(&str, i64, &str); 7] = [
+        ("What does a tokenizer do to a word like \"cooking\"?", end, "answer citing p.36"),
+        ("What is the difference between greedy sampling and sampling with temperature?", end, "answer near p.191"),
+        ("What is LoRA and why is it cheaper than full finetuning?", end, "answer near p.604"),
+        ("Who won the 2018 FIFA World Cup?", end, "refusal, no pages"),
+        ("thanks!", end, "chat reply, no pages"),
+        ("What is LoRA and why is it cheaper than full finetuning?", 300, "You haven't got there yet."),
+        ("What is a tokenizer?", 300, "answer, every page <= 300"),
+    ];
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    for (question, page, expect) in cases {
+        let t = std::time::Instant::now();
+        let reply = rt.block_on(super::answer::ask(&state, "eval", question, page));
+        let answer = reply["answer"].as_str().unwrap_or("").replace('\n', " ");
+        println!(
+            "\nQ ({expect}; reader at p.{page}): {question}\n  {:.1}s ok={} pages={} checks={}\n  A: {}",
+            t.elapsed().as_secs_f32(),
+            reply["ok"],
+            reply["pages"],
+            reply["checks"],
+            answer.chars().take(400).collect::<String>()
+        );
+        assert_eq!(reply["ok"], true, "error: {reply}");
+        let leaked = reply["pages"].as_array().unwrap().iter().any(|p| p.as_i64().unwrap() > page);
+        assert!(!leaked, "cited a page past the reader: {reply}");
+    }
+}

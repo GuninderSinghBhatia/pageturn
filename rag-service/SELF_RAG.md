@@ -155,8 +155,8 @@ installer stays the same size, and the app doesn't start any slower.
 
 ## Progress
 
-- [ ] S0 · [x] S1 · [ ] S2 · [ ] S3 · [x] S4 · [x] S5 · [x] S6 · [ ] S7
-- [x] A1 · [x] A2 · [x] A3 · [x] A4 · [ ] A5
+- [ ] S0 · [x] S1 · [x] S2 · [x] S3 · [x] S4 · [x] S5 · [x] S6 · [ ] S7
+- [x] A1 · [x] A2 · [x] A3 · [x] A4 · [x] A5
 
 ### Part 1 status (2026-11-27)
 
@@ -168,15 +168,26 @@ tests in `tests/test_selfrag.py`. First end-to-end run (`evals/selfrag_results.c
 |---|---|---|---|---|---|---|---|---|
 | plain | 20/25 | 22/25 | 19/22 | 8/8 | 0/5 | 0 | 1.21 | 661 |
 | self (rerank grader) | 21/25 | 24/25 | 22/24 | 8/8 | 5/5 | 0 | 1.91 | 1,189 |
+| self (rerank grader), 2nd run | 21/25 | 24/25 | 20/24 | 8/8 | 5/5 | 0 | 2.00 | 1,155 |
+| self (LLM-judge grader) | 21/25 | 24/25 | 20/24 | 8/8 | 5/5 | 0 | 2.75 | 2,200 |
 
-Still open:
-- **S0**: yours: explain Self-RAG in 3 sentences without looking.
-- **S1**: route accuracy is 13/13 on the chat and off-topic questions; the token cost of one
-  route call is not written down yet.
-- **S2**: only the reranker grader has an eval row. Run the LLM-judge grader too
-  (`RAG_GRADER=llm`) to finish the plain vs (a) vs (b) table, then pick one with a reason.
-- **S3**: rewrite works (tests), but nobody has counted how many first-search misses it fixes.
-- **S7**: yours: write the resume bullet from the table above.
+The faithful score moved 22 → 20 between two identical runs: the eval judge varies by about
+2 answers, so faithfulness differences smaller than that mean nothing.
+
+Results for the open items (2026-11-27, evening):
+- **S1**: route accuracy 13/13 on the chat and off-topic questions; one route call costs about
+  **208 tokens** (8 calls, gpt-oss-20b). "Can you explain that more simply?" goes to `book`:
+  the router has no chat history, so it can't know what "that" is.
+- **S2**: (a) LLM judge and (b) cross-encoder tie on every quality column (21/25, 24/25, 20/24),
+  but (b) takes 2.00 s and 1,155 tokens per question against 2.75 s and 2,200. The data favours
+  (b): same quality, half the tokens, and no LLM call (the app uses it). Your call to confirm.
+- **S3**: the rewrite fired on 1 of 25 questions (q12) and fixed 0. Why: **grading after the
+  rewrite still scores the chunks against the original question** (`grade_node` uses
+  `s["question"]`). Short questions score low on the cross-encoder ("What is a tokenizer?":
+  best chunk −0.42, under the 0 threshold), so the retry throws away what the rewrite found
+  (the rewritten query puts p.36 at +5.17). Open design question: grade the retry against the
+  rewritten query, or against the better of the two scores. The app copies this behaviour.
+- **S0**, **S7**: yours (explain Self-RAG without looking; write the resume bullet).
 
 ### Part 2 status (2026-11-27)
 
@@ -209,6 +220,12 @@ What it took to get there:
   adds on one thread. `Embedder::embed_all` runs 6 batches at once and batches chunks of
   similar length: 2.6x faster, same vectors.
 
-**A5**: built (`rag/answer.rs`: grade with the cross-encoder, route/rewrite and ground through
-the reader's AI from Settings) and unit-tested, but not yet tried by hand in the app with a
-real provider.
+**A5**: done. `rag::parity::a5_with_claude_plan` runs the in-app Self-RAG through the
+reader's Claude plan (Claude Code CLI) on the eval book: answers cite the right pages (36; 189
+and 191), off-topic gets "I don't know", "thanks!" gets a chat reply without a search, the
+Spoiler Shield blocks LoRA at p.300, 2 to 9 s per answer. It also showed the S3 flaw: "What is
+a tokenizer?" at p.300 got "I don't know" although p.36 answers it.
+
+**Models in the installer**: `scripts/fetch-models.mjs` (runs before every `tauri build`)
+puts both models in `resources/models/`, shipped as `<install folder>/models/` with a
+README.txt. The app uses that copy; it only downloads them if the folder is missing.

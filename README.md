@@ -2,13 +2,13 @@
 
 **A Windows PDF reader that feels like a real book.** Open a PDF and you get only the book: a two-page spread on a calm background, a realistic WebGL page flip when you turn, and tools that stay hidden until you reach for them.
 
-**It is also a RAG application.** *Ask the book* answers questions from your PDF using **both vector RAG and graph RAG**, cites every page, and won't spoil pages you haven't read yet. On a hand-checked golden set it finds the right page in the top 3 passages **80%** of the time, and **87%** on relationship questions when vector and graph retrieval work together ([numbers below](#ask-the-book-vector-rag--graph-rag)).
+**It is also a RAG application.** *Ask the book* answers questions from your PDF with **vector RAG plus Self-RAG checks**, all inside the app: it searches the book on your computer, keeps only passages that answer the question, checks the answer against them, cites every page, and won't spoil pages you haven't read yet. On a hand-checked golden set it finds the right page in the top 3 passages **84%** of the time (80% without the checks) and answers **96%** of questions instead of "I don't know" (88% without) ([numbers below](#ask-the-book-vector-rag--self-rag)).
 
 ![A page flipping over mid-turn](tests/e2e/curl.spec.ts-snapshots-tauri/flip-mid-win32.png)
 
 ## Download
 
-**[⬇ Download PageTurn for Windows](https://github.com/GuninderSinghBhatia/pageturn/releases/latest/download/PageTurn-Setup.exe)** — Windows 10/11, 64-bit, about 5 MB. Always the newest version.
+**[⬇ Download PageTurn for Windows](https://github.com/GuninderSinghBhatia/pageturn/releases/latest/download/PageTurn-Setup.exe)** — Windows 10/11, 64-bit, about 163 MB (most of it is the two models Ask runs on your computer). Always the newest version.
 
 Run it and choose where to install. The installer is not code-signed yet, so Windows may show "Windows protected your PC": click **More info → Run anyway**. Afterwards, right-click any PDF and choose **Open with → PageTurn**.
 
@@ -51,9 +51,9 @@ It hides again 800 ms after the pointer leaves. It stays pinned while a tool is 
 ### Ask the book (RAG)
 
 - **Ask the book:** ask a question and get an answer built only from passages found in your PDF, with clickable page citations.
-- **Who is this?:** select a name or term and get a summary of every mention so far, plus related terms from the knowledge graph ("Connected in the book").
+- **Who is this?:** select a name or term and get a summary of every mention so far.
 - **Spoiler Shield:** passages past the page you are on are never used.
-- Runs in a separate local Python service (`rag-service/`, FastAPI). It is a preview and ships separately for now.
+- Built into the app: every PDF you add is indexed in the background on your computer, with the two small models that ship in the installer's `models` folder. Answers are written by the AI you pick in Settings (your Claude or ChatGPT plan, or an API key).
 
 ### Help, notebook and your data
 
@@ -128,45 +128,54 @@ window shape (aspect lock)                 ├─ ReaderToolbar (hidden pill)
 - **Annotations:** coordinates are normalized 0..1 of the page, so they survive zoom and layout changes. Saves are optimistic, with 3 retries and a rollback plus toast on failure. Ink points are stored as packed `Float32Array` blobs.
 - **Data** lives in `%APPDATA%/PageTurn/` (`pageturn.db`, `thumbnails/`). Removing a book can keep its annotations, which come back if the same file is re-imported.
 
-### Ask the book: vector RAG + graph RAG
+### Ask the book: vector RAG + Self-RAG
 
 ```
-PDF ─▶ chunks (500 chars, 100 overlap, page kept) ─┬─▶ embeddings (all-MiniLM-L6-v2) ─▶ Chroma      (vector RAG)
-                                                  └─▶ LLM extracts terms + relations ─▶ Neo4j       (graph RAG)
-question ─▶ vector search  ┐
-         ─▶ graph lookup   ┴─▶ top passages (none past your page) ─▶ gpt-oss-120b on Groq ─▶ answer with page citations
+PDF ─▶ text per page ─▶ chunks (500 chars, 100 overlap, page kept) ─▶ all-MiniLM-L6-v2 ─▶ SQLite   (on your computer)
+question ─▶ vector search (none past your page) ─▶ grade: cross-encoder keeps passages that answer it
+         ─▶ none kept? rewrite the question once and search again, else "I don't know"
+         ─▶ answer from the kept passages with page citations ─▶ ground: claims no passage backs? rewrite once
 ```
 
-1. **Vector RAG** finds passages whose meaning is closest to the question.
-2. **Graph RAG**: an LLM read each passage and pulled out terms and how they relate, stored as a knowledge graph in Neo4j. Questions about connections ("what is X a variant of?") follow the links.
-3. Only the retrieved passages go to the model, which answers from them and cites pages. The retriever is chosen with `RAG_RETRIEVER=vector|tree|hybrid|graph|vector+graph`.
+1. **Vector search** finds the passages whose meaning is closest to the question, in milliseconds, on your computer.
+2. **Self-RAG checks** ([paper](https://arxiv.org/abs/2310.11511)), done the practical way with small judges instead of a trained model: a cross-encoder (ms-marco-MiniLM-L6-v2) **grades** each passage against the question; if none pass, the question is **rewritten** and searched once more; after answering, a **ground** check looks for claims no passage backs and has the answer rewritten without them. Every loop runs at most once, and every search keeps the Spoiler Shield page limit.
+3. Only the kept passages go to the model, which answers from them and cites pages.
 
-**Results on the golden set** (hit@3 = the right page is in the top 3 passages; page numbers in every question were checked against the PDF):
+**Results on the golden set** (25 questions whose page numbers were checked against the PDF, 8 off-topic questions, 5 chat messages):
 
-| Question set | Vector | Graph only | Vector + graph |
-| --- | --- | --- | --- |
-| 25 whole-book questions | **80%** | 8% | 76% |
-| 15 relationship questions (graph chapter) | 80% | 53% | **87%** |
-| Avg retrieval time | 0.03 s | 0.10 s | 0.15–0.21 s |
+| Measure | Plain RAG | Self-RAG |
+| --- | --- | --- |
+| Right page in the top 3 passages (hit@3) | 80% | **84%** |
+| Answered instead of "I don't know" | 88% | **96%** |
+| Answers with every claim backed by a passage | 86% | 83–92% (two runs) |
+| Chat messages ("thanks!") answered without searching | 0 of 5 | **5 of 5** |
+| Off-topic questions refused | 8 of 8 | 8 of 8 |
+| Spoiler leaks (cited a page past the reader) | 0 | 0 |
+| Time / tokens per question | 1.2 s / 661 | 2.0 s / ~1,170 |
 
-- Right page within one page: 84%. Off-topic questions refused: 4 of 4.
-- Also tried a table-of-contents tree retriever (80%, but ~2,450 LLM tokens per question) and a tree + vector hybrid (68%); plain vector won on cost.
-- Test book: a 991-page technical book (2,990 chunks). The graph so far covers one 100-page chapter (314 chunks → 1,019 terms, 1,136 links), so `vector+graph` only consults it inside that chapter.
-- Caveat: the sets are small, so one question moves a score by 4–7 points.
+- Backed claims are judged by a different model (Qwen) from the one that answers, so no model grades its own work. No clear gain there yet.
+- The question rewrite fired once in 25 questions and didn't find the page that time; Ask said "I don't know" instead of guessing.
+- Scored with the Python version (`rag-service/`: FastAPI, LangGraph, Chroma, gpt-oss on Groq). The app runs the same pipeline in Rust and finds the same pages: 21 of 25 with grading in both ([parity test](src-tauri/src/rag/parity.rs)).
+- Test book: a 991-page technical book (2,990 chunks). The sets are small, so one question moves a score by 4 points.
 
-Details: [rag-service/README.md](rag-service/README.md) · [rag-service/GRAPH_RAG.md](rag-service/GRAPH_RAG.md) · raw results in `rag-service/evals/results.csv` and `rag-service/graph/evals/results.csv`.
+Details: [rag-service/SELF_RAG.md](rag-service/SELF_RAG.md) · raw results in `rag-service/evals/selfrag_results.csv`. Earlier retrieval experiments (a table-of-contents tree retriever and a Neo4j graph) are in `rag-service/` too; plain vectors beat them on cost.
 
 ### Tech stack
 
 Tauri 2 (Rust, WebView2) · rusqlite · reqwest · TypeScript (strict) · React 18 · Vite · Zustand · CSS Modules · pdfjs-dist · WebGL2 · zod · perfect-freehand · Vitest · Testing Library · Playwright · ESLint · Prettier
 
-RAG service: Python · FastAPI · LangChain · Chroma · sentence-transformers · Neo4j · Groq (gpt-oss-120b / gpt-oss-20b) · pytest
+Ask in the app: candle (all-MiniLM-L6-v2 and ms-marco-MiniLM-L6-v2 on the CPU) · pdf-extract (patched, `src-tauri/vendor/`)
+
+RAG service (where the pipeline is designed and measured): Python · FastAPI · LangChain · LangGraph · Chroma · sentence-transformers · Groq (gpt-oss-120b / gpt-oss-20b) · pytest
 
 ### Project layout
 
 ```
 src-tauri/       Rust backend: commands (library, annotations, settings, AI, look-up, rag,
                  web, export, window, app), SQLite + migrations, updater, installer config
+  src/rag/       Ask the book in the app: PDF text, chunks, models, vector store, Self-RAG
+  vendor/        pdf-extract with a fix (see its Cargo.toml note)
+resources/       files the installer ships: sample book, models/ (fetched by scripts/fetch-models.mjs)
 src/shared/      types and the window.api contract
 src/renderer/
   platform/      window.api on top of the Rust commands
@@ -182,7 +191,7 @@ src/renderer/
 tests/unit/      Vitest (shared, renderer)
 tests/e2e/       Playwright attached to the Tauri app, incl. screenshot and frame-time tests
 tests/tauri/     the Rust commands through the real app; installer/ and measure/ next to it
-rag-service/     Python RAG service (FastAPI): vector RAG (Chroma), graph RAG (Neo4j), evals
+rag-service/     Python RAG service (FastAPI): Self-RAG, vector RAG (Chroma), evals, earlier experiments
 site/            the website (Next.js), deployed to pageturn-wheat.vercel.app
 scripts/         release tools; demo-video/ films the app and edits the site's video
 docs/superpowers/ design specs

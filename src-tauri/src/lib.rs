@@ -104,6 +104,10 @@ pub fn run() {
             {
                 log::error!("First-run setup failed: {e}");
             }
+            // Ask's models ship in the installer's `models` folder (scripts/fetch-models.mjs).
+            if let Ok(dir) = app.path().resource_dir() {
+                rag::models::set_bundled_dir(dir.join("models"));
+            }
             commands::rag_service::start(app.handle(), paths::logs_dir(&data_dir));
             commands::export::schedule_daily_backup(data_dir);
             commands::window::setup(app.handle());

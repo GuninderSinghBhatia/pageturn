@@ -26,3 +26,7 @@ dist-tauri/
 # local tool caches
 .impeccable/
 *.tsbuildinfo
+
+# Ask models, fetched at build time (scripts/fetch-models.mjs)
+resources/models/*
+!resources/models/README.txt

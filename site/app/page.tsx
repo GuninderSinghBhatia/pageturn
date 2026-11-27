@@ -35,24 +35,27 @@ const FEATURES: Feature[] = [
 /** How an answer is built, in the order it happens. */
 const PIPELINE = [
   {
-    step: 'Vector RAG',
-    body: 'The book is split into 500 character passages, embedded with all-MiniLM-L6-v2 and stored in Chroma. A question finds its closest passages in milliseconds.'
+    step: 'Vector search, on your computer',
+    body: 'The book is split into 500 character passages and embedded with all-MiniLM-L6-v2 on your own computer. A question finds its closest passages in milliseconds.'
   },
   {
-    step: 'Graph RAG',
-    body: 'An LLM reads each passage and pulls out terms and how they relate, stored as a knowledge graph in Neo4j. Questions about connections follow the links.'
+    step: 'Self-RAG checks',
+    body: 'A second small model reads each passage with the question and keeps only the ones that answer it. If none do, the question is rewritten and searched once more; if still none, Ask says it does not know.'
   },
   {
     step: 'Grounded answer',
-    body: 'Only the retrieved passages go to the model, which answers from them and cites every page. Spoiler Shield drops anything past the page you are on.'
+    body: 'Only the kept passages go to the model, which answers and cites every page. A last check looks for claims no passage backs and rewrites the answer without them. Spoiler Shield drops anything past your page.'
   }
 ]
 
-/** Golden-set results, hit@3 = the right page is among the top three passages. */
+/** Golden-set results: plain RAG vs the same search with the Self-RAG checks. */
 const RESULTS = [
-  { label: '25 questions across the whole book', vector: '80%', graph: '8%', both: '76%' },
-  { label: '15 questions about how terms relate', vector: '80%', graph: '53%', both: '87%' },
-  { label: 'Average retrieval time', vector: '0.03 s', graph: '0.10 s', both: '0.15–0.21 s' }
+  { label: 'Right page in the top three passages (hit@3)', plain: '80%', self: '84%' },
+  { label: 'Questions answered instead of “I don’t know”', plain: '88%', self: '96%' },
+  { label: 'Answers with every claim backed by a passage', plain: '86%', self: '83–92%' },
+  { label: 'Small talk (“thanks!”) answered without searching', plain: '0 of 5', self: '5 of 5' },
+  { label: 'Off-topic questions refused', plain: '8 of 8', self: '8 of 8' },
+  { label: 'Time per question', plain: '1.2 s', self: '2.0 s' }
 ]
 
 const schema = {
@@ -107,9 +110,9 @@ export default async function Home(): Promise<React.JSX.Element> {
               >
                 <span className="font-semibold text-ink">A RAG app</span>
                 <span aria-hidden>·</span>
-                vector RAG + graph RAG
+                vector RAG + Self-RAG
                 <span aria-hidden>·</span>
-                <span className="tabular-nums">87% on a golden set</span>
+                <span className="tabular-nums">84% on a golden set</span>
                 <span aria-hidden className="text-spark">→</span>
               </a>
               <Heading
@@ -131,7 +134,7 @@ export default async function Home(): Promise<React.JSX.Element> {
                 </a>
               </div>
               <ul className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-ink-soft">
-                {['Free, no account', `Windows 10 and 11 · 5 MB${version ? ` · v${version}` : ''}`, 'No spoilers past your page'].map(
+                {['Free, no account', `Windows 10 and 11 · 163 MB${version ? ` · v${version}` : ''}`, 'No spoilers past your page'].map(
                   (t) => (
                     <li key={t} className="flex items-center gap-1.5 tabular-nums">
                       <CheckCircle size={16} weight="fill" className="shrink-0 text-brand" aria-hidden />
@@ -164,8 +167,9 @@ export default async function Home(): Promise<React.JSX.Element> {
                 Ctrl+E with your own Claude, ChatGPT or Gemini key, kept encrypted on your computer.
               </p>
               <p className="mt-3 text-xs">
-                Ask the book and Who is this are a preview: they use the PageTurn AI service, which
-                runs on your computer and ships separately for now.
+                Ask the book and Who is this are built in: the search runs on your computer, and the
+                answer is written by the AI you pick in Settings (your Claude or ChatGPT plan, or an
+                API key).
               </p>
             </div>
           </div>
@@ -176,8 +180,9 @@ export default async function Home(): Promise<React.JSX.Element> {
             <div className="mx-auto max-w-2xl text-center">
               <Heading first="Built on RAG." second="Measured on a" accent="golden set." className="text-4xl leading-[1.05] md:text-5xl" />
               <p className="mt-5 text-base text-ink-soft">
-                Ask the book is retrieval augmented generation: the model never answers from memory,
-                only from passages found in your book. Two retrievers work together.
+                Ask the book is retrieval augmented generation with Self-RAG checks: the model never
+                answers from memory, only from passages found in your book, and the answer is
+                checked against those passages before you see it.
               </p>
             </div>
 
@@ -194,41 +199,40 @@ export default async function Home(): Promise<React.JSX.Element> {
             <div className="mx-auto mt-14 max-w-3xl">
               <table className="w-full text-left text-sm tabular-nums">
                 <caption className="mb-4 text-left text-base font-semibold text-ink">
-                  Right page in the top three passages (hit@3)
+                  Plain RAG vs Self-RAG, same book, same questions
                 </caption>
                 <thead className="text-xs text-ink-soft">
                   <tr className="border-b border-ink/10">
-                    <th scope="col" className="py-2 font-medium">Question set</th>
-                    <th scope="col" className="py-2 text-right font-medium">Vector</th>
-                    <th scope="col" className="py-2 pl-4 text-right font-medium">Graph only</th>
-                    <th scope="col" className="py-2 pl-4 text-right font-medium">Vector + graph</th>
+                    <th scope="col" className="py-2 font-medium">Measure</th>
+                    <th scope="col" className="py-2 text-right font-medium">Plain RAG</th>
+                    <th scope="col" className="py-2 pl-4 text-right font-medium">Self-RAG</th>
                   </tr>
                 </thead>
                 <tbody>
                   {RESULTS.map((r) => (
                     <tr key={r.label} className="border-b border-ink/8">
                       <th scope="row" className="py-3 pr-4 font-normal text-ink-soft">{r.label}</th>
-                      <td className="py-3 text-right font-semibold text-ink">{r.vector}</td>
-                      <td className="py-3 pl-4 text-right text-ink-soft">{r.graph}</td>
-                      <td className="py-3 pl-4 text-right font-semibold text-ink">{r.both}</td>
+                      <td className="py-3 text-right text-ink-soft">{r.plain}</td>
+                      <td className="py-3 pl-4 text-right font-semibold text-ink">{r.self}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               <p className="mt-4 text-sm text-ink-soft">
-                Off-topic questions refused: 4 of 4. Right page within one page: 84%. The graph alone
-                finds the right neighbourhood but not the exact page; paired with vectors it lifts
-                relationship questions from 80% to 87%. A table of contents tree retriever also
-                scored 80% but cost about 2,450 LLM tokens per question, so plain vectors stay the
-                default.
+                The checks cost about 0.8 s and 500 extra tokens per question. They find the right
+                page a little more often, answer more questions, and stop searching the book for
+                small talk. Backed-claim scores moved between 83% and 92% across two runs, against
+                86% for plain RAG: no clear gain there yet. Spoiler Shield held on every run: no
+                answer cited a page past the reader.
               </p>
               <p className="mt-6 text-xs text-ink-soft">
-                Measured on a 991 page technical book (2,990 passages) with question sets whose
-                page numbers were checked against the PDF. The graph so far covers one 100 page
-                chapter (1,019 terms, 1,136 links), so it only switches on inside it; the graph row
-                is scored there. The sets are small, so one question moves a score by 4 to 7
-                points. These scores measure retrieval (whether the right page is found), not
-                the wording of the final answer. Stack: FastAPI, LangChain, Chroma, Neo4j and gpt-oss-120b on Groq.
+                Measured on a 991 page technical book (2,990 passages) with 25 questions whose page
+                numbers were checked against the PDF, plus 8 off-topic questions and 5 chat
+                messages. The set is small, so one question moves a score by 4 points. Backed claims
+                were judged by a different model (Qwen) from the one that answered, so no model
+                grades its own work. Scored with the Python version (FastAPI, LangGraph, Chroma,
+                gpt-oss on Groq); the app runs the same search in Rust and finds the same pages (21
+                of 25 in both).
               </p>
             </div>
           </div>

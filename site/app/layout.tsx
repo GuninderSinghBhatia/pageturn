@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   title,
   description,
   applicationName: 'PageTurn',
-  keywords: ['AI PDF reader', 'RAG', 'graph RAG', 'vector RAG', 'chat with PDF','PDF reader', 'Windows PDF reader', 'ebook reader', 'page flip', 'PDF annotation'],
+  keywords: ['AI PDF reader', 'RAG', 'Self-RAG', 'vector RAG', 'chat with PDF','PDF reader', 'Windows PDF reader', 'ebook reader', 'page flip', 'PDF annotation'],
   openGraph: {
     type: 'website',
     title,
