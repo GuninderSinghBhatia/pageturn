@@ -97,7 +97,7 @@ fn check_field(key: &str, v: &Value) -> AppResult<Value> {
             _ => Err(bad()),
         },
         "lookupOpenIn" => one_of(&["app", "browser"]),
-        "aiProvider" => one_of(&PROVIDERS),
+        "aiProvider" => one_of(&["anthropic", "openai", "gemini", "claude"]),
         "aiModel" => match v {
             Value::Null => Ok(Value::Null),
             Value::String(s) => {

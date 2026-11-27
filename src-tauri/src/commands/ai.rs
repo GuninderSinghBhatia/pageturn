@@ -4,7 +4,10 @@
 //! (`settings::api_key`), never reach the UI and are never logged. Tokens stream back as the
 //! events `ai:token`, `ai:done` and `ai:error`.
 use crate::error::{invalid, AppResult};
+use crate::llm::claude_code::{self, ClaudeCodeProvider};
+use crate::llm::{Prompt, Provider};
 use crate::state::AppState;
+use futures_util::future::BoxFuture;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -19,12 +22,16 @@ use tokio::sync::oneshot;
 // Shared types (src/shared/ai.ts)
 // ---------------------------------------------------------------------------------------
 
+/// Providers that use the reader's own API key.
 const PROVIDERS: [&str; 3] = ["anthropic", "openai", "gemini"];
+/// The reader's Claude plan, through their installed Claude Code CLI (no key).
+pub const CLAUDE: &str = "claude";
 
 fn default_model(provider: &str) -> &'static str {
     match provider {
         "openai" => "gpt-5",
         "gemini" => "gemini-3.8-flash",
+        CLAUDE => "default",
         _ => "claude-sonnet-5-5",
     }
 }
@@ -286,6 +293,9 @@ impl ProviderErr {
         }
     }
     fn msg(message: impl Into<String>) -> Self {
+        Self::from_message(message)
+    }
+    pub fn from_message(message: impl Into<String>) -> Self {
         ProviderErr {
             message: message.into(),
             ..Default::default()
@@ -295,6 +305,21 @@ impl ProviderErr {
 
 /// Maps HTTP / network errors to the kinds the panel knows how to explain.
 pub fn to_ai_error(e: &ProviderErr) -> AiError {
+    // Claude plan failures carry their own codes; "no_key" makes the panel offer Settings.
+    match e.code {
+        Some(claude_code::MISSING) => return ai_error_msg(
+            "no_key",
+            "Claude Code is not installed. Install it, or pick another AI provider in Settings.",
+        ),
+        Some(claude_code::SIGNED_OUT) => {
+            return ai_error_msg(
+                "no_key",
+                "Sign in to Claude Code in Settings to use your Claude plan.",
+            )
+        }
+        Some(claude_code::PLAN_LIMIT) => return ai_error_msg("rate_limit", e.message.clone()),
+        _ => {}
+    }
     if matches!(e.status, Some(401) | Some(403)) {
         return ai_error("invalid_key");
     }
@@ -840,6 +865,61 @@ async fn stream_provider(
     }
 }
 
+/// Anthropic, OpenAI or Gemini (or the mock) with the reader's own key.
+pub struct ApiKeyProvider {
+    kind: Kind,
+    key: String,
+    model: String,
+    timeout: Duration,
+}
+
+impl Provider for ApiKeyProvider {
+    fn stream<'a>(
+        &'a self,
+        prompt: &'a Prompt,
+        on_token: OnToken<'a>,
+    ) -> BoxFuture<'a, Result<(), ProviderErr>> {
+        Box::pin(async move {
+            let args = StreamArgs {
+                key: self.key.clone(),
+                model: self.model.clone(),
+                system: prompt.system.clone(),
+                messages: prompt.messages.clone(),
+            };
+            stream_provider(self.kind, &args, on_token).await
+        })
+    }
+
+    fn timeout(&self) -> Duration {
+        self.timeout
+    }
+}
+
+/// The provider a run uses. `timeout` limits API providers; the Claude plan has its own
+/// (a CLI process is slower to start and may think longer).
+fn provider_for(
+    cfg: &RunConfig,
+    mock: bool,
+    timeout: Duration,
+) -> Result<Box<dyn Provider>, AiError> {
+    if cfg.provider == CLAUDE && !mock {
+        return Ok(Box::new(ClaudeCodeProvider {
+            model: cfg.model.clone(),
+        }));
+    }
+    let key = match (&cfg.key, cfg.provider == CLAUDE) {
+        (Some(k), _) => k.clone(),
+        (None, true) => "sk-mock".into(), // mock runs need no sign-in
+        (None, false) => return Err(ai_error("no_key")),
+    };
+    Ok(Box::new(ApiKeyProvider {
+        kind: kind_for(&cfg.provider, mock),
+        key,
+        model: cfg.model.clone(),
+        timeout,
+    }))
+}
+
 async fn list_provider(kind: Kind, key: &str) -> Result<Vec<String>, ProviderErr> {
     match kind {
         Kind::Anthropic => anthropic_list(key).await,
@@ -898,10 +978,14 @@ struct RunConfig {
 fn resolve_config(state: &AppState, key_fn: KeyFn) -> AppResult<RunConfig> {
     let provider = read_setting(state, "aiProvider")?
         .and_then(|v| v.as_str().map(str::to_string))
-        .filter(|p| PROVIDERS.contains(&p.as_str()))
+        .filter(|p| PROVIDERS.contains(&p.as_str()) || p == CLAUDE)
         .unwrap_or_else(|| "anthropic".to_string());
     let model = saved_model(state, &provider)?;
-    let key = key_fn(state, &provider)?;
+    let key = if provider == CLAUDE {
+        None // the CLI keeps its own sign-in
+    } else {
+        key_fn(state, &provider)?
+    };
     Ok(RunConfig {
         provider,
         model,
@@ -1012,16 +1096,15 @@ async fn execute(
         Ok(c) => c,
         Err(e) => return send_error(ai_error_msg("provider", e.to_string())),
     };
-    let Some(key) = cfg.key.clone() else {
-        return send_error(ai_error("no_key"));
+    let provider = match provider_for(&cfg, mock, timeout) {
+        Ok(p) => p,
+        Err(e) => return send_error(e),
     };
-    let args = StreamArgs {
-        key,
-        model: cfg.model.clone(),
+    let prompt = Prompt {
         system: ctx.system.clone(),
         messages: ctx.messages.clone(),
     };
-    let kind = kind_for(&cfg.provider, mock);
+    let limit = provider.timeout();
     let run = ctx.run;
     let mut text = String::new();
 
@@ -1037,11 +1120,11 @@ async fn execute(
                 emit("ai:token", json!({"requestId": request_id, "token": t}));
             }
         };
-        let fut = stream_provider(kind, &args, &mut on_token);
+        let fut = provider.stream(&prompt, &mut on_token);
         tokio::select! {
             r = fut => Outcome::Finished(r),
             _ = &mut ctx.cancelled => Outcome::Cancelled,
-            _ = tokio::time::sleep(timeout) => Outcome::TimedOut,
+            _ = tokio::time::sleep(limit) => Outcome::TimedOut,
         }
     };
 
@@ -1200,6 +1283,18 @@ pub async fn ai_follow_up(
         }
     }
     Ok(())
+}
+
+/// Claude plan status for Settings: installed, version, signed in, plan (never the account).
+#[tauri::command]
+pub async fn ai_claude_status() -> AppResult<Value> {
+    Ok(claude_code::status().await)
+}
+
+/// Opens Claude Code's own sign-in window; PageTurn never sees the sign-in.
+#[tauri::command]
+pub async fn ai_claude_login() -> AppResult<()> {
+    claude_code::open_login().map_err(crate::error::AppError::Msg)
 }
 
 fn ended_error() -> AiError {
@@ -1782,6 +1877,62 @@ mod tests {
             resolve_config(&s, key_sk).unwrap().model,
             "gemini-3.8-flash"
         );
+    }
+
+    #[test]
+    fn claude_plan_config_needs_no_key() {
+        fn no_lookup(_: &AppState, p: &str) -> AppResult<Option<String>> {
+            panic!("the Claude plan must not read an API key (asked for {p})")
+        }
+        let s = state_with(&[("aiProvider", "\"claude\"")]);
+        let c = resolve_config(&s, no_lookup).unwrap();
+        assert_eq!(
+            (c.provider.as_str(), c.model.as_str(), c.key),
+            ("claude", "default", None)
+        );
+        let s = state_with(&[("aiProvider", "\"claude\""), ("aiModel", "\"opus\"")]);
+        assert_eq!(resolve_config(&s, no_lookup).unwrap().model, "opus");
+        // Not mocked, it runs the CLI with its own (longer) time limit.
+        let p = provider_for(&resolve_config(&s, no_lookup).unwrap(), false, T).unwrap();
+        assert_eq!(p.timeout(), Duration::from_secs(120));
+    }
+
+    #[test]
+    fn claude_plan_errors_point_to_settings() {
+        let e = |code| ProviderErr {
+            code: Some(code),
+            status: Some(401),
+            message: "Your Claude plan's usage limit is reached.".into(),
+            ..Default::default()
+        };
+        let missing = to_ai_error(&e(claude_code::MISSING));
+        assert_eq!(missing.kind, "no_key");
+        assert!(missing.message.contains("not installed"));
+        let out = to_ai_error(&e(claude_code::SIGNED_OUT));
+        assert_eq!(out.kind, "no_key");
+        assert!(out.message.contains("Sign in"));
+        let limit = to_ai_error(&e(claude_code::PLAN_LIMIT));
+        assert_eq!(limit.kind, "rate_limit");
+        assert!(limit.message.contains("usage limit"));
+    }
+
+    #[tokio::test]
+    async fn claude_plan_runs_through_the_provider_layer_when_mocked() {
+        let (emit, log) = collector();
+        let id = "t-claude-1";
+        let ctx = begin_explain(id, &req());
+        let cfg = Ok(RunConfig {
+            provider: CLAUDE.into(),
+            model: "default".into(),
+            key: None,
+        });
+        execute(emit, id.into(), ctx, cfg, true, T).await;
+        let l = log.lock().unwrap();
+        let (last_ev, last) = l.last().unwrap();
+        assert_eq!(last_ev, "ai:done");
+        assert_eq!(last["text"], "Mock explanation of: the arrow of time");
+        drop(l);
+        cancel_session(id);
     }
 
     #[tokio::test]

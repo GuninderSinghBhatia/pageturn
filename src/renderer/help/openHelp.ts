@@ -1,3 +1,4 @@
+import { isKeyProvider } from '@shared/ai'
 import { displayTitle } from '../library/displayTitle'
 import { hasTextSelection, selectionByPage } from '../reader/annotations/selection'
 import { useLibraryStore } from '../stores/libraryStore'
@@ -32,7 +33,11 @@ export function openHelp(root: HTMLElement | null): boolean {
   const book = useLibraryStore.getState().books.find((b) => b.id === bookId)
   const title = book ? displayTitle(book) : null
   const { settings } = useSettingsStore.getState()
-  void window.api.settings.hasApiKey(settings.aiProvider).then((hasKey) =>
+  // The Claude plan needs no key: a signed-out Claude Code shows its own error in the panel.
+  const ready = isKeyProvider(settings.aiProvider)
+    ? window.api.settings.hasApiKey(settings.aiProvider)
+    : Promise.resolve(true)
+  void ready.then((hasKey) =>
     useHelpStore.getState().openFor(selection, {
       hasKey,
       defaultTab: settings.helpDefaultTab,

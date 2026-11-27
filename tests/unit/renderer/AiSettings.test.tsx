@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/types'
-import { PRIVACY_LINE } from '@shared/ai'
+import { PRIVACY_LINE, type ClaudeStatus } from '@shared/ai'
 import { AiSettings } from '@renderer/settings/AiSettings'
 import { useSettingsStore } from '@renderer/stores/settingsStore'
 
@@ -18,7 +18,9 @@ const api = {
   },
   ai: {
     testKey: vi.fn(async () => ({ ok: true as const })),
-    listModels: vi.fn(async (): Promise<string[]> => [])
+    listModels: vi.fn(async (): Promise<string[]> => []),
+    claudeStatus: vi.fn(async (): Promise<ClaudeStatus> => ({ installed: false, loggedIn: false })),
+    claudeLogin: vi.fn(async () => undefined)
   }
 }
 
@@ -37,6 +39,41 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('AiSettings', () => {
+  it('Claude plan: no key box; shows Claude Code status and offers sign-in', async () => {
+    stored = { ...DEFAULT_SETTINGS, aiProvider: 'claude' }
+    useSettingsStore.setState({ settings: stored, loaded: true })
+    const signedOut: ClaudeStatus = {
+      installed: true,
+      version: '2.1.292',
+      loggedIn: false,
+      authMethod: null,
+      plan: null
+    }
+    api.ai.claudeStatus.mockResolvedValueOnce(signedOut)
+    render(<AiSettings />)
+    expect(screen.queryByLabelText('API key')).toBeNull()
+    expect(api.settings.hasApiKey).not.toHaveBeenCalled()
+    expect(await screen.findByText(/installed but not signed in/)).toBeTruthy()
+    const model = screen.getByRole('combobox', { name: 'Model' }) as HTMLSelectElement
+    expect(model.value).toBe('default')
+    expect([...model.options].map((o) => o.value)).toEqual(['default', 'sonnet', 'opus', 'haiku'])
+
+    api.ai.claudeStatus.mockResolvedValueOnce({ ...signedOut, loggedIn: true, plan: 'max' })
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+    await waitFor(() => expect(api.ai.claudeLogin).toHaveBeenCalled())
+    expect(await screen.findByText(/Finish signing in/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Check again' }))
+    expect(await screen.findByText(/Signed in to Claude Code 2.1.292 \(max plan\)/)).toBeTruthy()
+  })
+
+  it('Claude plan: says when Claude Code is not installed', async () => {
+    stored = { ...DEFAULT_SETTINGS, aiProvider: 'claude' }
+    useSettingsStore.setState({ settings: stored, loaded: true })
+    render(<AiSettings />)
+    expect(await screen.findByText(/not installed/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull()
+  })
+
   it('saves a key without ever showing it, then reports it as saved', async () => {
     render(<AiSettings />)
     const input = screen.getByLabelText('API key') as HTMLInputElement

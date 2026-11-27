@@ -4,6 +4,7 @@
 mod commands;
 mod db;
 mod error;
+mod llm;
 mod models;
 mod paths;
 mod state;
@@ -140,6 +141,8 @@ pub fn run() {
             commands::ai::ai_explain,
             commands::ai::ai_follow_up,
             commands::ai::ai_cancel,
+            commands::ai::ai_claude_status,
+            commands::ai::ai_claude_login,
             commands::lookup::lookup_wikipedia,
             commands::lookup::lookup_open,
             commands::rag::rag_health,

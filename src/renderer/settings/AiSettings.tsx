@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import {
   DEFAULT_MODELS,
+  isKeyProvider,
   MODEL_OPTIONS,
   PRIVACY_LINE,
   PROVIDER_LABELS,
   PROVIDERS,
+  type ClaudeStatus,
   type HelpDefaultTab,
+  type KeyProviderId,
   type ProviderId,
   type SearchEngine
 } from '@shared/ai'
@@ -34,24 +37,27 @@ export function AiSettings(): React.JSX.Element {
   const [draft, setDraft] = useState('')
   const [liveModels, setLiveModels] = useState<{ provider: ProviderId; ids: string[] } | null>(null)
   const [status, setStatus] = useState<Status>(null)
+  const keyProvider: KeyProviderId | null = isKeyProvider(provider) ? provider : null
 
   useEffect(() => {
+    if (!keyProvider) return
     let live = true
-    void window.api.settings.hasApiKey(provider).then((h) => live && setHasKey(h))
+    void window.api.settings.hasApiKey(keyProvider).then((h) => live && setHasKey(h))
     return () => {
       live = false
     }
-  }, [provider])
+  }, [keyProvider])
 
   // With a saved key, also offer the models that key can use (newer ones appear here).
   useEffect(() => {
-    if (!hasKey) return
+    if (!hasKey || !keyProvider) return
+    const provider = keyProvider
     let live = true
     void window.api.ai.listModels(provider).then((ids) => live && setLiveModels({ provider, ids }))
     return () => {
       live = false
     }
-  }, [provider, hasKey])
+  }, [keyProvider, hasKey])
 
   const current = settings.aiModel ?? DEFAULT_MODELS[provider]
   const known = MODEL_OPTIONS[provider]
@@ -64,15 +70,14 @@ export function AiSettings(): React.JSX.Element {
     setRagStatus({ kind: 'info', text: 'Checking…' })
     const r = await window.api.rag.health()
     setRagStatus(
-      r.ok
-        ? { kind: 'ok', text: `✓ ${JSON.stringify(r.body)}` }
-        : { kind: 'error', text: r.error }
+      r.ok ? { kind: 'ok', text: `✓ ${JSON.stringify(r.body)}` } : { kind: 'error', text: r.error }
     )
   }
 
   const save = async (): Promise<void> => {
+    if (!keyProvider) return
     try {
-      await window.api.settings.setApiKey(provider, draft.trim())
+      await window.api.settings.setApiKey(keyProvider, draft.trim())
       setDraft('')
       setHasKey(true)
       setStatus({ kind: 'ok', text: 'Key saved (encrypted on this computer).' })
@@ -88,8 +93,9 @@ export function AiSettings(): React.JSX.Element {
   }
 
   const test = async (): Promise<void> => {
+    if (!keyProvider) return
     setStatus({ kind: 'info', text: 'Testing…' })
-    const r = await window.api.ai.testKey(provider)
+    const r = await window.api.ai.testKey(keyProvider)
     setStatus(
       r.ok ? { kind: 'ok', text: '✓ Key works.' } : { kind: 'error', text: r.error.message }
     )
@@ -116,46 +122,50 @@ export function AiSettings(): React.JSX.Element {
         </select>
       </fieldset>
 
-      <fieldset className={styles.group}>
-        <legend className={styles.legend}>API key</legend>
-        <div className={styles.row}>
-          <input
-            className={styles.input}
-            type="password"
-            aria-label="API key"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder={hasKey ? '•••••••• (saved)' : 'Paste your key'}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-          />
-          <button className={styles.button} disabled={!draft.trim()} onClick={() => void save()}>
-            Save key
-          </button>
-          <button className={styles.button} disabled={!hasKey} onClick={() => void test()}>
-            Test key
-          </button>
-          <button
-            className={styles.button}
-            disabled={!hasKey}
-            onClick={async () => {
-              await window.api.settings.clearApiKey(provider)
-              setHasKey(false)
-              setStatus({ kind: 'info', text: 'Key removed.' })
-            }}
-          >
-            Clear
-          </button>
-        </div>
-        {status && (
-          <p className={status.kind === 'error' ? styles.error : styles.hint} role="status">
-            {status.text}
-          </p>
-        )}
-        {hasKey === false && !status && (
-          <p className={styles.hint}>No key saved for {PROVIDER_LABELS[provider]}.</p>
-        )}
-      </fieldset>
+      {!keyProvider && <ClaudePlan />}
+
+      {keyProvider && (
+        <fieldset className={styles.group}>
+          <legend className={styles.legend}>API key</legend>
+          <div className={styles.row}>
+            <input
+              className={styles.input}
+              type="password"
+              aria-label="API key"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder={hasKey ? '•••••••• (saved)' : 'Paste your key'}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+            />
+            <button className={styles.button} disabled={!draft.trim()} onClick={() => void save()}>
+              Save key
+            </button>
+            <button className={styles.button} disabled={!hasKey} onClick={() => void test()}>
+              Test key
+            </button>
+            <button
+              className={styles.button}
+              disabled={!hasKey}
+              onClick={async () => {
+                await window.api.settings.clearApiKey(keyProvider)
+                setHasKey(false)
+                setStatus({ kind: 'info', text: 'Key removed.' })
+              }}
+            >
+              Clear
+            </button>
+          </div>
+          {status && (
+            <p className={status.kind === 'error' ? styles.error : styles.hint} role="status">
+              {status.text}
+            </p>
+          )}
+          {hasKey === false && !status && (
+            <p className={styles.hint}>No key saved for {PROVIDER_LABELS[keyProvider]}.</p>
+          )}
+        </fieldset>
+      )}
 
       <fieldset className={styles.group}>
         <legend className={styles.legend}>Model</legend>
@@ -174,7 +184,7 @@ export function AiSettings(): React.JSX.Element {
               {m.label}
             </option>
           ))}
-          {extra.length > 0 && (
+          {keyProvider && extra.length > 0 && (
             <optgroup label="Also available with your key">
               {extra.map((id) => (
                 <option key={id} value={id}>
@@ -185,9 +195,11 @@ export function AiSettings(): React.JSX.Element {
           )}
         </select>
         <p className={styles.hint}>
-          {hasKey
-            ? 'Your key decides which models you can use.'
-            : 'Save a key to see every model it can use.'}
+          {!keyProvider
+            ? 'Your Claude plan decides which models you can use.'
+            : hasKey
+              ? 'Your key decides which models you can use.'
+              : 'Save a key to see every model it can use.'}
         </p>
       </fieldset>
 
@@ -246,5 +258,90 @@ export function AiSettings(): React.JSX.Element {
         )}
       </fieldset>
     </>
+  )
+}
+
+/** The Claude plan: the reader's own Claude Code, signed in with their Claude subscription. */
+function ClaudePlan(): React.JSX.Element {
+  const [claude, setClaude] = useState<ClaudeStatus | null>(null)
+  const [note, setNote] = useState<Status>(null)
+
+  const refresh = (): Promise<void> => window.api.ai.claudeStatus().then(setClaude)
+
+  useEffect(() => {
+    let live = true
+    const load = (): void =>
+      void window.api.ai.claudeStatus().then((s) => {
+        if (live) setClaude(s)
+      })
+    load()
+    // Sign-in happens in another window: check again when the reader comes back.
+    window.addEventListener('focus', load)
+    return () => {
+      live = false
+      window.removeEventListener('focus', load)
+    }
+  }, [])
+
+  const signIn = async (): Promise<void> => {
+    try {
+      await window.api.ai.claudeLogin()
+      setNote({
+        kind: 'info',
+        text: 'A Claude Code window opened. Finish signing in in your browser, then come back here.'
+      })
+    } catch (err) {
+      setNote({ kind: 'error', text: String((err as Error).message ?? err) })
+    }
+  }
+
+  const summary: Status =
+    claude === null
+      ? { kind: 'info', text: 'Checking Claude Code…' }
+      : !claude.installed
+        ? {
+            kind: 'error',
+            text: 'Claude Code is not installed on this computer. Install it (claude.com/code), then click Check again.'
+          }
+        : !claude.loggedIn
+          ? {
+              kind: 'error',
+              text: `Claude Code ${claude.version} is installed but not signed in.`
+            }
+          : {
+              kind: 'ok',
+              text: `✓ Signed in to Claude Code ${claude.version}${claude.plan ? ` (${claude.plan} plan)` : ''}.`
+            }
+
+  return (
+    <fieldset className={styles.group}>
+      <legend className={styles.legend}>Claude plan</legend>
+      <p className={summary.kind === 'error' ? styles.error : styles.hint} role="status">
+        {summary.text}
+      </p>
+      <div className={styles.row}>
+        {claude?.installed && !claude.loggedIn && (
+          <button className={styles.button} onClick={() => void signIn()}>
+            Sign in
+          </button>
+        )}
+        <button
+          className={styles.button}
+          onClick={() => {
+            setNote(null)
+            setClaude(null)
+            void refresh()
+          }}
+        >
+          Check again
+        </button>
+      </div>
+      {note && <p className={note.kind === 'error' ? styles.error : styles.hint}>{note.text}</p>}
+      <p className={styles.hint}>
+        Explanations use your Claude subscription&apos;s limits, not an API key. PageTurn runs your
+        own Claude Code with no tools, so it cannot open or change your files, and it never sees
+        your sign-in.
+      </p>
+    </fieldset>
   )
 }

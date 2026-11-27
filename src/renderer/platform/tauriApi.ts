@@ -108,6 +108,8 @@ const api: Api = {
   ai: {
     testKey: (provider) => call('ai_test_key', { provider }),
     listModels: (provider) => call('ai_list_models', { provider }),
+    claudeStatus: () => call('ai_claude_status'),
+    claudeLogin: () => call('ai_claude_login'),
     explain: (requestId, req) => call('ai_explain', { requestId, req }),
     followUp: (requestId, text) => call('ai_follow_up', { requestId, text }),
     cancel: (requestId) => call('ai_cancel', { requestId }),

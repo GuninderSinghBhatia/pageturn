@@ -1,21 +1,40 @@
 import { z } from 'zod'
 
 /** AI providers the reader can use with their own API key. */
-export const PROVIDERS = ['anthropic', 'openai', 'gemini'] as const
+export const KEY_PROVIDERS = ['anthropic', 'openai', 'gemini'] as const
+export type KeyProviderId = (typeof KEY_PROVIDERS)[number]
+
+/** Every AI provider: the key ones, plus the reader's Claude plan through Claude Code. */
+export const PROVIDERS = [...KEY_PROVIDERS, 'claude'] as const
 export type ProviderId = (typeof PROVIDERS)[number]
 
+export const isKeyProvider = (p: ProviderId): p is KeyProviderId => p !== 'claude'
+
 export const PROVIDER_LABELS: Record<ProviderId, string> = {
-  anthropic: 'Anthropic (Claude)',
-  openai: 'OpenAI',
-  gemini: 'Google Gemini'
+  anthropic: 'Anthropic (Claude) — API key',
+  openai: 'OpenAI — API key',
+  gemini: 'Google Gemini — API key',
+  claude: 'Claude plan (via Claude Code)'
 }
 
 /** Model used when the reader has not typed one of their own. */
 export const DEFAULT_MODELS: Record<ProviderId, string> = {
   anthropic: 'claude-sonnet-5-5',
   openai: 'gpt-5',
-  gemini: 'gemini-3.8-flash'
+  gemini: 'gemini-3.8-flash',
+  claude: 'default'
 }
+
+/** What Settings shows about the reader's Claude Code (never their account details). */
+export type ClaudeStatus =
+  | { installed: false; loggedIn: false }
+  | {
+      installed: true
+      version: string
+      loggedIn: boolean
+      authMethod: string | null
+      plan: string | null
+    }
 
 /** Models offered in Settings (first = default). Keys can unlock more, listed live. */
 export const MODEL_OPTIONS: Record<ProviderId, { id: string; label: string }[]> = {
@@ -35,12 +54,18 @@ export const MODEL_OPTIONS: Record<ProviderId, { id: string; label: string }[]> 
     { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (preview) — deep reasoning' },
     { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite — fastest, lowest cost' },
     { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro — previous generation' }
+  ],
+  claude: [
+    { id: 'default', label: "Your plan's default — recommended" },
+    { id: 'sonnet', label: 'Sonnet' },
+    { id: 'opus', label: 'Opus — most capable, uses your limit faster' },
+    { id: 'haiku', label: 'Haiku — fastest' }
   ]
 }
 
 /** Of a provider's model list, the ones that can chat (no embeddings, audio, images…). */
-export function chatModels(p: ProviderId, ids: string[]): string[] {
-  const keep: Record<ProviderId, RegExp> = {
+export function chatModels(p: KeyProviderId, ids: string[]): string[] {
+  const keep: Record<KeyProviderId, RegExp> = {
     anthropic: /^claude-/,
     openai: /^(gpt-|o\d|chatgpt-)/,
     gemini: /^gemini-/
@@ -75,7 +100,7 @@ export type ExplainRequest = {
   nextHead: string
 }
 
-export const ProviderSchema = z.enum(PROVIDERS)
+export const ProviderSchema = z.enum(KEY_PROVIDERS)
 export const ApiKeySchema = z.string().trim().min(1).max(512)
 export const RequestIdSchema = z.string().regex(/^[A-Za-z0-9-]{8,64}$/)
 export const FollowUpSchema = z.string().trim().min(1).max(4000)

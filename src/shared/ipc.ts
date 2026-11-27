@@ -4,8 +4,9 @@ import {
   PROVIDERS,
   SEARCH_ENGINES,
   type AiError,
+  type ClaudeStatus,
   type ExplainRequest,
-  type ProviderId
+  type KeyProviderId
 } from './ai'
 import { LANGUAGE_RE, LOOKUP_SITES } from './lookup'
 import {
@@ -313,14 +314,18 @@ export interface Api {
     get(): Promise<Settings>
     set(partial: SettingsPartial): Promise<Settings>
     /** Stores the key encrypted in main; the renderer can only ask whether one exists. */
-    setApiKey(p: ProviderId, key: string): Promise<void>
-    hasApiKey(p: ProviderId): Promise<boolean>
-    clearApiKey(p: ProviderId): Promise<void>
+    setApiKey(p: KeyProviderId, key: string): Promise<void>
+    hasApiKey(p: KeyProviderId): Promise<boolean>
+    clearApiKey(p: KeyProviderId): Promise<void>
   }
   ai: {
-    testKey(p: ProviderId): Promise<{ ok: true } | { ok: false; error: AiError }>
+    testKey(p: KeyProviderId): Promise<{ ok: true } | { ok: false; error: AiError }>
     /** Chat models the saved key can use ([] without a key or offline). */
-    listModels(p: ProviderId): Promise<string[]>
+    listModels(p: KeyProviderId): Promise<string[]>
+    /** Is Claude Code installed and signed in (for the Claude plan provider)? */
+    claudeStatus(): Promise<ClaudeStatus>
+    /** Opens Claude Code's own sign-in window; PageTurn never sees the sign-in. */
+    claudeLogin(): Promise<void>
     /** Starts streaming an explanation; results arrive through onToken / onDone / onError. */
     explain(requestId: string, req: ExplainRequest): Promise<void>
     followUp(requestId: string, text: string): Promise<void>
