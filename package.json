@@ -3,6 +3,7 @@
   "version": "2.0.1",
   "description": "PageTurn - a PDF reader that reads like a real book",
   "author": "PageTurn",
+  "license": "MIT",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
