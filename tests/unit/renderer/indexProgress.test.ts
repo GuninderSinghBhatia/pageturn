@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { progressText } from '@renderer/ask/IndexGate'
+import { progressText } from '@renderer/ask/indexProgress'
 
 describe('progressText (Ask drawer while a book is indexed)', () => {
   it('says the book is waiting while another book goes first', () => {
