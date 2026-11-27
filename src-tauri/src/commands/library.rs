@@ -226,6 +226,7 @@ pub async fn import_paths(
     notify_changed(app);
     // Every added book is indexed for Ask in the background.
     crate::commands::rag::index_in_background(
+        app,
         rows.iter()
             .map(|r| (r.id.clone(), r.path.clone()))
             .collect(),

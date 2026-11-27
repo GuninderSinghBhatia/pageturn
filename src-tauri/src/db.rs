@@ -10,6 +10,7 @@ const MIGRATIONS: &[(i64, &str)] = &[
     (3, include_str!("../migrations/003_reader_redesign.sql")),
     (4, include_str!("../migrations/004_book_likes.sql")),
     (5, include_str!("../migrations/005_note_tags.sql")),
+    (6, include_str!("../migrations/006_ask_index.sql")),
 ];
 
 /// Opens (creating if needed) the database and brings it up to the latest migration.
@@ -52,7 +53,7 @@ mod tests {
         let v: i64 = conn
             .pragma_query_value(None, "user_version", |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 5);
+        assert_eq!(v, 6);
         conn.execute(
             "INSERT INTO books (id, path, added_at) VALUES ('b', 'x.pdf', 1)",
             [],

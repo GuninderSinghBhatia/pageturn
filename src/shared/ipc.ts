@@ -64,9 +64,12 @@ export type RagIndexStatus =
   | {
       ok: true
       state: 'missing' | 'queued' | 'indexing' | 'done' | 'failed'
-      /** Chunks embedded so far, of `total` (0 while unknown). */
+      /** Chunks embedded so far, of `total` (0 while unknown); bytes while `step` is download. */
       done: number
       total: number
+      /** While indexing in the app: downloading the Ask model (first time only), reading the
+       *  PDF, or embedding its chunks. */
+      step?: 'download' | 'read' | 'embed'
       error?: string
     }
   | { ok: false; error: string }

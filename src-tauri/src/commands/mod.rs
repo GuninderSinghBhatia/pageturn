@@ -5,6 +5,7 @@ pub mod export;
 pub mod library;
 pub mod lookup;
 pub mod rag;
+pub mod rag_service;
 pub mod settings;
 pub mod web;
 pub mod window;

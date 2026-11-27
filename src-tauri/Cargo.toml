@@ -34,12 +34,75 @@ futures-util = "0.3"
 tokio = { version = "1", features = ["fs", "time", "sync", "macros", "rt-multi-thread", "process", "io-util", "net"] }
 urlencoding = "2"
 jsonwebtoken = "9"
+# Ask the book, in the app (src/rag): PDF text, MiniLM models on the CPU.
+pdf-extract = "0.9"
+candle-core = "0.9"
+candle-nn = "0.9"
+candle-transformers = "0.9"
+tokenizers = { version = "0.21", default-features = false, features = ["onig"] }
 
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.58", features = ["Win32_Foundation", "Win32_Security_Cryptography", "Win32_System_Memory"] }
+windows = { version = "0.58", features = ["Win32_Foundation", "Win32_Security_Cryptography", "Win32_System_Memory", "Win32_System_JobObjects", "Win32_System_Threading"] }
 
 [dev-dependencies]
 tempfile = "3"
+
+# pdf-extract 0.9.0 with one fix (still unfixed upstream in 0.12.1): CID font widths given as a
+# range were dropped, which put a space inside about 2% of words ("dif ferent"). See the
+# "PageTurn patch" comment in vendor/pdf-extract/src/lib.rs.
+[patch.crates-io]
+pdf-extract = { path = "vendor/pdf-extract" }
+
+# Dev builds: no debug info for dependencies (keeps rustc's memory low), and the models' math
+# is optimized, since unoptimized candle would take many minutes to index one book. Only the
+# math crates: optimizing every dependency runs rustc out of memory on a 16 GB machine.
+[profile.dev.package."*"]
+debug = false
+[profile.dev.package.gemm]
+opt-level = 3
+[profile.dev.package.gemm-common]
+opt-level = 3
+[profile.dev.package.gemm-f32]
+opt-level = 3
+[profile.dev.package.candle-core]
+opt-level = 3
+[profile.dev.package.candle-nn]
+opt-level = 3
+[profile.dev.package.candle-transformers]
+opt-level = 3
+[profile.dev.package.tokenizers]
+opt-level = 3
+[profile.dev.package.pulp]
+opt-level = 3
+# Reading a PDF's text: unoptimized, a 1,000-page book takes over a minute.
+[profile.dev.package.pdf-extract]
+opt-level = 3
+[profile.dev.package.lopdf]
+opt-level = 3
+[profile.dev.package.nom]
+opt-level = 3
+[profile.dev.package.miniz_oxide]
+opt-level = 3
+[profile.dev.package.euclid]
+opt-level = 3
+[profile.dev.package.adobe-cmap-parser]
+opt-level = 3
+[profile.dev.package.type1-encoding-parser]
+opt-level = 3
+
+# The models' math runs at full speed; the rest of the app stays optimized for size.
+[profile.release.package.gemm]
+opt-level = 3
+[profile.release.package.gemm-common]
+opt-level = 3
+[profile.release.package.gemm-f32]
+opt-level = 3
+[profile.release.package.candle-core]
+opt-level = 3
+[profile.release.package.candle-nn]
+opt-level = 3
+[profile.release.package.candle-transformers]
+opt-level = 3
 
 [profile.release]
 codegen-units = 1

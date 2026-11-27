@@ -7,8 +7,16 @@ mod error;
 mod llm;
 mod models;
 mod paths;
+mod rag;
 mod state;
 mod updater;
+
+/// `pageturn --pageturn-extract-pdf <path>`: the PDF-reading helper Ask starts (rag/pdf.rs).
+pub const PDF_HELPER_FLAG: &str = rag::pdf::EXTRACT_FLAG;
+
+pub fn run_pdf_helper(path: &str) -> i32 {
+    rag::pdf::run_helper(path)
+}
 
 use state::AppState;
 use std::sync::Mutex;
@@ -96,9 +104,8 @@ pub fn run() {
             {
                 log::error!("First-run setup failed: {e}");
             }
+            commands::rag_service::start(app.handle(), paths::logs_dir(&data_dir));
             commands::export::schedule_daily_backup(data_dir);
-            // Books added while rag-service was off get indexed for Ask now.
-            commands::rag::index_library(&app.state::<AppState>());
             commands::window::setup(app.handle());
             updater::start(app.handle().clone());
 

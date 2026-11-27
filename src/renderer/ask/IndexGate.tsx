@@ -5,10 +5,27 @@ import styles from './Ask.module.css'
 
 const POLL_MS = 1500
 
+type IndexProgress = Extract<RagIndexStatus, { ok: true }>
+
+/** The line above the progress bar while the open book waits for (or is in) indexing. */
+export function progressText(
+  state: IndexProgress['state'],
+  step: IndexProgress['step'],
+  pct: number
+): string {
+  if (state !== 'indexing') {
+    return 'Waiting to index this book for Ask (another book is being indexed first)…'
+  }
+  if (step === 'download') return `Downloading the Ask model (one time, about 90 MB)… ${pct}%`
+  if (step === 'read') return 'Reading this book for Ask…'
+  return `Indexing this book for Ask… ${pct}%`
+}
+
 /**
  * Shows the Ask form only once the open book is indexed. Every added book is indexed in the
- * background by rag-service; until it is done this shows progress, a failure (with Try again),
- * or that the service is not running. A book the service has never seen is queued here too.
+ * background (in the app, or by rag-service in service mode); until it is done this shows
+ * progress, a failure (with Try again), or that the service is not running. A book that was
+ * never indexed is queued here too.
  */
 export function IndexGate({
   bookId,
@@ -80,11 +97,7 @@ export function IndexGate({
         </>
       ) : (
         <>
-          <p>
-            {s.state === 'indexing'
-              ? `Indexing this book for Ask… ${pct}%`
-              : 'Waiting to index this book for Ask (another book is being indexed first)…'}
-          </p>
+          <p>{progressText(s.state, s.step, pct)}</p>
           <div
             className={styles.progress}
             role="progressbar"

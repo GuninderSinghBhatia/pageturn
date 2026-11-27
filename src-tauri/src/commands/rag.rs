@@ -71,13 +71,19 @@ async fn health(base: &str) -> Value {
     }
 }
 
+/// True when rag-service answers its health check.
+pub async fn is_up() -> bool {
+    health(RAG_URL).await["ok"] == true
+}
+
 /// POSTs to an endpoint that answers with text + the pages it used.
 async fn post_for_answer(base: &str, path: &str, payload: Value) -> Value {
     let client = reqwest::Client::new();
     let res = match client
         .post(format!("{base}{path}"))
         .json(&payload)
-        .timeout(Duration::from_secs(60))
+        // Self-RAG makes several LLM calls, paced under Groq's rate limit.
+        .timeout(Duration::from_secs(180))
         .send()
         .await
     {
@@ -210,8 +216,12 @@ async fn send_for_indexing(base: &str, books: &[(String, String)]) -> usize {
 }
 
 /// Indexes these books for Ask in the background (after an import, and at every start).
-pub fn index_in_background(books: Vec<(String, String)>) {
+pub fn index_in_background(app: &tauri::AppHandle, books: Vec<(String, String)>) {
     if books.is_empty() {
+        return;
+    }
+    if !crate::rag::use_service() {
+        crate::rag::index::enqueue(app, books, false);
         return;
     }
     tauri::async_runtime::spawn(async move {
@@ -219,62 +229,111 @@ pub fn index_in_background(books: Vec<(String, String)>) {
     });
 }
 
-/// At startup: every book in the library, so books added while rag-service was off get indexed.
-pub fn index_library(state: &AppState) {
+/// At startup: every book in the library, so books added while Ask was off get indexed.
+pub fn index_library(app: &tauri::AppHandle, state: &AppState) {
     match state.with_db(crate::commands::library::library_books) {
-        Ok(books) => index_in_background(books),
+        Ok(books) => index_in_background(app, books),
         Err(e) => log::error!("Could not list books for indexing: {e}"),
     }
 }
 
+/// The open book's path, for queueing it.
+fn book_path(state: &AppState, id: &str) -> AppResult<String> {
+    Ok(state
+        .with_db(|c| crate::models::get_book_row(c, id))?
+        .ok_or(AppError::UnknownBook)?
+        .path)
+}
+
+/// In-app Ask on a book that isn't indexed yet: queue it and let the drawer show progress.
+fn not_indexed(app: &tauri::AppHandle, state: &AppState, id: &str) -> AppResult<Option<Value>> {
+    let s = crate::rag::index::status(state, id);
+    if s["state"] == "done" {
+        return Ok(None);
+    }
+    crate::rag::index::enqueue(app, vec![(id.to_string(), book_path(state, id)?)], false);
+    Ok(Some(json!({ "ok": true, "answer": "", "pages": [], "notIndexed": true })))
+}
+
+fn open_book(id: Option<String>) -> AppResult<String> {
+    book_ok(id)?.ok_or_else(|| invalid("bookId is required"))
+}
+
 /// The open book's indexing state (the Ask drawer polls this while a book is being indexed).
 #[tauri::command]
-pub async fn rag_index_status(book_id: String) -> AppResult<Value> {
+pub async fn rag_index_status(state: State<'_, AppState>, book_id: String) -> AppResult<Value> {
     let id = book_ok(Some(book_id))?.unwrap_or_default();
+    if !crate::rag::use_service() {
+        return Ok(crate::rag::index::status(&state, &id));
+    }
     Ok(index_status(RAG_URL, &id).await)
 }
 
-/// Queues the book now (for example when rag-service was off at import); `retry` tries a book
+/// Queues the book now (for example when Ask was off at import); `retry` tries a book
 /// that failed before.
 #[tauri::command]
 pub async fn rag_index_book(
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
     book_id: String,
     retry: bool,
 ) -> AppResult<Value> {
     let id = book_ok(Some(book_id))?.unwrap_or_default();
-    let row = state
-        .with_db(|c| crate::models::get_book_row(c, &id))?
-        .ok_or(AppError::UnknownBook)?;
-    Ok(request_index(RAG_URL, &id, &row.path, retry).await)
+    let path = book_path(&state, &id)?;
+    if !crate::rag::use_service() {
+        crate::rag::index::enqueue(&app, vec![(id.clone(), path)], retry);
+        return Ok(crate::rag::index::status(&state, &id));
+    }
+    Ok(request_index(RAG_URL, &id, &path, retry).await)
 }
 
 #[tauri::command]
 pub async fn rag_health() -> AppResult<Value> {
+    if !crate::rag::use_service() {
+        return Ok(json!({ "ok": true, "body": { "status": "healthy", "engine": "app" } }));
+    }
     Ok(health(RAG_URL).await)
 }
 
 #[tauri::command]
 pub async fn rag_ask(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
     question: String,
     current_page: i64,
     book_id: Option<String>,
 ) -> AppResult<Value> {
-    let payload = json!({
-        "question": question_ok(&question)?,
-        "current_page": page_ok(current_page)?,
-        "book_id": book_ok(book_id)?,
-    });
+    let question = question_ok(&question)?;
+    let page = page_ok(current_page)?;
+    if !crate::rag::use_service() {
+        let id = open_book(book_id)?;
+        if let Some(wait) = not_indexed(&app, &state, &id)? {
+            return Ok(wait);
+        }
+        return Ok(crate::rag::answer::ask(&state, &id, &question, page).await);
+    }
+    let payload = json!({ "question": question, "current_page": page, "book_id": book_ok(book_id)? });
     Ok(post_for_answer(RAG_URL, "/ask", payload).await)
 }
 
 #[tauri::command]
-pub async fn rag_who(name: String, current_page: i64, book_id: Option<String>) -> AppResult<Value> {
-    let payload = json!({
-        "name": name_ok(&name)?,
-        "current_page": page_ok(current_page)?,
-        "book_id": book_ok(book_id)?,
-    });
+pub async fn rag_who(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    name: String,
+    current_page: i64,
+    book_id: Option<String>,
+) -> AppResult<Value> {
+    let name = name_ok(&name)?;
+    let page = page_ok(current_page)?;
+    if !crate::rag::use_service() {
+        let id = open_book(book_id)?;
+        if let Some(wait) = not_indexed(&app, &state, &id)? {
+            return Ok(wait);
+        }
+        return Ok(crate::rag::answer::who(&state, &id, &name, page).await);
+    }
+    let payload = json!({ "name": name, "current_page": page, "book_id": book_ok(book_id)? });
     Ok(post_for_answer(RAG_URL, "/who", payload).await)
 }
 

@@ -1190,6 +1190,29 @@ fn make_emit(app: AppHandle) -> Emit {
 
 const RUN_TIMEOUT: Duration = Duration::from_secs(30);
 
+/// One whole reply from the reader's chosen AI (Settings), for Ask the book's steps. Errors
+/// come back as the same reader-facing messages Explain shows.
+pub async fn complete(state: &AppState, system: &str, user: &str) -> Result<String, AiError> {
+    let cfg = resolve_config(state, crate::commands::settings::api_key)
+        .map_err(|e| ai_error_msg("provider", e.to_string()))?;
+    let provider = provider_for(&cfg, mock_enabled(), RUN_TIMEOUT)?;
+    let prompt = Prompt {
+        system: system.to_string(),
+        messages: vec![msg("user", user)],
+    };
+    let mut text = String::new();
+    let limit = provider.timeout();
+    let result = {
+        let mut on_token = |t: &str| text.push_str(t);
+        tokio::time::timeout(limit, provider.stream(&prompt, &mut on_token)).await
+    };
+    match result {
+        Err(_) => Err(ai_error("timeout")),
+        Ok(Err(e)) => Err(to_ai_error(&e)),
+        Ok(Ok(())) => Ok(text),
+    }
+}
+
 // ---------------------------------------------------------------------------------------
 // Commands (src/main/ipc/ai.ts)
 // ---------------------------------------------------------------------------------------
