@@ -1,10 +1,12 @@
 //! `rag` commands: thin proxies to the Python rag-service on localhost:8000.
 //! Ported from src/main/ipc/rag.ts. They never reject for service failures: those come
 //! back as `{ok:false,error}`. Only invalid arguments are an `Err`.
-use crate::error::{invalid, AppResult};
+use crate::error::{invalid, AppError, AppResult};
+use crate::state::AppState;
 use serde_json::{json, Value};
 use std::collections::BTreeSet;
 use std::time::Duration;
+use tauri::State;
 
 const RAG_URL: &str = "http://localhost:8000";
 const UNREACHABLE: &str = "rag-service is not reachable on localhost:8000";
@@ -110,6 +112,9 @@ async fn post_for_answer(base: &str, path: &str, payload: Value) -> Value {
     }
     let mut out =
         json!({ "ok": true, "answer": answer, "pages": pages.into_iter().collect::<Vec<_>>() });
+    if body.get("not_indexed").and_then(Value::as_bool) == Some(true) {
+        out["notIndexed"] = json!(true); // the Ask drawer shows indexing progress instead
+    }
     if let Some(related) = body.get("related") {
         match related_ok(related) {
             Some(r) => out["related"] = r,
@@ -138,6 +143,110 @@ fn related_ok(v: &Value) -> Option<Value> {
         );
     }
     Some(Value::Array(items))
+}
+
+// ---------------------------------------------------------------- automatic indexing
+
+/// Asks rag-service to index one book in the background. Answers its status
+/// (`{ok: true, state, done, total, error?}`) or `{ok: false, error}`.
+async fn request_index(base: &str, book_id: &str, path: &str, retry: bool) -> Value {
+    let res = reqwest::Client::new()
+        .post(format!("{base}/index"))
+        .json(&json!({ "book_id": book_id, "path": path, "retry": retry }))
+        .timeout(Duration::from_secs(10))
+        .send()
+        .await;
+    status_reply(res).await
+}
+
+async fn index_status(base: &str, book_id: &str) -> Value {
+    let res = reqwest::Client::new()
+        .get(format!("{base}/index/status"))
+        .query(&[("book_id", book_id)])
+        .timeout(Duration::from_secs(5))
+        .send()
+        .await;
+    status_reply(res).await
+}
+
+async fn status_reply(res: reqwest::Result<reqwest::Response>) -> Value {
+    let Ok(r) = res else {
+        return fail(UNREACHABLE);
+    };
+    if !r.status().is_success() {
+        return fail(format!("rag-service answered HTTP {}", r.status().as_u16()));
+    }
+    let Ok(body) = r.json::<Value>().await else {
+        return fail("rag-service sent an unexpected reply");
+    };
+    let state = body.get("state").and_then(Value::as_str).unwrap_or("");
+    if !["missing", "queued", "indexing", "done", "failed"].contains(&state) {
+        return fail("rag-service sent an unexpected reply");
+    }
+    let num = |k: &str| body.get(k).and_then(Value::as_i64).unwrap_or(0).max(0);
+    let mut out = json!({ "ok": true, "state": state, "done": num("done"), "total": num("total") });
+    if let Some(e) = body.get("error").and_then(Value::as_str) {
+        out["error"] = json!(e);
+    }
+    out
+}
+
+/// Sends books to rag-service for indexing (it skips indexed ones). Stops at the first
+/// connection failure: the service is off, and the next app start sends them again.
+async fn send_for_indexing(base: &str, books: &[(String, String)]) -> usize {
+    let mut sent = 0;
+    for (id, path) in books {
+        let r = request_index(base, id, path, false).await;
+        if r["ok"] != true && r["error"] == UNREACHABLE {
+            log::info!(
+                "rag-service is not running; {} book(s) not sent for indexing",
+                books.len() - sent
+            );
+            break;
+        }
+        sent += 1;
+    }
+    sent
+}
+
+/// Indexes these books for Ask in the background (after an import, and at every start).
+pub fn index_in_background(books: Vec<(String, String)>) {
+    if books.is_empty() {
+        return;
+    }
+    tauri::async_runtime::spawn(async move {
+        send_for_indexing(RAG_URL, &books).await;
+    });
+}
+
+/// At startup: every book in the library, so books added while rag-service was off get indexed.
+pub fn index_library(state: &AppState) {
+    match state.with_db(crate::commands::library::library_books) {
+        Ok(books) => index_in_background(books),
+        Err(e) => log::error!("Could not list books for indexing: {e}"),
+    }
+}
+
+/// The open book's indexing state (the Ask drawer polls this while a book is being indexed).
+#[tauri::command]
+pub async fn rag_index_status(book_id: String) -> AppResult<Value> {
+    let id = book_ok(Some(book_id))?.unwrap_or_default();
+    Ok(index_status(RAG_URL, &id).await)
+}
+
+/// Queues the book now (for example when rag-service was off at import); `retry` tries a book
+/// that failed before.
+#[tauri::command]
+pub async fn rag_index_book(
+    state: State<'_, AppState>,
+    book_id: String,
+    retry: bool,
+) -> AppResult<Value> {
+    let id = book_ok(Some(book_id))?.unwrap_or_default();
+    let row = state
+        .with_db(|c| crate::models::get_book_row(c, &id))?
+        .ok_or(AppError::UnknownBook)?;
+    Ok(request_index(RAG_URL, &id, &row.path, retry).await)
 }
 
 #[tauri::command]
@@ -244,6 +353,51 @@ mod tests {
         let req = seen.lock().unwrap()[0].clone();
         assert!(req.starts_with("POST /ask "));
         assert!(req.contains(r#""current_page":4"#));
+    }
+
+    #[tokio::test]
+    async fn index_request_and_status_shapes() {
+        let (base, seen) = fake(200, r#"{"state":"indexing","done":64,"total":300}"#).await;
+        let r = request_index(&base, "abc", r"D:\Books\x.pdf", false).await;
+        assert_eq!(
+            r,
+            json!({"ok": true, "state": "indexing", "done": 64, "total": 300})
+        );
+        let req = seen.lock().unwrap()[0].clone();
+        assert!(req.starts_with("POST /index "));
+        assert!(req.contains(r#""book_id":"abc""#) && req.contains(r#""retry":false"#));
+
+        let (base, seen) = fake(200, r#"{"state":"failed","error":"no text found"}"#).await;
+        let r = index_status(&base, "abc").await;
+        assert_eq!(r["state"], "failed");
+        assert_eq!(r["error"], "no text found");
+        assert!(seen.lock().unwrap()[0].starts_with("GET /index/status?book_id=abc "));
+
+        let (base, _) = fake(200, r#"{"state":"weird"}"#).await;
+        assert_eq!(index_status(&base, "abc").await["ok"], false);
+    }
+
+    #[tokio::test]
+    async fn indexing_stops_when_the_service_is_off() {
+        let books = vec![
+            ("a".to_string(), "a.pdf".to_string()),
+            ("b".into(), "b.pdf".into()),
+        ];
+        assert_eq!(send_for_indexing("http://127.0.0.1:9", &books).await, 0);
+        let (base, seen) = fake(200, r#"{"state":"queued"}"#).await;
+        assert_eq!(send_for_indexing(&base, &books).await, 2);
+        assert_eq!(seen.lock().unwrap().len(), 2);
+    }
+
+    #[tokio::test]
+    async fn not_indexed_answers_are_flagged() {
+        let (base, _) = fake(
+            200,
+            r#"{"answer":"This book isn't set up for Ask yet.","context_pages":[],"not_indexed":true}"#,
+        )
+        .await;
+        let r = post_for_answer(&base, "/ask", json!({})).await;
+        assert_eq!(r["notIndexed"], true);
     }
 
     #[tokio::test]

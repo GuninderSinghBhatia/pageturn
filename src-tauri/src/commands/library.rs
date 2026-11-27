@@ -85,6 +85,14 @@ fn import_files_sync(conn: &Connection, paths: &[String]) -> AppResult<Vec<BookR
     store_imports(conn, &hashed)
 }
 
+/// (id, path) of every book in the library, for indexing.
+pub fn library_books(conn: &Connection) -> AppResult<Vec<(String, String)>> {
+    Ok(list_rows(conn)?
+        .into_iter()
+        .map(|r| (r.id, r.path))
+        .collect())
+}
+
 fn list_rows(conn: &Connection) -> AppResult<Vec<BookRow>> {
     let mut stmt = conn.prepare(&format!(
         "SELECT {BOOK_COLUMNS} FROM books WHERE removed_at IS NULL
@@ -216,6 +224,12 @@ pub async fn import_paths(
     .map_err(|e| AppError::Msg(e.to_string()))??;
     let rows = state.with_db(|c| store_imports(c, &hashed))?;
     notify_changed(app);
+    // Every added book is indexed for Ask in the background.
+    crate::commands::rag::index_in_background(
+        rows.iter()
+            .map(|r| (r.id.clone(), r.path.clone()))
+            .collect(),
+    );
     let dir = state.thumb_dir();
     Ok(rows.into_iter().map(|r| to_book(r, &dir)).collect())
 }

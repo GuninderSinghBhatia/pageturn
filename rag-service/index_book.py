@@ -19,6 +19,34 @@ HERE = Path(__file__).parent  # paths below don't depend on where the script is 
 DEFAULT_PDF = HERE / "docs" / "_OceanofPDF.com_AI_Engineering_Building_Applications_-_Chip_Huyen.pdf"
 
 
+BATCH = 64  # chunks embedded at a time (progress is reported per batch)
+
+
+def index_book(book_id: str, pdf: str, collection, model, progress=None) -> int:
+    """Chunks, embeds and stores one book; returns the number of chunks.
+
+    Replaces the book's old chunks (a different chunk count never leaves stale ids behind).
+    progress(done, total) is called as chunks are embedded. Shared by this script and the
+    service's background indexer (indexer.py).
+    """
+    chunks = ingest_pdf(book_id, pdf)
+    text = [chunk.page_content for chunk in chunks]
+    if not text:
+        raise ValueError("no text found (a scanned PDF without a text layer?)")
+    metadata = [chunk.metadata for chunk in chunks]
+    ids = [f"{book_id}-{n}" for n in range(len(chunks))]
+
+    embeddings = []
+    for start in range(0, len(text), BATCH):
+        embeddings.extend(model.encode(text[start:start + BATCH]).tolist())
+        if progress:
+            progress(min(start + BATCH, len(text)), len(text))
+
+    collection.delete(where={"book_id": book_id})
+    collection.upsert(ids=ids, documents=text, embeddings=embeddings, metadatas=metadata)
+    return len(chunks)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--book-id", default="book1")
@@ -29,20 +57,10 @@ def main() -> None:
     collection = client.get_or_create_collection("books")
     model = SentenceTransformer("all-MiniLM-L6-v2")
 
-    chunks = ingest_pdf(args.book_id, args.pdf)
-    ids = [f"{args.book_id}-{n}" for n in range(len(chunks))]
-    print(ids[0:3])
-
-    text = [chunk.page_content for chunk in chunks]
-    metadata = [chunk.metadata for chunk in chunks]
-    print(len(text), len(metadata))
-
-    embeddings = model.encode(text, show_progress_bar=True)
-    print(embeddings.shape)
-
-    collection.delete(where={"book_id": args.book_id})
-    collection.upsert(ids=ids, documents=text, embeddings=embeddings, metadatas=metadata)
-    print(collection.count())
+    n = index_book(args.book_id, args.pdf, collection, model,
+                   progress=lambda done, total: print(f"embedded {done}/{total}", end=chr(13)))
+    print()
+    print(f"{args.book_id}: {n} chunks; the collection now has {collection.count()}")
 
 
 if __name__ == "__main__":

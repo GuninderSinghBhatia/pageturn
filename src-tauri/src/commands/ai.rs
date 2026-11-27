@@ -4,6 +4,7 @@
 //! (`settings::api_key`), never reach the UI and are never logged. Tokens stream back as the
 //! events `ai:token`, `ai:done` and `ai:error`.
 use crate::error::{invalid, AppResult};
+use crate::llm::chatgpt::{self, ChatGptProvider};
 use crate::llm::claude_code::{self, ClaudeCodeProvider};
 use crate::llm::{Prompt, Provider};
 use crate::state::AppState;
@@ -26,12 +27,19 @@ use tokio::sync::oneshot;
 const PROVIDERS: [&str; 3] = ["anthropic", "openai", "gemini"];
 /// The reader's Claude plan, through their installed Claude Code CLI (no key).
 pub const CLAUDE: &str = "claude";
+/// The reader's ChatGPT plan, through Sign in with ChatGPT (no key).
+pub const CHATGPT: &str = "chatgpt";
+
+/// Plan providers sign in their own way; they never use a saved API key.
+fn is_plan(provider: &str) -> bool {
+    provider == CLAUDE || provider == CHATGPT
+}
 
 fn default_model(provider: &str) -> &'static str {
     match provider {
         "openai" => "gpt-5",
         "gemini" => "gemini-3.8-flash",
-        CLAUDE => "default",
+        CLAUDE | CHATGPT => "default",
         _ => "claude-sonnet-5-5",
     }
 }
@@ -317,7 +325,20 @@ pub fn to_ai_error(e: &ProviderErr) -> AiError {
                 "Sign in to Claude Code in Settings to use your Claude plan.",
             )
         }
-        Some(claude_code::PLAN_LIMIT) => return ai_error_msg("rate_limit", e.message.clone()),
+        Some(claude_code::PLAN_LIMIT) | Some(chatgpt::PLAN_LIMIT) => {
+            return ai_error_msg("rate_limit", e.message.clone())
+        }
+        Some(chatgpt::SIGNED_OUT) => {
+            return ai_error_msg(
+                "no_key",
+                "Sign in with ChatGPT in Settings to use your ChatGPT plan.",
+            )
+        }
+        Some(chatgpt::PLAN_OFF) => return ai_error_msg(
+            "no_key",
+            "PageTurn doesn't have permission to use your ChatGPT plan. Turn it on in Settings.",
+        ),
+        Some(chatgpt::NOT_ELIGIBLE) => return ai_error_msg("provider", e.message.clone()),
         _ => {}
     }
     if matches!(e.status, Some(401) | Some(403)) {
@@ -907,7 +928,13 @@ fn provider_for(
             model: cfg.model.clone(),
         }));
     }
-    let key = match (&cfg.key, cfg.provider == CLAUDE) {
+    if cfg.provider == CHATGPT && !mock {
+        return Ok(Box::new(ChatGptProvider {
+            model: cfg.model.clone(),
+            dir: cfg.dir.clone(),
+        }));
+    }
+    let key = match (&cfg.key, is_plan(&cfg.provider)) {
         (Some(k), _) => k.clone(),
         (None, true) => "sk-mock".into(), // mock runs need no sign-in
         (None, false) => return Err(ai_error("no_key")),
@@ -973,16 +1000,18 @@ struct RunConfig {
     provider: String,
     model: String,
     key: Option<String>,
+    /// The data folder (where a plan provider keeps its sign-in).
+    dir: std::path::PathBuf,
 }
 
 fn resolve_config(state: &AppState, key_fn: KeyFn) -> AppResult<RunConfig> {
     let provider = read_setting(state, "aiProvider")?
         .and_then(|v| v.as_str().map(str::to_string))
-        .filter(|p| PROVIDERS.contains(&p.as_str()) || p == CLAUDE)
+        .filter(|p| PROVIDERS.contains(&p.as_str()) || is_plan(p))
         .unwrap_or_else(|| "anthropic".to_string());
     let model = saved_model(state, &provider)?;
-    let key = if provider == CLAUDE {
-        None // the CLI keeps its own sign-in
+    let key = if is_plan(&provider) {
+        None // signed in its own way
     } else {
         key_fn(state, &provider)?
     };
@@ -990,6 +1019,7 @@ fn resolve_config(state: &AppState, key_fn: KeyFn) -> AppResult<RunConfig> {
         provider,
         model,
         key,
+        dir: state.data_dir.clone(),
     })
 }
 
@@ -1295,6 +1325,75 @@ pub async fn ai_claude_status() -> AppResult<Value> {
 #[tauri::command]
 pub async fn ai_claude_login() -> AppResult<()> {
     claude_code::open_login().map_err(crate::error::AppError::Msg)
+}
+
+// --- ChatGPT plan (Sign in with ChatGPT) ---
+
+fn chatgpt_store(state: &AppState) -> chatgpt::Store {
+    chatgpt::Store::os(&state.data_dir)
+}
+
+/// Signed in? Plan use allowed? Which email? (Never the tokens.)
+#[tauri::command]
+pub async fn ai_chatgpt_status(state: State<'_, AppState>) -> AppResult<Value> {
+    Ok(chatgpt::status(&chatgpt_store(&state)))
+}
+
+/// Runs the browser sign-in; `consent` asks for plan permission again after a decline.
+/// Answers `{ok: true, status}` or `{ok: false, error}`; never rejects for sign-in failures.
+#[tauri::command]
+pub async fn ai_chatgpt_login(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    consent: bool,
+) -> AppResult<Value> {
+    use tauri_plugin_opener::OpenerExt;
+    let store = chatgpt_store(&state);
+    let open = |url: &str| {
+        app.opener()
+            .open_url(url, None::<&str>)
+            .map_err(|e| e.to_string())
+    };
+    Ok(match chatgpt::sign_in(&store, consent, open).await {
+        Ok(()) => json!({"ok": true, "status": chatgpt::status(&store)}),
+        Err(e) => json!({"ok": false, "error": e.message, "status": chatgpt::status(&store)}),
+    })
+}
+
+/// Signs out (revoking the sign-in at OpenAI); `confirmed` is false when OpenAI could not be told.
+#[tauri::command]
+pub async fn ai_chatgpt_logout(state: State<'_, AppState>) -> AppResult<Value> {
+    let confirmed = chatgpt::sign_out(&chatgpt_store(&state)).await;
+    Ok(json!({"confirmed": confirmed}))
+}
+
+/// The signed-in account's models ([] when signed out or offline).
+#[tauri::command]
+pub async fn ai_chatgpt_models(state: State<'_, AppState>) -> AppResult<Value> {
+    let list = chatgpt::models(&chatgpt_store(&state))
+        .await
+        .unwrap_or_default();
+    Ok(Value::Array(
+        list.into_iter()
+            .map(|(id, label)| json!({"id": id, "label": label}))
+            .collect(),
+    ))
+}
+
+/// The one-time "You're using your ChatGPT plan" notice was dismissed.
+#[tauri::command]
+pub async fn ai_chatgpt_welcomed(state: State<'_, AppState>) -> AppResult<()> {
+    chatgpt::mark_welcomed(&chatgpt_store(&state));
+    Ok(())
+}
+
+/// Opens ChatGPT settings → Usage in the browser.
+#[tauri::command]
+pub async fn ai_chatgpt_open_usage(app: AppHandle) -> AppResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    app.opener()
+        .open_url(chatgpt::USAGE_URL, None::<&str>)
+        .map_err(|e| crate::error::AppError::Msg(e.to_string()))
 }
 
 fn ended_error() -> AiError {
@@ -1676,6 +1775,7 @@ mod tests {
             provider: "anthropic".into(),
             model: "m".into(),
             key: key.map(str::to_string),
+            dir: Default::default(),
         })
     }
 
@@ -1925,6 +2025,7 @@ mod tests {
             provider: CLAUDE.into(),
             model: "default".into(),
             key: None,
+            dir: Default::default(),
         });
         execute(emit, id.into(), ctx, cfg, true, T).await;
         let l = log.lock().unwrap();

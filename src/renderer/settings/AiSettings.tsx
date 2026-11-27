@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   DEFAULT_MODELS,
   isKeyProvider,
@@ -6,6 +6,7 @@ import {
   PRIVACY_LINE,
   PROVIDER_LABELS,
   PROVIDERS,
+  type ChatGptStatus,
   type ClaudeStatus,
   type HelpDefaultTab,
   type KeyProviderId,
@@ -23,7 +24,7 @@ const ENGINES: [SearchEngine, string][] = [
   ['bing', 'Bing']
 ]
 const TABS: [HelpDefaultTab, string][] = [
-  ['auto', 'Explain if a key is set, otherwise Web'],
+  ['auto', 'Explain if AI is set up, otherwise Web'],
   ['explain', 'Explain'],
   ['web', 'Web']
 ]
@@ -35,7 +36,10 @@ export function AiSettings(): React.JSX.Element {
   const provider = settings.aiProvider
   const [hasKey, setHasKey] = useState<boolean | null>(null)
   const [draft, setDraft] = useState('')
-  const [liveModels, setLiveModels] = useState<{ provider: ProviderId; ids: string[] } | null>(null)
+  type Model = { id: string; label: string }
+  const [liveModels, setLiveModels] = useState<{ provider: ProviderId; models: Model[] } | null>(
+    null
+  )
   const [status, setStatus] = useState<Status>(null)
   const keyProvider: KeyProviderId | null = isKeyProvider(provider) ? provider : null
 
@@ -53,16 +57,28 @@ export function AiSettings(): React.JSX.Element {
     if (!hasKey || !keyProvider) return
     const provider = keyProvider
     let live = true
-    void window.api.ai.listModels(provider).then((ids) => live && setLiveModels({ provider, ids }))
+    void window.api.ai
+      .listModels(provider)
+      .then(
+        (ids) => live && setLiveModels({ provider, models: ids.map((id) => ({ id, label: id })) })
+      )
     return () => {
       live = false
     }
   }, [keyProvider, hasKey])
 
+  const onChatGptModels = useCallback(
+    (models: Model[]) => setLiveModels({ provider: 'chatgpt', models }),
+    []
+  )
+
   const current = settings.aiModel ?? DEFAULT_MODELS[provider]
   const known = MODEL_OPTIONS[provider]
-  const extra = [...(liveModels?.provider === provider ? liveModels.ids : []), current].filter(
-    (id, i, all) => all.indexOf(id) === i && !known.some((m) => m.id === id)
+  const extra = [
+    ...(liveModels?.provider === provider ? liveModels.models : []),
+    { id: current, label: current }
+  ].filter(
+    (m, i, all) => all.findIndex((o) => o.id === m.id) === i && !known.some((k) => k.id === m.id)
   )
 
   const [ragStatus, setRagStatus] = useState<Status>(null)
@@ -122,7 +138,8 @@ export function AiSettings(): React.JSX.Element {
         </select>
       </fieldset>
 
-      {!keyProvider && <ClaudePlan />}
+      {provider === 'claude' && <ClaudePlan />}
+      {provider === 'chatgpt' && <ChatGptPlan onModels={onChatGptModels} />}
 
       {keyProvider && (
         <fieldset className={styles.group}>
@@ -184,22 +201,30 @@ export function AiSettings(): React.JSX.Element {
               {m.label}
             </option>
           ))}
-          {keyProvider && extra.length > 0 && (
-            <optgroup label="Also available with your key">
-              {extra.map((id) => (
-                <option key={id} value={id}>
-                  {id}
+          {provider !== 'claude' && extra.length > 0 && (
+            <optgroup
+              label={
+                provider === 'chatgpt'
+                  ? 'Available on your ChatGPT plan'
+                  : 'Also available with your key'
+              }
+            >
+              {extra.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
                 </option>
               ))}
             </optgroup>
           )}
         </select>
         <p className={styles.hint}>
-          {!keyProvider
+          {provider === 'claude'
             ? 'Your Claude plan decides which models you can use.'
-            : hasKey
-              ? 'Your key decides which models you can use.'
-              : 'Save a key to see every model it can use.'}
+            : provider === 'chatgpt'
+              ? 'Your ChatGPT plan decides which models you can use.'
+              : hasKey
+                ? 'Your key decides which models you can use.'
+                : 'Save a key to see every model it can use.'}
         </p>
       </fieldset>
 
@@ -341,6 +366,150 @@ function ClaudePlan(): React.JSX.Element {
         Explanations use your Claude subscription&apos;s limits, not an API key. PageTurn runs your
         own Claude Code with no tools, so it cannot open or change your files, and it never sees
         your sign-in.
+      </p>
+    </fieldset>
+  )
+}
+
+/**
+ * The ChatGPT plan: Sign in with ChatGPT (OpenAI's plan sign-in for open-source local apps).
+ * Follows OpenAI's guidelines: "Continue with ChatGPT", a one-time "You're using your ChatGPT
+ * plan" notice, and "Manage usage" links to ChatGPT settings.
+ */
+function ChatGptPlan({
+  onModels
+}: {
+  onModels: (models: { id: string; label: string }[]) => void
+}): React.JSX.Element {
+  const [st, setSt] = useState<ChatGptStatus | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState<Status>(null)
+
+  useEffect(() => {
+    let live = true
+    void window.api.ai.chatgptStatus().then((s) => {
+      if (live) setSt(s)
+    })
+    return () => {
+      live = false
+    }
+  }, [])
+
+  // Signed in with plan use: offer the account's own models.
+  const ready = !!st?.signedIn && st.planUse
+  useEffect(() => {
+    if (!ready) return
+    let live = true
+    void window.api.ai.chatgptModels().then((m) => {
+      if (live) onModels(m)
+    })
+    return () => {
+      live = false
+    }
+  }, [ready, onModels])
+
+  const signIn = async (consent: boolean): Promise<void> => {
+    setBusy(true)
+    setNote({ kind: 'info', text: 'Finish signing in in your browser…' })
+    const r = await window.api.ai.chatgptLogin(consent)
+    setBusy(false)
+    setSt(r.status)
+    setNote(r.ok ? null : { kind: 'error', text: r.error })
+  }
+
+  const signOut = async (): Promise<void> => {
+    setBusy(true)
+    const r = await window.api.ai.chatgptLogout()
+    setBusy(false)
+    setSt(await window.api.ai.chatgptStatus())
+    setNote({
+      kind: 'info',
+      text: r.confirmed
+        ? 'Signed out.'
+        : "Signed out on this computer, but OpenAI couldn't be told. You can disconnect PageTurn in ChatGPT settings."
+    })
+  }
+
+  return (
+    <fieldset className={styles.group}>
+      <legend className={styles.legend}>Use your ChatGPT plan</legend>
+      {st === null ? (
+        <p className={styles.hint} role="status">
+          Checking…
+        </p>
+      ) : !st.signedIn ? (
+        <>
+          <p className={styles.hint}>
+            Get explanations with the usage included in your ChatGPT plan, instead of an API key.
+          </p>
+          <div className={styles.row}>
+            <button
+              className={styles.chatgptButton}
+              disabled={busy}
+              onClick={() => void signIn(false)}
+            >
+              Continue with ChatGPT
+            </button>
+          </div>
+        </>
+      ) : !st.planUse ? (
+        <>
+          <p className={styles.error} role="status">
+            Signed in{st.email ? ` as ${st.email}` : ''}, but PageTurn doesn&apos;t have permission
+            to use your ChatGPT plan.
+          </p>
+          <div className={styles.row}>
+            <button className={styles.button} disabled={busy} onClick={() => void signIn(true)}>
+              Allow plan use
+            </button>
+            <button className={styles.button} disabled={busy} onClick={() => void signOut()}>
+              Sign out
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className={styles.hint} role="status">
+            ✓ Using ChatGPT plan{st.email ? ` (${st.email})` : ''}.
+          </p>
+          <div className={styles.row}>
+            <button className={styles.button} onClick={() => void window.api.ai.chatgptOpenUsage()}>
+              Manage usage
+            </button>
+            <button className={styles.button} disabled={busy} onClick={() => void signOut()}>
+              Sign out
+            </button>
+          </div>
+        </>
+      )}
+      {note && (
+        <p className={note.kind === 'error' ? styles.error : styles.hint} role="status">
+          {note.text}
+        </p>
+      )}
+      {ready && !st.welcomed && (
+        <div className={styles.notice} role="dialog" aria-labelledby="chatgpt-welcome">
+          <h3 id="chatgpt-welcome">You&apos;re using your ChatGPT plan</h3>
+          <p className={styles.hint}>
+            Explanations in PageTurn now use your ChatGPT plan. You can see and manage this usage in
+            ChatGPT settings.
+          </p>
+          <div className={styles.row}>
+            <button
+              className={styles.button}
+              onClick={() => {
+                void window.api.ai.chatgptWelcomed()
+                setSt({ ...st, welcomed: true })
+              }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+      <p className={styles.hint}>
+        PageTurn keeps your ChatGPT sign-in encrypted on this computer and only uses it for the text
+        you ask about.
       </p>
     </fieldset>
   )

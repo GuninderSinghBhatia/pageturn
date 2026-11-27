@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Query
 from pydantic import BaseModel, Field
 
+import indexer
 from ask import DEFAULT_BOOK, ask_question, resolve_book, who_is
 from graph.retrieve import related_terms
 
@@ -20,6 +21,23 @@ class WhoRequest(BaseModel):
 
 
 NOT_INDEXED = {"answer": "This book isn't set up for Ask yet.", "context_pages": [], "not_indexed": True}
+
+
+class IndexRequest(BaseModel):
+    book_id: str = Field(min_length=1, max_length=200, pattern=r"^[A-Za-z0-9_-]+$")
+    path: str = Field(min_length=5, max_length=1000, pattern=r"(?i)\.pdf$")
+    retry: bool = False  # try again a book that failed before
+
+
+@app.post("/index")
+def handle_index(req: IndexRequest):
+    """Queues the book for background indexing (skips books already indexed)."""
+    return indexer.enqueue(req.book_id, req.path, req.retry)
+
+
+@app.get("/index/status")
+def handle_index_status(book_id: str = Query(min_length=1, max_length=200, pattern=r"^[A-Za-z0-9_-]+$")):
+    return indexer.status(book_id)
 
 
 @app.get("/health")

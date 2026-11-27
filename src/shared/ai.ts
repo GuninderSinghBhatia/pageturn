@@ -4,17 +4,22 @@ import { z } from 'zod'
 export const KEY_PROVIDERS = ['anthropic', 'openai', 'gemini'] as const
 export type KeyProviderId = (typeof KEY_PROVIDERS)[number]
 
-/** Every AI provider: the key ones, plus the reader's Claude plan through Claude Code. */
-export const PROVIDERS = [...KEY_PROVIDERS, 'claude'] as const
+/**
+ * Every AI provider: the key ones, plus the reader's own plans: Claude (through Claude Code)
+ * and ChatGPT (Sign in with ChatGPT).
+ */
+export const PROVIDERS = [...KEY_PROVIDERS, 'claude', 'chatgpt'] as const
 export type ProviderId = (typeof PROVIDERS)[number]
 
-export const isKeyProvider = (p: ProviderId): p is KeyProviderId => p !== 'claude'
+export const isKeyProvider = (p: ProviderId): p is KeyProviderId =>
+  (KEY_PROVIDERS as readonly string[]).includes(p)
 
 export const PROVIDER_LABELS: Record<ProviderId, string> = {
   anthropic: 'Anthropic (Claude) — API key',
   openai: 'OpenAI — API key',
   gemini: 'Google Gemini — API key',
-  claude: 'Claude plan (via Claude Code)'
+  claude: 'Claude plan (via Claude Code)',
+  chatgpt: 'ChatGPT plan (Sign in with ChatGPT)'
 }
 
 /** Model used when the reader has not typed one of their own. */
@@ -22,7 +27,8 @@ export const DEFAULT_MODELS: Record<ProviderId, string> = {
   anthropic: 'claude-sonnet-5-5',
   openai: 'gpt-5',
   gemini: 'gemini-3.8-flash',
-  claude: 'default'
+  claude: 'default',
+  chatgpt: 'default'
 }
 
 /** What Settings shows about the reader's Claude Code (never their account details). */
@@ -35,6 +41,19 @@ export type ClaudeStatus =
       authMethod: string | null
       plan: string | null
     }
+
+/** What Settings shows about the ChatGPT plan sign-in (never the tokens). */
+export type ChatGptStatus = {
+  signedIn: boolean
+  /** The reader allowed PageTurn to use their ChatGPT plan. */
+  planUse: boolean
+  email: string | null
+  /** The one-time "You're using your ChatGPT plan" notice was dismissed. */
+  welcomed: boolean
+}
+
+/** ChatGPT settings → Usage, where readers manage plan usage and limits. */
+export const CHATGPT_USAGE_URL = 'https://chatgpt.com/settings/usage'
 
 /** Models offered in Settings (first = default). Keys can unlock more, listed live. */
 export const MODEL_OPTIONS: Record<ProviderId, { id: string; label: string }[]> = {
@@ -60,7 +79,8 @@ export const MODEL_OPTIONS: Record<ProviderId, { id: string; label: string }[]> 
     { id: 'sonnet', label: 'Sonnet' },
     { id: 'opus', label: 'Opus — most capable, uses your limit faster' },
     { id: 'haiku', label: 'Haiku — fastest' }
-  ]
+  ],
+  chatgpt: [{ id: 'default', label: "Your plan's default — recommended" }]
 }
 
 /** Of a provider's model list, the ones that can chat (no embeddings, audio, images…). */

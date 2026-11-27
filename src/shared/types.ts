@@ -122,6 +122,8 @@ export type Settings = {
   aiPrivacyAcknowledged: boolean
   onboardingDone: boolean // the first-run tour was finished or skipped
   sampleImported: boolean // first-run setup ran (set by main only)
+  /** Spoiler Shield per book (book id → on?); a book not listed has not been asked yet. */
+  spoilerShield: Record<string, boolean>
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -147,5 +149,6 @@ export const DEFAULT_SETTINGS: Settings = {
   helpPanelWidth: 420,
   aiPrivacyAcknowledged: false,
   onboardingDone: false,
-  sampleImported: false
+  sampleImported: false,
+  spoilerShield: {}
 }

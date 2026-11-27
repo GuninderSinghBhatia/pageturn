@@ -10,6 +10,9 @@ interface AskState {
   /** Opens the drawer and looks up who/what `name` is, using only the pages read so far. */
   askWho(name: string): void
   clearPendingName(): void
+  /** The book whose index is ready for Ask (set by IndexGate); null while it is not. */
+  readyBook: string | null
+  setReadyBook(bookId: string | null): void
 }
 
 export const useAskStore = create<AskState>((set) => ({
@@ -18,5 +21,7 @@ export const useAskStore = create<AskState>((set) => ({
   toggle: () => set((s) => ({ open: !s.open })),
   close: () => set({ open: false }),
   askWho: (name) => set({ open: true, pendingName: name }),
-  clearPendingName: () => set({ pendingName: null })
+  clearPendingName: () => set({ pendingName: null }),
+  readyBook: null,
+  setReadyBook: (bookId) => set({ readyBook: bookId })
 }))

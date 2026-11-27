@@ -37,7 +37,7 @@ fn defaults() -> Map<String, Value> {
         "lookupOpenIn": "app", "aiProvider": "anthropic", "aiModel": null,
         "searchEngine": "duckduckgo", "searchIncludeTitle": false, "helpDefaultTab": "auto",
         "helpPanelWidth": 420, "aiPrivacyAcknowledged": false, "onboardingDone": false,
-        "sampleImported": false
+        "sampleImported": false, "spoilerShield": {}
     });
     match v {
         Value::Object(m) => m,
@@ -97,7 +97,7 @@ fn check_field(key: &str, v: &Value) -> AppResult<Value> {
             _ => Err(bad()),
         },
         "lookupOpenIn" => one_of(&["app", "browser"]),
-        "aiProvider" => one_of(&["anthropic", "openai", "gemini", "claude"]),
+        "aiProvider" => one_of(&["anthropic", "openai", "gemini", "claude", "chatgpt"]),
         "aiModel" => match v {
             Value::Null => Ok(Value::Null),
             Value::String(s) => {
@@ -115,6 +115,17 @@ fn check_field(key: &str, v: &Value) -> AppResult<Value> {
         "helpPanelWidth" => match v.as_f64() {
             Some(n) if n.fract() == 0.0 && (320.0..=4000.0).contains(&n) => {
                 Ok(Value::from(n as i64))
+            }
+            _ => Err(bad()),
+        },
+        // Spoiler Shield per book: { bookId: on? } (a book missing from it has not been asked).
+        "spoilerShield" => match v.as_object() {
+            Some(m)
+                if m.len() <= 100_000
+                    && m.iter()
+                        .all(|(id, on)| (1..=64).contains(&id.len()) && on.is_boolean()) =>
+            {
+                Ok(v.clone())
             }
             _ => Err(bad()),
         },
@@ -316,6 +327,34 @@ pub async fn settings_clear_api_key(state: State<'_, AppState>, provider: String
     store_clear(&state.data_dir, &provider)
 }
 
+/// Internal secrets (not API keys, never exposed to the UI), stored in secrets.bin under
+/// `secret:<name>` and encrypted like the keys. Used for the ChatGPT plan session.
+pub fn secret_set(dir: &Path, c: &dyn SecretCipher, name: &str, plain: &str) -> AppResult<()> {
+    let blob = c.encrypt(plain.as_bytes())?;
+    let mut data = read_secrets(dir);
+    data.insert(format!("secret:{name}"), Value::String(B64.encode(blob)));
+    std::fs::create_dir_all(dir)?;
+    std::fs::write(secrets_file(dir), serde_json::to_string(&data)?)?;
+    Ok(())
+}
+
+pub fn secret_get(dir: &Path, c: &dyn SecretCipher, name: &str) -> Option<String> {
+    let blob = read_secrets(dir)
+        .get(&format!("secret:{name}"))?
+        .as_str()?
+        .to_string();
+    let bytes = B64.decode(blob).ok()?;
+    String::from_utf8(c.decrypt(&bytes).ok()?).ok()
+}
+
+pub fn secret_clear(dir: &Path, name: &str) -> AppResult<()> {
+    let mut data = read_secrets(dir);
+    if data.remove(&format!("secret:{name}")).is_some() {
+        std::fs::write(secrets_file(dir), serde_json::to_string(&data)?)?;
+    }
+    Ok(())
+}
+
 /// The saved API key for a provider ("anthropic" | "openai" | "gemini"), or None.
 /// Used by the AI module.
 pub fn api_key(state: &AppState, provider: &str) -> AppResult<Option<String>> {
@@ -347,6 +386,19 @@ mod tests {
         assert_eq!(s["helpPanelWidth"], 420);
         assert_eq!(s["aiModel"], Value::Null);
         assert_eq!(s["sampleImported"], false);
+        assert_eq!(s["spoilerShield"], json!({}));
+    }
+
+    #[test]
+    fn spoiler_shield_is_remembered_per_book() {
+        let c = db();
+        let s = set_settings(
+            &c,
+            &json!({"spoilerShield": {"book-1": true, "book-2": false}}),
+        )
+        .unwrap();
+        assert_eq!(s["spoilerShield"]["book-1"], true);
+        assert_eq!(get_settings(&c).unwrap()["spoilerShield"]["book-2"], false);
     }
 
     #[test]
@@ -375,6 +427,9 @@ mod tests {
             json!({"lookupLanguage": "EN"}),
             json!({"aiModel": "   "}),
             json!({"turnSound": "yes"}),
+            json!({"spoilerShield": {"book-1": "on"}}),
+            json!({"spoilerShield": {"": true}}),
+            json!({"spoilerShield": [true]}),
             json!([1]),
         ] {
             assert!(set_settings(&c, &bad).is_err(), "{bad}");

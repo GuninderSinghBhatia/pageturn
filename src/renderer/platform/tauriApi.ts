@@ -82,7 +82,9 @@ const api: Api = {
   rag: {
     health: () => call('rag_health'),
     ask: (question, currentPage, bookId) => call('rag_ask', { question, currentPage, bookId }),
-    who: (name, currentPage, bookId) => call('rag_who', { name, currentPage, bookId })
+    who: (name, currentPage, bookId) => call('rag_who', { name, currentPage, bookId }),
+    indexStatus: (bookId) => call('rag_index_status', { bookId }),
+    indexBook: (bookId, retry) => call('rag_index_book', { bookId, retry })
   },
   settings: {
     get: () => call('settings_get'),
@@ -110,6 +112,12 @@ const api: Api = {
     listModels: (provider) => call('ai_list_models', { provider }),
     claudeStatus: () => call('ai_claude_status'),
     claudeLogin: () => call('ai_claude_login'),
+    chatgptStatus: () => call('ai_chatgpt_status'),
+    chatgptLogin: (consent) => call('ai_chatgpt_login', { consent }),
+    chatgptLogout: () => call('ai_chatgpt_logout'),
+    chatgptModels: () => call('ai_chatgpt_models'),
+    chatgptWelcomed: () => call('ai_chatgpt_welcomed'),
+    chatgptOpenUsage: () => call('ai_chatgpt_open_usage'),
     explain: (requestId, req) => call('ai_explain', { requestId, req }),
     followUp: (requestId, text) => call('ai_follow_up', { requestId, text }),
     cancel: (requestId) => call('ai_cancel', { requestId }),

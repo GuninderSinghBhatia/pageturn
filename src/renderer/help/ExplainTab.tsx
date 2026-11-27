@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { PRIVACY_LINE } from '@shared/ai'
 import { useNav } from '../app/nav'
+import { useSettingsStore } from '../stores/settingsStore'
 import { useToastStore } from '../stores/toastStore'
 import { useHelpStore, type QuickKind } from './helpStore'
 import { Markdown } from './Markdown'
@@ -26,6 +27,8 @@ export function ExplainTab({
   const [lang, setLang] = useState('Hindi')
   const endRef = useRef<HTMLDivElement>(null)
   const busy = s.messages.some((m) => m.streaming)
+  const onChatGpt = useSettingsStore((st) => st.settings.aiProvider === 'chatgpt')
+  const manageUsage = (): void => void window.api.ai.chatgptOpenUsage()
   const lastAnswer = [...s.messages].reverse().find((m) => m.role === 'assistant' && m.content)
 
   useEffect(() => {
@@ -97,6 +100,11 @@ export function ExplainTab({
               <button className={styles.ghost} onClick={s.retry}>
                 Retry
               </button>
+              {onChatGpt && s.error.kind === 'rate_limit' && (
+                <button className={styles.ghost} onClick={manageUsage}>
+                  Manage usage
+                </button>
+              )}
               {keyError && (
                 <button className={styles.ghost} onClick={() => useNav.getState().openSettings()}>
                   Open Settings
@@ -157,6 +165,15 @@ export function ExplainTab({
           onChange={(e) => setDraft(e.target.value)}
         />
       </form>
+
+      {onChatGpt && (
+        <p className={styles.planLine}>
+          Using ChatGPT plan ·{' '}
+          <button className={styles.linkBtn} onClick={manageUsage}>
+            Manage usage
+          </button>
+        </p>
+      )}
 
       <div className={styles.footer}>
         <button

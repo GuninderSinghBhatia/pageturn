@@ -9,6 +9,9 @@
 //! - Claude plan ([`claude_code::ClaudeCodeProvider`]): the reader's own installed Claude Code
 //!   CLI, signed in with their Claude subscription. PageTurn never sees that sign-in: it runs
 //!   the official CLI and reads its output.
+//! - ChatGPT plan ([`chatgpt::ChatGptProvider`]): OpenAI's "Sign in with ChatGPT" plan usage for
+//!   open-source local apps; PageTurn holds the OAuth tokens, encrypted like API keys.
+pub mod chatgpt;
 pub mod claude_code;
 
 use crate::commands::ai::{ChatMessage, ProviderErr};

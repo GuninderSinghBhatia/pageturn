@@ -4,6 +4,7 @@ import {
   PROVIDERS,
   SEARCH_ENGINES,
   type AiError,
+  type ChatGptStatus,
   type ClaudeStatus,
   type ExplainRequest,
   type KeyProviderId
@@ -48,7 +49,26 @@ export interface RagRelated {
  * `related` comes only with "Who is this?" and is empty when the graph is not running.
  */
 export type RagAnswer =
-  | { ok: true; answer: string; pages: number[]; related?: RagRelated[] }
+  | {
+      ok: true
+      answer: string
+      pages: number[]
+      related?: RagRelated[]
+      /** The book has not been indexed for Ask yet (the answer is only a notice). */
+      notIndexed?: boolean
+    }
+  | { ok: false; error: string }
+
+/** A book's indexing for Ask: every added book is indexed in the background by rag-service. */
+export type RagIndexStatus =
+  | {
+      ok: true
+      state: 'missing' | 'queued' | 'indexing' | 'done' | 'failed'
+      /** Chunks embedded so far, of `total` (0 while unknown). */
+      done: number
+      total: number
+      error?: string
+    }
   | { ok: false; error: string }
 
 /** IPC channel names: one per Api method (plus main → renderer events). */
@@ -153,7 +173,8 @@ export const SettingsPartialSchema = z
     helpDefaultTab: z.enum(HELP_TABS),
     helpPanelWidth: z.number().int().min(320).max(4000),
     aiPrivacyAcknowledged: z.boolean(),
-    onboardingDone: z.boolean()
+    onboardingDone: z.boolean(),
+    spoilerShield: z.record(z.string().min(1).max(64), z.boolean())
   })
   .partial()
   .strict()
@@ -309,6 +330,10 @@ export interface Api {
     ask(question: string, currentPage: number, bookId?: string): Promise<RagAnswer>
     /** Who/what a selected name is, from the text up to `currentPage` only; never rejects. */
     who(name: string, currentPage: number, bookId?: string): Promise<RagAnswer>
+    /** The book's indexing state; never rejects (an unreachable service is `ok: false`). */
+    indexStatus(bookId: string): Promise<RagIndexStatus>
+    /** Queues the book for indexing now; `retry` tries a book that failed before. */
+    indexBook(bookId: string, retry: boolean): Promise<RagIndexStatus>
   }
   settings: {
     get(): Promise<Settings>
@@ -326,6 +351,24 @@ export interface Api {
     claudeStatus(): Promise<ClaudeStatus>
     /** Opens Claude Code's own sign-in window; PageTurn never sees the sign-in. */
     claudeLogin(): Promise<void>
+    /** ChatGPT plan sign-in state (never the tokens). */
+    chatgptStatus(): Promise<ChatGptStatus>
+    /**
+     * Runs Sign in with ChatGPT in the browser (`consent`: ask for plan permission again).
+     * Never rejects for sign-in failures: they come back as `ok: false`.
+     */
+    chatgptLogin(
+      consent: boolean
+    ): Promise<
+      { ok: true; status: ChatGptStatus } | { ok: false; error: string; status: ChatGptStatus }
+    >
+    /** Signs out; `confirmed` is false when OpenAI could not be told. */
+    chatgptLogout(): Promise<{ confirmed: boolean }>
+    /** Models the signed-in ChatGPT account can use ([] when signed out or offline). */
+    chatgptModels(): Promise<{ id: string; label: string }[]>
+    chatgptWelcomed(): Promise<void>
+    /** Opens ChatGPT settings → Usage in the browser. */
+    chatgptOpenUsage(): Promise<void>
     /** Starts streaming an explanation; results arrive through onToken / onDone / onError. */
     explain(requestId: string, req: ExplainRequest): Promise<void>
     followUp(requestId: string, text: string): Promise<void>

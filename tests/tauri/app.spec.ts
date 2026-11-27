@@ -121,7 +121,8 @@ test('AI (mock provider): streams tokens, finishes, follow-up and cancel work', 
   // Like PageTurn 1.x, the mock still needs a saved key for the selected provider.
   await page.evaluate(async () => {
     const { aiProvider } = await window.api.settings.get()
-    if (aiProvider !== 'claude') await window.api.settings.setApiKey(aiProvider, 'sk-test-key-0001')
+    if (aiProvider !== 'claude' && aiProvider !== 'chatgpt')
+      await window.api.settings.setApiKey(aiProvider, 'sk-test-key-0001')
   })
   const run = await page.evaluate(async () => {
     const events: string[] = []

@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/types'
-import { PRIVACY_LINE, type ClaudeStatus } from '@shared/ai'
+import { PRIVACY_LINE, type ChatGptStatus, type ClaudeStatus } from '@shared/ai'
 import { AiSettings } from '@renderer/settings/AiSettings'
 import { useSettingsStore } from '@renderer/stores/settingsStore'
 
@@ -20,8 +20,22 @@ const api = {
     testKey: vi.fn(async () => ({ ok: true as const })),
     listModels: vi.fn(async (): Promise<string[]> => []),
     claudeStatus: vi.fn(async (): Promise<ClaudeStatus> => ({ installed: false, loggedIn: false })),
-    claudeLogin: vi.fn(async () => undefined)
+    claudeLogin: vi.fn(async () => undefined),
+    chatgptStatus: vi.fn(async (): Promise<ChatGptStatus> => signedOut),
+    chatgptLogin: vi.fn(),
+    chatgptLogout: vi.fn(async () => ({ confirmed: true })),
+    chatgptModels: vi.fn(async () => [{ id: 'gpt-x', label: 'GPT X' }]),
+    chatgptWelcomed: vi.fn(async () => undefined),
+    chatgptOpenUsage: vi.fn(async () => undefined)
   }
+}
+
+const signedOut: ChatGptStatus = { signedIn: false, planUse: false, email: null, welcomed: false }
+const signedIn: ChatGptStatus = { signedIn: true, planUse: true, email: 'r@x.org', welcomed: false }
+
+function useChatGpt(): void {
+  stored = { ...DEFAULT_SETTINGS, aiProvider: 'chatgpt' }
+  useSettingsStore.setState({ settings: stored, loaded: true })
 }
 
 beforeEach(() => {
@@ -39,6 +53,54 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('AiSettings', () => {
+  it('ChatGPT plan: Continue with ChatGPT signs in, then the one-time notice and account models', async () => {
+    useChatGpt()
+    api.ai.chatgptLogin.mockResolvedValueOnce({ ok: true, status: signedIn })
+    render(<AiSettings />)
+    expect(screen.queryByLabelText('API key')).toBeNull()
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue with ChatGPT' }))
+    await waitFor(() => expect(api.ai.chatgptLogin).toHaveBeenCalledWith(false))
+    expect(await screen.findByText(/Using ChatGPT plan \(r@x.org\)/)).toBeTruthy()
+    expect(screen.getByRole('dialog', { name: "You're using your ChatGPT plan" })).toBeTruthy()
+
+    const model = screen.getByRole('combobox', { name: 'Model' }) as HTMLSelectElement
+    await waitFor(() => expect([...model.options].map((o) => o.value)).toContain('gpt-x'))
+    expect([...model.options].find((o) => o.value === 'gpt-x')?.text).toBe('GPT X')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Got it' }))
+    expect(api.ai.chatgptWelcomed).toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Manage usage' }))
+    expect(api.ai.chatgptOpenUsage).toHaveBeenCalled()
+  })
+
+  it('ChatGPT plan: a declined permission offers to allow it; sign-in errors are shown', async () => {
+    useChatGpt()
+    api.ai.chatgptStatus.mockResolvedValueOnce({ ...signedIn, planUse: false })
+    api.ai.chatgptLogin.mockResolvedValueOnce({
+      ok: false,
+      error: 'Sign-in was cancelled.',
+      status: { ...signedIn, planUse: false }
+    })
+    render(<AiSettings />)
+    expect(await screen.findByText(/doesn.t have permission/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Allow plan use' }))
+    await waitFor(() => expect(api.ai.chatgptLogin).toHaveBeenCalledWith(true))
+    expect(await screen.findByText('Sign-in was cancelled.')).toBeTruthy()
+  })
+
+  it('ChatGPT plan: sign out reports when OpenAI could not be told', async () => {
+    useChatGpt()
+    api.ai.chatgptStatus
+      .mockResolvedValueOnce({ ...signedIn, welcomed: true })
+      .mockResolvedValueOnce(signedOut)
+    api.ai.chatgptLogout.mockResolvedValueOnce({ confirmed: false })
+    render(<AiSettings />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }))
+    expect(await screen.findByText(/couldn't be told/)).toBeTruthy()
+    expect(await screen.findByRole('button', { name: 'Continue with ChatGPT' })).toBeTruthy()
+  })
+
   it('Claude plan: no key box; shows Claude Code status and offers sign-in', async () => {
     stored = { ...DEFAULT_SETTINGS, aiProvider: 'claude' }
     useSettingsStore.setState({ settings: stored, loaded: true })

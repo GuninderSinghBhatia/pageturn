@@ -97,6 +97,8 @@ pub fn run() {
                 log::error!("First-run setup failed: {e}");
             }
             commands::export::schedule_daily_backup(data_dir);
+            // Books added while rag-service was off get indexed for Ask now.
+            commands::rag::index_library(&app.state::<AppState>());
             commands::window::setup(app.handle());
             updater::start(app.handle().clone());
 
@@ -143,6 +145,14 @@ pub fn run() {
             commands::ai::ai_cancel,
             commands::ai::ai_claude_status,
             commands::ai::ai_claude_login,
+            commands::ai::ai_chatgpt_status,
+            commands::ai::ai_chatgpt_login,
+            commands::ai::ai_chatgpt_logout,
+            commands::ai::ai_chatgpt_models,
+            commands::ai::ai_chatgpt_welcomed,
+            commands::ai::ai_chatgpt_open_usage,
+            commands::rag::rag_index_status,
+            commands::rag::rag_index_book,
             commands::lookup::lookup_wikipedia,
             commands::lookup::lookup_open,
             commands::rag::rag_health,
