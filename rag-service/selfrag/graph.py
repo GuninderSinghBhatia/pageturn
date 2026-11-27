@@ -83,8 +83,28 @@ def refuse_node(s: State) -> State:
     return {"answer": REFUSAL, "kept": [], "done": True}
 
 
+ANSWER_PROMPT = """Rules:
+1. Use only the context to answer the question and do not make anything up.
+2. If the context answers only part of the question, answer that part and say in one short
+   sentence what the excerpts don't cover. Reply with exactly 'I don't know' only when nothing
+   in the context helps answer it; never start a real answer with it.
+3. After each fact, provide the page number in parentheses.
+
+Context:
+{context}
+
+Question: {question}
+
+Answer:
+"""
+
+
 def answer_prompt(question: str, kept: list[dict], avoid: list[str]) -> str:
-    prompt = ask.build_prompt(question, kept)
+    """Self mode's own answer prompt. Plain mode's (ask.build_prompt) said "respond with 'I don't
+    know'" whenever the context fell short, so partial answers came out as "I don't know. ...
+    but here is what the book says"; plain mode keeps it as the baseline."""
+    context = "\n".join(f"Page {c['metadata']['page']}: {c['text']}" for c in kept)
+    prompt = ANSWER_PROMPT.format(context=context, question=question)
     if avoid:
         # Second try after the ground check: name the claims the excerpts don't back.
         listed = "\n".join(f"- {c}" for c in avoid)

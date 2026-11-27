@@ -193,3 +193,9 @@ def test_llm_grade_keeps_chunks_relevant_to_either_text(monkeypatch):
                         lambda prompt: {"relevant": picks["r" if "Question: r\n" in prompt else "q"]})
     kept = checks.grade("q", [chunk(1), chunk(2)], how="llm", query="r")
     assert [c["metadata"]["page"] for c in kept] == [2]
+
+
+def test_answer_prompt_answers_the_covered_part_instead_of_i_dont_know():
+    p = graph.answer_prompt("What is a tokenizer?", [chunk(36, "Tokenization breaks text into tokens.")], [])
+    assert "answer that part" in p and "never start a real answer with it" in p
+    assert "Page 36: Tokenization breaks text into tokens." in p

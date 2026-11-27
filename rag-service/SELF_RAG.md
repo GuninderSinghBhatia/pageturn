@@ -192,6 +192,14 @@ Results for the open items (2026-11-27, evening):
   tokens: nothing got worse, but q12 still misses, because its rewrite doesn't find p.436
   either. In the app, "What is a tokenizer?" at p.300 now answers from pp.35–36 instead of
   "I don't know".
+- **Answer wording**: the answer prompt said "respond with 'I don't know'" whenever the
+  context fell short, so partial answers came out as "I don't know. The excerpts don't define
+  X, but ..." (and evals counted them as unanswered). Self mode now has its own prompt
+  (`graph.ANSWER_PROMPT`, same in Rust): answer the covered part and say in one sentence what
+  the excerpts don't cover; exactly "I don't know" only when nothing helps. Plain mode keeps
+  `ask.build_prompt` as the baseline. Eval (`answer_prompt_partial`): 21/25, 24/25, faithful
+  22/24, off-topic 8/8, 2.11 s, 1,125 tokens; the only "I don't know" left is q12, where nothing
+  was kept.
 - **S0**, **S7**: yours (explain Self-RAG without looking; write the resume bullet).
 
 ### Part 2 status (2026-11-27)

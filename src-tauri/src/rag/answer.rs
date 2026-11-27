@@ -59,7 +59,9 @@ pub fn answer_prompt(question: &str, context: &str, avoid: &[String]) -> String 
     let mut p = format!(
         "Rules:\n\
          1. Use only the context to answer the question and do not make anything up.\n\
-         2. If the context does not contain the answer, respond with 'I don't know'.\n\
+         2. If the context answers only part of the question, answer that part and say in one \
+         short sentence what the excerpts don't cover. Reply with exactly 'I don't know' only \
+         when nothing in the context helps answer it; never start a real answer with it.\n\
          3. After each fact, provide the page number in parentheses.\n\n\
          Context:\n{context}\n\nQuestion: {question}\n\nAnswer:"
     );
@@ -322,6 +324,13 @@ pub async fn who(state: &AppState, book_id: &str, name: &str, page: i64) -> Valu
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn partial_answers_are_given_not_hedged_with_i_dont_know() {
+        let p = answer_prompt("What is a tokenizer?", "Page 36: Tokenization breaks text into tokens.", &[]);
+        assert!(p.contains("answer that part"));
+        assert!(p.contains("never start a real answer with it"));
+    }
 
     #[test]
     fn a_chunk_keeps_its_better_score_from_question_or_rewrite() {
