@@ -20,6 +20,7 @@ DEFAULT_PDF = HERE / "docs" / "_OceanofPDF.com_AI_Engineering_Building_Applicati
 
 
 BATCH = 64  # chunks embedded at a time (progress is reported per batch)
+WRITE_BATCH = 5000  # chunks stored per Chroma write (Chroma's limit is about 5,400)
 
 
 def index_book(book_id: str, pdf: str, collection, model, progress=None) -> int:
@@ -43,7 +44,11 @@ def index_book(book_id: str, pdf: str, collection, model, progress=None) -> int:
             progress(min(start + BATCH, len(text)), len(text))
 
     collection.delete(where={"book_id": book_id})
-    collection.upsert(ids=ids, documents=text, embeddings=embeddings, metadatas=metadata)
+    # Chroma caps one write at about 5,400 chunks; big books go in several writes.
+    for start in range(0, len(ids), WRITE_BATCH):
+        end = start + WRITE_BATCH
+        collection.upsert(ids=ids[start:end], documents=text[start:end],
+                          embeddings=embeddings[start:end], metadatas=metadata[start:end])
     return len(chunks)
 
 

@@ -1,0 +1,21 @@
+{
+  "notes": "Extra cases for Self-RAG (S7), used with questions.json. chat = needs no book (right behaviour: no search, no pages). off_topic = the book can't answer (right behaviour: refuse, cite no pages). spoiler = an answerable question from questions.json asked while the reader is before its page (right behaviour: cite nothing past current_page).",
+  "chat": [
+    "hello!",
+    "thanks, that was really helpful",
+    "what can you do?",
+    "who are you?",
+    "great, thank you!"
+  ],
+  "off_topic": [
+    "What's the weather like in Paris today?",
+    "How many goals did Lionel Messi score in 2022?",
+    "What is the best recipe for chocolate cake?",
+    "Who is the current prime minister of Japan?"
+  ],
+  "spoiler": [
+    {"id": 3, "current_page": 150},
+    {"id": 4, "current_page": 170},
+    {"id": 2, "current_page": 120}
+  ]
+}

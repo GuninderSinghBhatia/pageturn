@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI, Query
 from pydantic import BaseModel, Field
 
@@ -50,6 +52,10 @@ def handle_ask(req: AskRequest):
     book = resolve_book(req.book_id)
     if book is None:
         return NOT_INDEXED
+    if os.getenv("RAG_MODE", "self") == "self":
+        from selfrag.graph import ask_self  # imported here: loads LangGraph only when used
+
+        return ask_self(req.question, req.current_page, book)
     return ask_question(req.question, req.current_page, book)
 
 
