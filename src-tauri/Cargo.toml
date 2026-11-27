@@ -1,6 +1,6 @@
 [package]
 name = "pageturn"
-version = "2.0.1"
+version = "2.1.0"
 description = "A Windows PDF reader that feels like a real book"
 edition = "2021"
 license = "MIT"
