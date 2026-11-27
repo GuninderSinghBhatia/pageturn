@@ -95,18 +95,31 @@ def reranker():
     return _reranker
 
 
-def grade_rerank(question: str, chunks: list[dict]) -> list[dict]:
-    """Chunks scoring above RERANK_MIN, best first. Free (no LLM), about 50 ms on a CPU."""
+def grade_rerank(texts: list[str], chunks: list[dict]) -> list[dict]:
+    """Chunks scoring above RERANK_MIN against any of `texts` (each keeps its best score), best
+    first. Free (no LLM), about 50 ms on a CPU."""
     if not chunks:
         return []
-    scores = reranker().predict([(question, c["text"]) for c in chunks])
-    ranked = sorted(zip(scores, range(len(chunks))), reverse=True)
+    pairs = [(t, c["text"]) for t in texts for c in chunks]
+    flat = reranker().predict(pairs)
+    n = len(chunks)
+    scores = [max(flat[k * n + i] for k in range(len(texts))) for i in range(n)]
+    ranked = sorted(zip(scores, range(n)), reverse=True)
     return [{**chunks[i], "score": float(s)} for s, i in ranked if s > RERANK_MIN]
 
 
-def grade(question: str, chunks: list[dict], how: str | None = None) -> list[dict]:
+def grade(question: str, chunks: list[dict], how: str | None = None, query: str | None = None) -> list[dict]:
+    """The chunks worth answering from. After a rewrite, `query` is the rewritten search: a chunk
+    counts if it answers the question OR the rewrite (the better of both scores). Short
+    questions score low on their own ("What is a tokenizer?": best chunk -0.42), so grading the
+    retry against the question alone threw away what the rewrite found."""
     how = how or os.getenv("RAG_GRADER", "rerank")
-    return grade_llm(question, chunks) if how == "llm" else grade_rerank(question, chunks)
+    texts = [question] if not query or query == question else [question, query]
+    if how != "llm":
+        return grade_rerank(texts, chunks)
+    picked = [grade_llm(t, chunks) for t in texts]
+    ids = {id(c) for p in picked for c in p}
+    return [c for c in chunks if id(c) in ids]
 
 
 # ---------------------------------------------------------------- correct

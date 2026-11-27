@@ -181,12 +181,17 @@ Results for the open items (2026-11-27, evening):
 - **S2**: (a) LLM judge and (b) cross-encoder tie on every quality column (21/25, 24/25, 20/24),
   but (b) takes 2.00 s and 1,155 tokens per question against 2.75 s and 2,200. The data favours
   (b): same quality, half the tokens, and no LLM call (the app uses it). Your call to confirm.
-- **S3**: the rewrite fired on 1 of 25 questions (q12) and fixed 0. Why: **grading after the
-  rewrite still scores the chunks against the original question** (`grade_node` uses
-  `s["question"]`). Short questions score low on the cross-encoder ("What is a tokenizer?":
-  best chunk −0.42, under the 0 threshold), so the retry throws away what the rewrite found
-  (the rewritten query puts p.36 at +5.17). Open design question: grade the retry against the
-  rewritten query, or against the better of the two scores. The app copies this behaviour.
+- **S3**: the rewrite fired on 1 of 25 questions (q12) and fixed 0. Why: grading after the
+  rewrite scored the chunks against the original question only. Short questions score low on
+  the cross-encoder ("What is a tokenizer?": best chunk −0.42, under the 0 threshold), so the
+  retry threw away what the rewrite found (the rewritten query puts p.36 at +5.17).
+  **Fixed (your choice): the retry is graded against the better of both scores**: a chunk
+  counts if it answers the question or the rewrite (LLM judge: relevant to either). Python
+  `checks.grade(..., query=)` and Rust `answer::keep_best`. Eval after the fix
+  (`s3_grade_retry_best_of_both`): 21/25, 24/25, faithful 22/24, off-topic 8/8, 1.99 s, 1,246
+  tokens: nothing got worse, but q12 still misses, because its rewrite doesn't find p.436
+  either. In the app, "What is a tokenizer?" at p.300 now answers from pp.35–36 instead of
+  "I don't know".
 - **S0**, **S7**: yours (explain Self-RAG without looking; write the resume bullet).
 
 ### Part 2 status (2026-11-27)

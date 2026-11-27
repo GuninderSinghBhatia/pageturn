@@ -145,9 +145,31 @@ async fn embed(state: &AppState, text: &str) -> Result<Vec<f32>, Value> {
     .map_err(fail)
 }
 
+/// Each chunk's best score over all the texts it was graded against, kept above RERANK_MIN,
+/// best first, at most KEEP. `scores[t][c]` = chunk `found[c]` against text `t`.
+pub fn keep_best(scores: &[Vec<f32>], found: &[usize]) -> Vec<usize> {
+    let mut ranked: Vec<(f32, usize)> = found
+        .iter()
+        .enumerate()
+        .map(|(c, &i)| (scores.iter().map(|s| s[c]).fold(f32::NEG_INFINITY, f32::max), i))
+        .collect();
+    ranked.sort_by(|a, b| b.0.total_cmp(&a.0));
+    ranked.into_iter().filter(|(s, _)| *s > RERANK_MIN).map(|(_, i)| i).take(KEEP).collect()
+}
+
 /// The chunks worth answering from, best first: the cross-encoder's picks above RERANK_MIN.
-/// Without the reranker (first use, offline) the top KEEP by vector are used, like plain RAG.
-async fn grade(state: &AppState, book: &Arc<store::BookIndex>, question: &str, found: &[usize]) -> Vec<usize> {
+/// `query` is the rewritten search on a retry: a chunk then counts if it answers the question
+/// or the rewrite (the better of both scores). Short questions score low on their own ("What
+/// is a tokenizer?": best chunk -0.42), so grading the retry on the question alone threw away
+/// what the rewrite found (+5.17). Without the reranker (first use, offline) the top KEEP by
+/// vector are used, like plain RAG.
+async fn grade(
+    state: &AppState,
+    book: &Arc<store::BookIndex>,
+    question: &str,
+    query: Option<&str>,
+    found: &[usize],
+) -> Vec<usize> {
     let dir = state.data_dir.clone();
     if !models::is_downloaded(&dir, &models::RERANKER) {
         let d = dir.clone();
@@ -159,14 +181,17 @@ async fn grade(state: &AppState, book: &Arc<store::BookIndex>, question: &str, f
         return found.iter().copied().take(KEEP).collect();
     }
     let texts: Vec<String> = found.iter().map(|&i| book.chunks[i].text.clone()).collect();
-    let q = question.to_string();
-    let scores = tokio::task::spawn_blocking(move || models::reranker(&dir)?.score(&q, &texts)).await;
+    let mut against = vec![question.to_string()];
+    if let Some(q) = query.filter(|q| *q != question) {
+        against.push(q.to_string());
+    }
+    let scores = tokio::task::spawn_blocking(move || {
+        let r = models::reranker(&dir)?;
+        against.iter().map(|t| r.score(t, &texts)).collect::<Result<Vec<_>, String>>()
+    })
+    .await;
     match scores {
-        Ok(Ok(scores)) => {
-            let mut ranked: Vec<(f32, usize)> = scores.into_iter().zip(found.iter().copied()).collect();
-            ranked.sort_by(|a, b| b.0.total_cmp(&a.0));
-            ranked.into_iter().filter(|(s, _)| *s > RERANK_MIN).map(|(_, i)| i).take(KEEP).collect()
-        }
+        Ok(Ok(scores)) => keep_best(&scores, found),
         _ => found.iter().copied().take(KEEP).collect(),
     }
 }
@@ -202,7 +227,7 @@ async fn ask_inner(state: &AppState, book_id: &str, question: &str, page: i64) -
     }
 
     let ids = |hits: Vec<(usize, f32)>| hits.into_iter().map(|h| h.0).collect::<Vec<_>>();
-    let mut kept = grade(state, &book, question, &ids(store::search(&book, &q, CANDIDATES, Some(page)))).await;
+    let mut kept = grade(state, &book, question, None, &ids(store::search(&book, &q, CANDIDATES, Some(page)))).await;
     let mut query = question.to_string();
     if kept.is_empty() {
         match read_route(&llm(state, &route_or_rewrite_prompt(question)).await?, question) {
@@ -210,7 +235,7 @@ async fn ask_inner(state: &AppState, book_id: &str, question: &str, page: i64) -
             Route::Query(rewritten) => {
                 query = rewritten;
                 let q2 = embed(state, &query).await?;
-                kept = grade(state, &book, question, &ids(store::search(&book, &q2, CANDIDATES, Some(page)))).await;
+                kept = grade(state, &book, question, Some(query.as_str()), &ids(store::search(&book, &q2, CANDIDATES, Some(page)))).await;
             }
         }
         if kept.is_empty() {
@@ -297,6 +322,20 @@ pub async fn who(state: &AppState, book_id: &str, name: &str, page: i64) -> Valu
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_chunk_keeps_its_better_score_from_question_or_rewrite() {
+        // "What is a tokenizer?" and its rewrite on three chunks (scores from the eval book)
+        let question = vec![-0.42, -4.95, -3.5];
+        let rewrite = vec![2.29, 5.17, -0.2];
+        assert_eq!(keep_best(&[question.clone()], &[10, 20, 30]), Vec::<usize>::new());
+        assert_eq!(keep_best(&[question, rewrite], &[10, 20, 30]), vec![20, 10]);
+    }
+
+    #[test]
+    fn keep_best_caps_at_keep() {
+        assert_eq!(keep_best(&[vec![1.0, 4.0, 3.0, 2.0]], &[1, 2, 3, 4]), vec![2, 3, 4]);
+    }
 
     #[test]
     fn parses_json_wrapped_in_prose_or_fences() {

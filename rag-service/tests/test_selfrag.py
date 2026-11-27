@@ -34,7 +34,9 @@ class Fake:
         monkeypatch.setattr(graph, "invoke_paced", answer_llm)
         monkeypatch.setattr(checks, "route", lambda q: route)
         monkeypatch.setattr(checks, "chat_reply", lambda q: "Happy to help!")
-        monkeypatch.setattr(checks, "grade", lambda q, c: self.grades.pop(0) if self.grades else [])
+        self.graded_with = []  # the search query each grade saw
+        monkeypatch.setattr(checks, "grade", lambda q, c, query=None: (
+            self.graded_with.append(query), self.grades.pop(0) if self.grades else [])[1])
         monkeypatch.setattr(checks, "rewrite", lambda q: "rewritten " + q)
         monkeypatch.setattr(checks, "unsupported_claims",
                             lambda a, c: self.unsupported.pop(0) if self.unsupported else [])
@@ -139,7 +141,7 @@ def test_llm_grade_keeps_everything_when_the_judge_is_unreadable(monkeypatch):
 
 def test_rerank_grade_sorts_by_score_and_drops_low_ones(monkeypatch):
     monkeypatch.setattr(checks, "_reranker", SimpleNamespace(predict=lambda pairs: [-2.0, 5.0, 1.0]))
-    kept = checks.grade_rerank("q", [chunk(1), chunk(2), chunk(3)])
+    kept = checks.grade_rerank(["q"], [chunk(1), chunk(2), chunk(3)])
     assert [c["metadata"]["page"] for c in kept] == [2, 3]
 
 
@@ -167,3 +169,27 @@ def test_parse_json_finds_the_object(text, expected):
 def test_parse_json_rejects_prose():
     with pytest.raises(ValueError):
         judges.parse_json("I think chunk 2 is relevant")
+
+
+def test_the_retry_is_graded_against_the_rewrite_too(monkeypatch):
+    f = Fake(monkeypatch, grades=[[], [chunk(9)]])
+    graph.ask_self("What is a tokenizer?", current_page=100)
+    assert f.graded_with == ["What is a tokenizer?", "rewritten What is a tokenizer?"]
+
+
+def test_rerank_keeps_the_better_of_the_question_and_rewrite_scores(monkeypatch):
+    # pairs: question x (p1, p2), then rewrite x (p1, p2)
+    scores = {("q", "c1"): -0.4, ("q", "c2"): -3.0, ("r", "c1"): 5.2, ("r", "c2"): -1.0}
+    monkeypatch.setattr(checks, "_reranker", SimpleNamespace(
+        predict=lambda pairs: [scores[(t, c[-2:])] for t, c in pairs]))
+    a, b = {**chunk(1), "text": "c1"}, {**chunk(2), "text": "c2"}
+    assert [c["metadata"]["page"] for c in checks.grade("q", [a, b], how="rerank", query="r")] == [1]
+    assert checks.grade("q", [a, b], how="rerank") == []  # the question alone keeps nothing
+
+
+def test_llm_grade_keeps_chunks_relevant_to_either_text(monkeypatch):
+    picks = {"q": [], "r": [2]}
+    monkeypatch.setattr(checks.judges, "ask_json",
+                        lambda prompt: {"relevant": picks["r" if "Question: r\n" in prompt else "q"]})
+    kept = checks.grade("q", [chunk(1), chunk(2)], how="llm", query="r")
+    assert [c["metadata"]["page"] for c in kept] == [2]

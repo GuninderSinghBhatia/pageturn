@@ -72,7 +72,7 @@ def search_node(s: State) -> State:
 
 
 def grade_node(s: State) -> State:
-    return {"kept": checks.grade(s["question"], s["candidates"])[:KEEP]}
+    return {"kept": checks.grade(s["question"], s["candidates"], query=s["query"])[:KEEP]}
 
 
 def rewrite_node(s: State) -> State:
